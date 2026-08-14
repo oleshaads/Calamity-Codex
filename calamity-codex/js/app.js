@@ -398,12 +398,12 @@
 
     if (view === "home") { applyTheme(null); renderHome(); }
     else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
-    else if (view === "wiki") { applySectionTheme(view); renderWiki(params.tab || "progress"); }
+    else if (view === "wiki") { applySectionTheme(view); renderWiki(params); }
     else if (view === "bosses") { applySectionTheme(view); renderBosses(params); }
     else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || ""); }
     else if (view === "items") { applySectionTheme(view); renderItems(params); }
     else if (view === "favorites") { applySectionTheme(view); renderFavorites(); }
-    else if (view === "lex") { applySectionTheme(view); renderLex(); }
+    else if (view === "lex") { applySectionTheme(view); renderLex(params); }
     else if (view === "biomes") { applySectionTheme(view); renderBiomes(); }
 
     if (viewChanged) {
@@ -649,8 +649,126 @@
     tool: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#8aa4d4" d="M10 38 28 20l4 4L14 42z"/><path fill="#d4ae5a" d="M30 8l10 10-8 4-6-6z"/></svg>',
     mat: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#7ad3a0" d="M24 6 40 18 34 40H14L8 18z"/></svg>',
     summon: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#d07aff" d="M24 6c6 8 14 10 14 20 0 8-6 16-14 16S10 34 10 26C10 16 18 14 24 6z"/></svg>',
-    potion: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#6ecbff" d="M20 6h8v8l8 14c0 8-6 14-12 14S12 36 12 28l8-14z"/></svg>'
+    potion: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#6ecbff" d="M20 6h8v8l8 14c0 8-6 14-12 14S12 36 12 28l8-14z"/></svg>',
+    boss: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#df7680" d="m8 11 8 5a16 16 0 0 1 16 0l8-5-3 10a15 15 0 0 1 2 8c0 9-7 14-15 14S9 38 9 29a15 15 0 0 1 2-8z"/><path fill="#111820" d="M15 27h7l-4 6zm11 0h7l-3 6zM21 36h6v4h-6z"/></svg>',
+    world: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#75bd91" d="M5 39 17 17l7 10 6-9 13 21z"/><path fill="#b9e9ee" d="m13 25 4-8 4 6-4-2z"/><circle cx="35" cy="12" r="5" fill="#d9bd69"/></svg>',
+    mechanic: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="none" stroke="#b695dc" stroke-width="3" d="M24 5v38M7 14l34 20M41 14 7 34"/><circle cx="24" cy="24" r="9" fill="#2c1b3d" stroke="#d39bf0" stroke-width="3"/></svg>',
+    npc: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="15" r="9" fill="#8ebbe0"/><path fill="#6688a8" d="M8 43c1-12 7-18 16-18s15 6 16 18z"/></svg>',
+    misc: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#9fb0bc" d="M8 15 24 6l16 9v20l-16 8-16-8z"/><path fill="#687985" d="m8 15 16 8 16-8v5l-16 8-16-8z"/></svg>'
   };
+
+  const BOSS_ART = {
+    1: "assets/sprites/Slime_Crown.png",
+    2: "assets/boss-sprites/desert-scourge.png",
+    3: "assets/sprites/Suspicious_Looking_Eye.png",
+    4: "assets/boss-sprites/crabulon.png",
+    5: "assets/sprites/Worm_Food.png",
+    6: "assets/boss-sprites/hive-mind.png",
+    7: "assets/sprites/Abeemination.png",
+    10: "assets/boss-sprites/slime-god.png",
+    11: "assets/sprites/Guide_Voodoo_Doll.png",
+    13: "assets/boss-sprites/cryogen.png",
+    15: "assets/boss-sprites/aquatic-scourge.png",
+    16: "assets/boss-sprites/brimstone-elemental.png",
+    17: "assets/boss-sprites/calamitas-clone.png",
+    18: "assets/sprites/Portabulb.png",
+    19: "assets/boss-sprites/leviathan.png",
+    20: "assets/boss-sprites/astrum-aureus.png",
+    21: "assets/sprites/Lihzahrd_Power_Cell.png",
+    22: "assets/boss-sprites/plaguebringer-goliath.png",
+    23: "assets/boss-sprites/ravager.png",
+    25: "assets/boss-sprites/astrum-deus.png",
+    26: "assets/sprites/Celestial_Sigil.png",
+    27: "assets/boss-sprites/profaned-guardians.png",
+    28: "assets/boss-sprites/dragonfolly.png",
+    29: "assets/boss-sprites/providence.png",
+    30: "assets/boss-sprites/signus.png",
+    31: "assets/boss-sprites/polterghast.png",
+    32: "assets/boss-sprites/old-duke.png",
+    33: "assets/boss-sprites/devourer-of-gods.png",
+    34: "assets/boss-sprites/yharon.png",
+    35: "assets/boss-sprites/exo-mechs.png",
+    36: "assets/boss-sprites/supreme-calamitas.png"
+  };
+  const BOSS_ART_BY_ID = {
+    "king-slime": BOSS_ART[1], "desert-scourge": BOSS_ART[2], eoc: BOSS_ART[3], crabulon: BOSS_ART[4],
+    eow: BOSS_ART[5], boc: BOSS_ART[5], "hive-mind": BOSS_ART[6], perforators: "assets/boss-sprites/perforators.png",
+    "queen-bee": BOSS_ART[7], "slime-god": BOSS_ART[10], wof: BOSS_ART[11], cryogen: BOSS_ART[13],
+    "aquatic-scourge": BOSS_ART[15], "brimstone-ele": BOSS_ART[16], "cal-clone": BOSS_ART[17], plantera: BOSS_ART[18],
+    leviathan: BOSS_ART[19], aureus: BOSS_ART[20], golem: BOSS_ART[21], pbg: BOSS_ART[22], ravager: BOSS_ART[23],
+    "astrum-deus": BOSS_ART[25], "moon-lord": BOSS_ART[26], guardians: BOSS_ART[27], dragonfolly: BOSS_ART[28],
+    providence: BOSS_ART[29], weaver: "assets/boss-sprites/storm-weaver.png", void: "assets/boss-sprites/ceaseless-void.png",
+    signus: BOSS_ART[30], polterghast: BOSS_ART[31], "old-duke": BOSS_ART[32], dog: BOSS_ART[33], yharon: BOSS_ART[34],
+    exo: BOSS_ART[35], scal: BOSS_ART[36], "giant-clam": "assets/boss-sprites/giant-clam.png",
+    "sand-shark": "assets/boss-sprites/great-sand-shark.png"
+  };
+  const GUIDE_ART = {
+    1: "assets/sprites/StarterBag.png", 2: "assets/sprites/WulfrumMetalScrap.png", 3: "assets/sprites/LabSeekingMechanism.png",
+    4: "assets/sprites/SeaPrism.png", 5: BOSS_ART[1], 6: BOSS_ART[2], 7: "assets/sprites/VictideBreastplate.png",
+    8: BOSS_ART[3], 9: BOSS_ART[4], 10: BOSS_ART[6], 11: "assets/sprites/Abeemination.png", 12: BOSS_ART[10],
+    13: BOSS_ART[11], 14: "assets/sprites/Cobalt_Breastplate.png", 15: BOSS_ART[13], 16: BOSS_ART[15],
+    17: BOSS_ART[16], 18: BOSS_ART[17], 19: BOSS_ART[18], 20: "assets/boss-sprites/anahita.png", 21: BOSS_ART[20],
+    22: BOSS_ART[21], 23: BOSS_ART[22], 24: BOSS_ART[25], 25: BOSS_ART[29], 26: BOSS_ART[31], 27: BOSS_ART[33],
+    28: BOSS_ART[34], 29: BOSS_ART[35], 30: "assets/sprites/ShadowspecBar.png"
+  };
+  const REFERENCE_ART = {
+    Wulfrum: "assets/sprites/WulfrumJacket.png", Victide: "assets/sprites/VictideBreastplate.png",
+    Sulphurous: "assets/sprites/SulphurousBreastplate.png", Aerospec: "assets/sprites/AerospecBreastplate.png",
+    Statigel: "assets/sprites/StatigelArmor.png", Mollusk: "assets/sprites/MolluskShellmet.png",
+    Daedalus: "assets/sprites/DaedalusBreastplate.png", Hydrothermic: "assets/sprites/HydrothermicArmor.png",
+    Astral: "assets/sprites/AstralBreastplate.png", Empyrean: "assets/sprites/EmpyreanCloak.png",
+    Tarragon: "assets/sprites/TarragonBreastplate.png", Bloodflare: "assets/sprites/BloodflareBodyArmor.png",
+    "Omega Blue": "assets/sprites/OmegaBlueChestplate.png", "God Slayer": "assets/sprites/GodSlayerChestplate.png",
+    Silva: "assets/sprites/SilvaArmor.png", "Auric Tesla": "assets/sprites/AuricTeslaBodyArmor.png",
+    Demonshade: "assets/sprites/DemonshadeBreastplate.png"
+  };
+  const LEX_KIND = {
+    "Босс": "boss", "Мини-босс": "boss", "Биом": "world", "Структура": "world", "Событие": "world",
+    "Механика": "mechanic", "Сложность": "mechanic", "Класс": "mechanic", "Мод": "mechanic", "НПС": "npc",
+    "Броня": "armor", "Аксессуар": "acc", "Инструмент": "tool", "Оружие": "weapon", "Призыв": "summon",
+    "Расходник": "potion", "Бафф": "potion", "Материал": "mat", "Руда": "mat", "Станция": "tool", "Предмет": "misc", "Маунт": "summon"
+  };
+  let artNameIndex;
+  function normalizeArtName(name) {
+    return String(name || "").toLocaleLowerCase("ru").replace(/[’']/g, "").replace(/[^a-zа-яё0-9]+/gi, " ").trim();
+  }
+  function getArtNameIndex() {
+    if (artNameIndex) return artNameIndex;
+    artNameIndex = new Map();
+    Object.entries(CODEX.sprites || {}).forEach(([name, path]) => {
+      [name, ...name.split(/\s*\/\s*/)].forEach((part) => {
+        const key = normalizeArtName(part);
+        if (key && !artNameIndex.has(key)) artNameIndex.set(key, path);
+      });
+    });
+    indexedItems().forEach((item) => {
+      const key = normalizeArtName(item.name);
+      if (item.image && key && !artNameIndex.has(key)) artNameIndex.set(key, `assets/item-sprites/${encodeURIComponent(item.id)}.png`);
+    });
+    return artNameIndex;
+  }
+  function resolveArt(name, explicit = "") {
+    if (explicit) return explicit;
+    if (REFERENCE_ART[name]) return REFERENCE_ART[name];
+    const lex = CODEX.lookup ? CODEX.lookup(name) : null;
+    const names = [name, lex && lex.en, lex && lex.ru].filter(Boolean);
+    const index = getArtNameIndex();
+    for (const candidate of names) {
+      const exact = index.get(normalizeArtName(candidate));
+      if (exact) return exact;
+      for (const part of String(candidate).split(/\s*\/\s*/)) {
+        const hit = index.get(normalizeArtName(part));
+        if (hit) return hit;
+      }
+    }
+    return "";
+  }
+  function visualArt(name, kind = "mat", explicit = "") {
+    const src = resolveArt(name, explicit);
+    return src
+      ? `<img class="item-art" src="${escAttr(src)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(kind)}">`
+      : (KIND_SVG[kind] || KIND_SVG.mat);
+  }
   function spriteKey(it) {
     if (it.sprite) return it.sprite;
     if (SPRITE_FIX[it.name]) return SPRITE_FIX[it.name];
@@ -924,40 +1042,132 @@
     bindSprites(app);
   }
 
-  function renderLex() {
-    fillRail("");
-    const groups = {};
-    Object.values(CODEX.lex || {}).forEach((e) => {
-      (groups[e.type] = groups[e.type] || []).push(e);
-    });
-    app.innerHTML = `
-      <div class="page">
-        ${mast("Словарь", "Полка по типу. На карточке — что это, где взять, зачем.")}
-        ${Object.entries(groups).map(([type, arr]) => shelf(esc(type), arr.length, `
-          <div class="item-grid">
-            ${arr.map((e) => `<article class="item-card">
-              <div class="item-top"><b>${esc(e.ru)}</b><span class="tag-cls all">${esc(e.type)}</span></div>
-              ${e.en ? `<span class="en-sub">в игре: ${esc(e.en)}</span>` : ""}
-              <p class="desc">${esc(e.desc)}</p>
-              <div class="item-foot">
-                ${e.where ? `<div class="fact"><span>Где</span><p>${esc(e.where)}</p></div>` : ""}
-                ${e.used ? `<div class="fact"><span>Зачем</span><p>${esc(e.used)}</p></div>` : ""}
-                ${e.craft ? `<div class="fact"><span>Крафт</span><p>${esc(e.craft)}</p></div>` : ""}
-              </div>
-            </article>`).join("")}
-          </div>`)).join("")}
+  function lexCard(e) {
+    const kind = LEX_KIND[e.type] || "mat";
+    const art = BOSS_ART_BY_ID[e.id] || "";
+    const wikiName = e.en || e.ru;
+    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(wikiName)}`;
+    return `<article class="item-card has-art lex-card" data-kind="${escAttr(kind)}">
+      <div class="item-shot lex-shot ${escAttr(kind)}">
+        ${visualArt(e.en || e.ru, kind, art)}
+        <span class="kind-pill">${esc(e.type)}</span>
+        <span class="tag-cls all">RU / EN</span>
       </div>
-    `;
-  }
-
-  function wikiCard(title, rows) {
-    return `<article class="item-card">
-      <b>${esc(title)}</b>
-      <div class="item-foot">${rows.map(([k, v]) => v ? `<div class="fact"><span>${k}</span><p>${esc(v)}</p></div>` : "").join("")}</div>
+      <div class="body">
+        <b>${esc(e.ru)}${e.en ? `<span class="en-sub">в игре: ${esc(e.en)}</span>` : ""}</b>
+        <p class="desc">${esc(e.desc)}</p>
+        <div class="item-foot">
+          ${e.where ? `<div class="fact"><span>Где</span><p>${esc(e.where)}</p></div>` : ""}
+          ${e.used ? `<div class="fact"><span>Зачем</span><p>${esc(e.used)}</p></div>` : ""}
+          ${e.craft ? `<div class="fact"><span>Крафт</span><p>${esc(e.craft)}</p></div>` : ""}
+        </div>
+        <div class="catalog-card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Найти на официальной wiki ↗</a></div>
+      </div>
     </article>`;
   }
 
-  function renderWiki(tab) {
+  function renderLex(params = {}) {
+    fillRail("");
+    const search = (params.q || "").trim().toLocaleLowerCase("ru");
+    const type = params.type || "all";
+    const pageSize = 96;
+    const limit = Math.max(pageSize, Number(params.limit) || pageSize);
+    const allEntries = Object.values(CODEX.lex || {});
+    const types = [...new Set(allEntries.map((e) => e.type))].sort((a, b) => a.localeCompare(b, "ru"));
+    const list = allEntries.filter((e) => {
+      if (type !== "all" && e.type !== type) return false;
+      const blob = `${e.ru} ${e.en} ${e.type} ${e.desc} ${e.where || ""} ${e.used || ""} ${e.craft || ""} ${(e.aliases || []).join(" ")}`.toLocaleLowerCase("ru");
+      return !search || blob.includes(search);
+    }).sort((a, b) => a.ru.localeCompare(b.ru, "ru"));
+    const visible = list.slice(0, limit);
+    app.innerHTML = `
+      <div class="page">
+        ${mast("Словарь", "Все термины в формате карточек маршрута: изображение, смысл, источник и игровое название.")}
+        <div class="filter-bar lex-controls">
+          <label class="search-wrap">
+            <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
+            <input id="lex-s" type="search" aria-label="Поиск по словарю" placeholder="Термин, английское имя, место или назначение…" value="${escAttr(params.q || "")}" />
+            ${search ? `<button class="filter-clear" id="lex-clear" type="button">Сбросить</button>` : ""}
+          </label>
+          <select id="lex-type" aria-label="Тип термина">
+            <option value="all">Все типы · ${allEntries.length}</option>
+            ${types.map((name) => `<option value="${escAttr(name)}" ${type === name ? "selected" : ""}>${esc(name)} · ${allEntries.filter((e) => e.type === name).length}</option>`).join("")}
+          </select>
+        </div>
+        <div class="catalog-found"><p class="found">Найдено: <b>${list.length}</b> · показано ${visible.length}</p>${search || type !== "all" ? `<a href="#/lex">Сбросить фильтры</a>` : ""}</div>
+        ${visible.length
+          ? `<div class="item-grid lex-grid">${visible.map(lexCard).join("")}</div>
+             ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="lex-more">Показать ещё ${Math.min(pageSize, list.length - visible.length)}<small>${visible.length} из ${list.length}</small></button></div>` : ""}`
+          : `<div class="empty-state"><span>A</span><b>Термин не найден</b><p>Попробуй английское название, место или сбрось выбранный тип.</p><a class="btn ghost" href="#/lex">Показать весь словарь</a></div>`}
+      </div>
+    `;
+    const build = (over = {}, replace = false) => {
+      const next = { q: params.q || "", type, limit, ...over };
+      const qs = new URLSearchParams();
+      if (next.q) qs.set("q", next.q);
+      if (next.type && next.type !== "all") qs.set("type", next.type);
+      if (next.limit > pageSize) qs.set("limit", next.limit);
+      const hash = "#/lex" + (qs.toString() ? `?${qs}` : "");
+      if (replace) { history.replaceState(null, "", hash); route(); }
+      else location.hash = hash;
+    };
+    const input = $("#lex-s");
+    let timer;
+    if (input) input.oninput = () => { clearTimeout(timer); timer = setTimeout(() => build({ q: input.value, limit: pageSize }, true), 220); };
+    const typeSelect = $("#lex-type");
+    if (typeSelect) typeSelect.onchange = () => build({ type: typeSelect.value, limit: pageSize });
+    const clear = $("#lex-clear");
+    if (clear) clear.onclick = () => build({ q: "", limit: pageSize }, true);
+    const more = $("#lex-more");
+    if (more) more.onclick = () => build({ limit: visible.length + pageSize }, true);
+    bindSprites(app);
+  }
+
+  function wikiCard(title, rows, options = {}) {
+    const kind = options.kind || "mat";
+    const lex = CODEX.lookup ? CODEX.lookup(title) : null;
+    const en = options.en || lex?.en || "";
+    const desc = options.desc || lex?.desc || "";
+    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(options.wiki || en || title)}`;
+    return `<article class="item-card has-art wiki-card">
+      <div class="item-shot wiki-shot ${escAttr(kind)}">
+        ${visualArt(title, kind, options.art || "")}
+        <span class="kind-pill">${esc(options.type || "Справочник")}</span>
+        ${options.badge ? `<span class="tag-cls all">${esc(options.badge)}</span>` : ""}
+      </div>
+      <div class="body">
+        <b>${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</b>
+        ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
+        <div class="item-foot">${rows.map(([k, v]) => v ? `<div class="fact"><span>${esc(k)}</span><p>${esc(v)}</p></div>` : "").join("")}</div>
+        ${options.noWiki ? "" : `<div class="catalog-card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>`}
+      </div>
+    </article>`;
+  }
+
+  function guideReferenceCard(q) {
+    return `<article class="item-card has-art wiki-card guide-reference-card">
+      <div class="item-shot wiki-shot guide ${escAttr(q.era || "pre")}">
+        ${visualArt(q.title, "mechanic", GUIDE_ART[q.id] || "")}
+        <span class="kind-pill">Глава ${String(q.id).padStart(2, "0")}</span>
+        <span class="tag-cls all">${esc(({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[q.era] || "Маршрут")}</span>
+      </div>
+      <div class="body">
+        <b>${esc(q.title)}<span class="en-sub">${esc(q.subtitle || "Этап прохождения")}</span></b>
+        <p class="desc">${esc(q.mood || q.story || q.subtitle || "Практический этап маршрута прохождения.")}</p>
+        <div class="item-foot">
+          ${q.objective ? `<div class="fact"><span>Цель</span><p>${esc(q.objective)}</p></div>` : ""}
+          <div class="fact"><span>Когда</span><p>${esc(q.subtitle || "По порядку маршрута")}</p></div>
+          <div class="fact"><span>Дальше</span><p>Открой главу: внутри шаги, предметы, крафты, противники и чеклист.</p></div>
+        </div>
+        <div class="catalog-card-links"><a href="#/novice?q=${q.id}">Открыть полный маршрут →</a></div>
+      </div>
+    </article>`;
+  }
+
+  function renderWiki(params = {}) {
+    fillRail("");
+    const tab = ["progress", "armor", "mats", "hp", "mech"].includes(params.tab) ? params.tab : "progress";
+    const search = (params.q || "").trim().toLocaleLowerCase("ru");
     const tabs = [
       ["progress", "Прогрессия"],
       ["armor", "Броня"],
@@ -965,33 +1175,59 @@
       ["hp", "Сердца и мана"],
       ["mech", "Механики"]
     ];
-    fillRail("");
+    const sources = { progress: CODEX.quests, armor: CODEX.armors, mats: CODEX.materials, hp: CODEX.hpUps, mech: CODEX.mechanics };
+    const source = sources[tab] || sources.progress;
+    const list = source.filter((entry) => {
+      if (!search) return true;
+      const name = entry.name || entry.title || "";
+      const lex = CODEX.lookup ? CODEX.lookup(name) : null;
+      const blob = `${JSON.stringify(entry)} ${lex?.en || ""} ${(lex?.aliases || []).join(" ")}`.toLocaleLowerCase("ru");
+      return blob.includes(search);
+    });
+    let cards;
+    if (tab === "armor") {
+      cards = list.map((a) => wikiCard(a.name, [["Когда", a.when], ["Из", a.mat], ["Зачем", a.note]], { kind: "armor", type: "Броня", badge: a.era === "pre" ? "Прехардмод" : a.era === "hard" ? "Хардмод" : a.era === "post" ? "После Луны" : "Финал" }));
+    } else if (tab === "mats") {
+      cards = list.map((m) => wikiCard(m.name, [["Когда", m.when], ["Где", m.src], ["Зачем", m.use]], { kind: "mat", type: "Материал" }));
+    } else if (tab === "hp") {
+      cards = list.map((h) => wikiCard(h.name, [["Когда", h.when], ["Эффект", h.bonus], ["Зачем", "Постоянно усиливает текущего персонажа."]], { kind: "potion", type: "Усиление" }));
+    } else if (tab === "mech") {
+      cards = list.map((m) => wikiCard(m.name, [["Суть", m.d], ["Когда", "Учитывай механику на соответствующем этапе прохождения."]], { kind: "mechanic", type: "Механика", desc: "Ключевое правило Calamity, которое влияет на подготовку или бой.", noWiki: true }));
+    } else {
+      cards = list.map(guideReferenceCard);
+    }
     app.innerHTML = `
       <div class="page">
-        ${mast("Справочник", "Коротко по этапам. Полные маршруты — в предметах и квестах.")}
-        <div class="chips">
-          ${tabs.map(([id, name]) => `<button class="chip ${tab === id ? "active" : ""}" data-tab="${id}">${name}</button>`).join("")}
+        ${mast("Справочник", "Те же наглядные карточки маршрута: изображение, этап, источник, назначение и быстрый переход к подробностям.")}
+        <div class="chips wiki-tabs">
+          ${tabs.map(([id, name]) => `<button class="chip ${tab === id ? "active" : ""}" data-tab="${id}">${name}<em>${sources[id].length}</em></button>`).join("")}
         </div>
-        <div id="wiki-body"></div>
+        <label class="search-wrap wiki-search">
+          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
+          <input id="wiki-s" type="search" aria-label="Поиск по справочнику" placeholder="Название, этап, источник или назначение…" value="${escAttr(params.q || "")}" />
+          ${search ? `<button class="filter-clear" id="wiki-clear" type="button">Сбросить</button>` : ""}
+        </label>
+        <p class="found">Раздел: ${esc(tabs.find(([id]) => id === tab)?.[1] || "Прогрессия")} · найдено ${list.length}</p>
+        ${cards.length
+          ? `<div class="item-grid wiki-card-grid">${cards.join("")}</div>`
+          : `<div class="empty-state"><span>✦</span><b>Запись не найдена</b><p>Измени запрос или открой другой раздел справочника.</p><a class="btn ghost" href="#/wiki?tab=${escAttr(tab)}">Сбросить поиск</a></div>`}
       </div>
     `;
-    app.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => location.hash = `#/wiki?tab=${b.dataset.tab}`);
-    const body = $("#wiki-body");
-    if (tab === "armor") {
-      body.innerHTML = `<div class="item-grid">${CODEX.armors.map((a) => wikiCard(a.name, [["Когда", a.when], ["Из", a.mat], ["Заметка", a.note]])).join("")}</div>`;
-    } else if (tab === "mats") {
-      body.innerHTML = `<div class="item-grid">${CODEX.materials.map((m) => wikiCard(m.name, [["Этап", m.when], ["Откуда", m.src], ["Зачем", m.use]])).join("")}</div>`;
-    } else if (tab === "hp") {
-      body.innerHTML = `<div class="item-grid">${CODEX.hpUps.map((h) => wikiCard(h.name, [["Когда", h.when], ["Эффект", h.bonus]])).join("")}</div>`;
-    } else if (tab === "mech") {
-      body.innerHTML = `<div class="item-grid">${CODEX.mechanics.map((m) => wikiCard(m.name, [["Суть", m.d]])).join("")}</div>`;
-    } else {
-      body.innerHTML = CODEX.quests.map((q) => shelf(
-        `${String(q.id).padStart(2, "0")}. ${q.title}`,
-        q.subtitle,
-        `<p class="story" style="margin:0 0 10px">${esc(q.mood || q.subtitle || "")}</p><a href="#/novice?q=${q.id}">Открыть квест →</a>`
-      )).join("");
-    }
+    app.querySelectorAll("[data-tab]").forEach((button) => { button.onclick = () => { location.hash = `#/wiki?tab=${button.dataset.tab}`; }; });
+    const build = (q) => {
+      const qs = new URLSearchParams();
+      if (tab !== "progress") qs.set("tab", tab);
+      if (q) qs.set("q", q);
+      const hash = "#/wiki" + (qs.toString() ? `?${qs}` : "");
+      history.replaceState(null, "", hash);
+      route();
+    };
+    const input = $("#wiki-s");
+    let timer;
+    if (input) input.oninput = () => { clearTimeout(timer); timer = setTimeout(() => build(input.value), 220); };
+    const clear = $("#wiki-clear");
+    if (clear) clear.onclick = () => build("");
+    bindSprites(app);
   }
 
   function renderItems(params) {
@@ -1184,33 +1420,56 @@
     const inp = $("#boss-s");
     let timer;
     if (inp) inp.oninput = () => { clearTimeout(timer); timer = setTimeout(() => build({ q: inp.value }, true), 220); };
+    bindSprites(app);
   }
 
   function bossCard(b) {
-    return `<article class="item-card boss-card">
-      <div class="item-top">
-        <span class="boss-num">#${String(b.n).padStart(2, "0")} · ${esc(b.type)}</span>
-        <span class="card-actions">${eraBadge(b.era)}${favoriteButton("boss", b.n, b.name)}</span>
+    const era = ({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[b.era] || b.era;
+    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(b.en || b.name)}`;
+    return `<article class="item-card has-art boss-card">
+      <div class="item-shot boss-shot boss ${escAttr(b.era)}">
+        ${visualArt(b.name, "boss", BOSS_ART[b.n] || "")}
+        ${favoriteButton("boss", b.n, b.name)}
+        <span class="kind-pill">#${String(b.n).padStart(2, "0")} · ${esc(b.type)}</span>
+        <span class="tag-cls all">${esc(era)}</span>
       </div>
-      <b>${esc(b.name)}${b.en ? `<span class="en-sub">в игре: ${esc(b.en)}</span>` : ""}</b>
-      ${b.tip ? `<p class="desc">${esc(b.tip)}</p>` : ""}
-      <div class="item-foot">
-        <div class="fact"><span>Где</span><p>${esc(b.where)}</p></div>
-        <div class="fact"><span>Когда</span><p>${esc(b.when)}</p></div>
-        <div class="fact"><span>Зови</span><p>${esc(b.summon)}</p></div>
-        <div class="fact"><span>Дроп</span><p>${esc(b.drops)}</p></div>
-        ${b.q ? `<a class="boss-link" href="#/novice?q=${b.q}">Квест ${b.q} →</a>` : ""}
+      <div class="body">
+        <b>${esc(b.name)}${b.en ? `<span class="en-sub">в игре: ${esc(b.en)}</span>` : ""}</b>
+        <p class="desc">${esc(b.tip || "Ключевой противник маршрута: подготовь арену, мобильность и подходящее этапу снаряжение.")}</p>
+        <div class="item-foot">
+          <div class="fact"><span>Где</span><p>${esc(b.where)}</p></div>
+          <div class="fact"><span>Когда</span><p>${esc(b.when)}</p></div>
+          <div class="fact"><span>Зови</span><p>${esc(b.summon)}</p></div>
+          <div class="fact"><span>Дроп</span><p>${esc(b.drops)}</p></div>
+        </div>
+        <div class="catalog-card-links">
+          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Тактика и дроп на wiki ↗</a>
+          ${b.q ? `<a class="catalog-guide-link" href="#/novice?q=${b.q}">Открыть квест ${b.q} →</a>` : ""}
+        </div>
       </div>
     </article>`;
   }
 
   function miniCard(m) {
-    return `<article class="item-card">
-      <b>${esc(m.name)}${m.en ? `<span class="en-sub">в игре: ${esc(m.en)}</span>` : ""}</b>
-      <div class="item-foot">
-        <div class="fact"><span>Когда</span><p>${esc(m.when)}</p></div>
-        <div class="fact"><span>Где</span><p>${esc(m.where)}</p></div>
-        <div class="fact"><span>Дроп</span><p>${esc(m.drops)}</p></div>
+    const art = m.name === "Giant Clam" ? BOSS_ART_BY_ID["giant-clam"]
+      : m.name === "Great Sand Shark" ? BOSS_ART_BY_ID["sand-shark"]
+      : "assets/boss-sprites/cragmaw-mire.png";
+    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(m.name)}`;
+    return `<article class="item-card has-art boss-card mini-boss-card">
+      <div class="item-shot boss-shot boss">
+        ${visualArt(m.name, "boss", art)}
+        <span class="kind-pill">Мини-босс</span>
+        <span class="tag-cls all">Дополнительно</span>
+      </div>
+      <div class="body">
+        <b>${esc(m.name)}${m.en ? `<span class="en-sub">в игре: ${esc(m.en)}</span>` : ""}</b>
+        <p class="desc">Опциональный сильный противник с полезными материалами и оружием.</p>
+        <div class="item-foot">
+          <div class="fact"><span>Когда</span><p>${esc(m.when)}</p></div>
+          <div class="fact"><span>Где</span><p>${esc(m.where)}</p></div>
+          <div class="fact"><span>Дроп</span><p>${esc(m.drops)}</p></div>
+        </div>
+        <div class="catalog-card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>
       </div>
     </article>`;
   }
@@ -1313,8 +1572,9 @@
         hits.push({ href: `#/novice?q=${x.id}`, title: `Квест ${x.id}: ${x.title}`, sub: x.subtitle, type: "Квест", mark: String(x.id) });
     });
     Object.values(CODEX.lex || {}).forEach((x) => {
-      if (`${x.ru} ${x.en} ${x.desc} ${x.where}`.toLowerCase().includes(q))
-        hits.push({ href: `#/lex`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Словарь", mark: "A" });
+      const blob = `${x.ru} ${x.en} ${x.type} ${x.desc} ${x.where || ""} ${x.used || ""} ${x.craft || ""} ${(x.aliases || []).join(" ")}`.toLowerCase();
+      if (blob.includes(q))
+        hits.push({ href: `#/lex?q=${encodeURIComponent(x.ru)}`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Словарь", mark: "A" });
     });
     const itemHitNames = new Set();
     (CODEX.items || []).forEach((x) => {

@@ -1079,6 +1079,13 @@ body[data-view="biomes"] .page-head-art { background-position: center 42%; }
 .item-shot.mage { background: radial-gradient(ellipse at 50% 72%, #232a54, #0c1118 69%); }
 .item-shot.summoner { background: radial-gradient(ellipse at 50% 72%, #3b1f4c, #0c1118 69%); }
 .item-shot.rogue { background: radial-gradient(ellipse at 50% 72%, #4b202b, #0c1118 69%); }
+.item-shot.boss { background: radial-gradient(ellipse at 50% 72%, #4d2027, #0c1118 69%); }
+.item-shot.world { background: radial-gradient(ellipse at 50% 72%, #183c31, #0c1118 69%); }
+.item-shot.mechanic, .item-shot.guide { background: radial-gradient(ellipse at 50% 72%, #30234d, #0c1118 69%); }
+.item-shot.npc { background: radial-gradient(ellipse at 50% 72%, #203649, #0c1118 69%); }
+.item-shot.armor { background: radial-gradient(ellipse at 50% 72%, #25344d, #0c1118 69%); }
+.item-shot.potion { background: radial-gradient(ellipse at 50% 72%, #173e3a, #0c1118 69%); }
+.item-shot.mat, .item-shot.tool { background: radial-gradient(ellipse at 50% 72%, #3c3420, #0c1118 69%); }
 .item-art { position: relative; z-index: 1; width: auto; height: 66px; max-width: 104px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 7px 2px rgba(0,0,0,.65)); transition: transform .2s ease; }
 .item-shot .item-ico { position: relative; z-index: 1; width: 56px; height: 56px; filter: drop-shadow(0 7px 2px rgba(0,0,0,.65)); }
 .item-card:hover .item-art { transform: translateY(-2px) scale(1.06); }
@@ -1132,9 +1139,13 @@ body[data-view="biomes"] .page-head-art { background-position: center 42%; }
 .tag-cls.all { border-color: #625633; color: var(--gold); background: #282313; }
 
 .boss-card { cursor: default; }
-.boss-card::after { content: ""; position: absolute; right: 0; top: 0; width: 64px; height: 64px; opacity: .13; background: radial-gradient(circle at 100% 0, var(--crimson), transparent 67%); }
-.boss-num { margin-bottom: 7px; color: #df7680; font-size: 9px; font-weight: 800; letter-spacing: .09em; }
-.boss-link { display: inline-block; margin-top: 2px; padding-top: 10px; border-top: 1px solid #2d3843; font-size: 10px; font-weight: 800; }
+.boss-card::after { content: ""; position: absolute; right: 0; top: 0; width: 64px; height: 64px; pointer-events: none; opacity: .13; background: radial-gradient(circle at 100% 0, var(--crimson), transparent 67%); }
+.boss-card .item-art { height: 76px; max-width: 118px; }
+.boss-card .catalog-card-links { margin-top: 13px; }
+.lex-card .body, .wiki-card .body { min-height: 0; }
+.lex-card .catalog-card-links, .wiki-card .catalog-card-links { margin-top: 13px; }
+.wiki-search { max-width: 760px; }
+.wiki-card-grid, .lex-grid { align-items: stretch; }
 .kv { gap: 8px; }
 .kv > div { display: block; }
 .kv span { display: block; margin-bottom: 2px; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
