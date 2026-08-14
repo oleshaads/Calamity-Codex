@@ -20,11 +20,11 @@
   };
   let lastView = "";
   const SECTION_THEMES = {
-    wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/dungeon.jpg",  accent: "#8ebbe0", fx: "dust" },
+    wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/mushroom.jpg",  accent: "#8ebbe0", fx: "dust" },
     bosses:    { eyebrow: "Бестиарий Каламити", mark: "☠", no: "II",  cover: "assets/headers/bosses.webp",    bg: "assets/themes/brimstone.jpg", accent: "#f06c73", fx: "fire" },
-    items:     { eyebrow: "Арсенал героя",      mark: "◆", no: "III", cover: "assets/headers/items.webp",     bg: "assets/themes/wulfrum.jpg",   accent: "#68d8c9", fx: "sparks" },
-    favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "IV",  cover: "assets/headers/favorites.webp", bg: "assets/hero.jpg",             accent: "#efc66e", fx: "stars" },
-    lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "V",   cover: "assets/headers/lex.webp",       bg: "assets/themes/mushroom.jpg",  accent: "#c997e8", fx: "spores" },
+    items:     { eyebrow: "Арсенал героя",      mark: "◆", no: "III", cover: "assets/headers/items.webp",     bg: "assets/themes/desert.jpg",    accent: "#68d8c9", fx: "sparks" },
+    favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "IV",  cover: "assets/headers/favorites.webp", bg: "assets/themes/dungeon.jpg",   accent: "#efc66e", fx: "stars" },
+    lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "V",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.jpg",       accent: "#c997e8", fx: "spores" },
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VI",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.jpg",      accent: "#eea85b", fx: "embers" },
     biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.jpg",    accent: "#91d47f", fx: "leaves" }
   };
@@ -446,7 +446,8 @@
         </div>
         <div class="hero-visual" aria-hidden="true">
           <div class="crest-card">
-            <img src="assets/veteran.jpg" alt="" width="1400" height="800" />
+            <img class="crest-scene" src="assets/crest.jpg" alt="" width="900" height="1100" />
+            <img class="crest-emblem" src="assets/emblem.png" alt="Calamity" width="704" height="384" />
             <div class="crest-content">
               <small>Текущая глава · ${String(current.id).padStart(2, "0")}</small>
               <h2>${esc(current.title)}</h2>
@@ -717,6 +718,90 @@
     Silva: "assets/sprites/SilvaArmor.png", "Auric Tesla": "assets/sprites/AuricTeslaBodyArmor.png",
     Demonshade: "assets/sprites/DemonshadeBreastplate.png"
   };
+  // Dictionary entries include biomes, classes and mechanics that do not have
+  // inventory sprites of their own. Those cards use either the exact game UI /
+  // NPC texture or a clearly related in-game landmark material; never a made-up
+  // icon. Keeping the mapping explicit avoids brittle filename guessing.
+  const LEX_ART = {
+    Underworld: "assets/lex/vanilla/hellstone.png",
+    Adrenaline: "assets/lex/calamity/adrenaline.png",
+    Hellforge: "assets/lex/vanilla/hellforge.png",
+    Hellstone: "assets/lex/vanilla/hellstone.png",
+    "Demon Altar": "assets/lex/vanilla/demon-altar.png",
+    Archmage: "assets/lex/calamity/archmage.png",
+    Bandit: "assets/lex/calamity/bandit.png",
+    Abyss: "assets/sprites/SeaRemains.png",
+    "Bio-center Lab": "assets/lex/calamity/laboratory-icon.png",
+    "Mollusk armor": "assets/sprites/MolluskShellmet.png",
+    Codebreaker: "assets/sprites/CodebreakerBase.png",
+    "Victide armor": "assets/sprites/VictideBreastplate.png",
+    "Revengeance Mode": "assets/lex/calamity/adrenaline.png",
+    "Wulfrum armor": "assets/sprites/WulfrumJacket.png",
+    Guide: "assets/lex/vanilla/guide.png",
+    "Glowing Mushroom biome": "assets/lex/vanilla/mushroom.png",
+    Dungeon: "assets/lex/vanilla/blue-dungeon-brick.png",
+    Jungle: "assets/lex/vanilla/jungle-spores.png",
+    "Ancient Manipulator": "assets/lex/vanilla/ancient-manipulator.png",
+    "Sunken Sea": "assets/sprites/SeaPrism.png",
+    "Acid Rain": "assets/sprites/SulphuricScale.png",
+    "Night's Edge": "assets/lex/vanilla/nights-edge.png",
+    Space: "assets/lex/vanilla/fallen-star.png",
+    "Mana Crystal": "assets/lex/vanilla/mana-crystal.png",
+    Forest: "assets/lex/vanilla/acorn.png",
+    "Lunatic Cultist": "assets/lex/vanilla/lunatic-cultist.png",
+    "Tinkerer's Workshop": "assets/lex/vanilla/tinkerers-workshop.png",
+    Mechanic: "assets/lex/vanilla/mechanic.png",
+    Minishark: "assets/lex/vanilla/minishark.png",
+    "Mythril Anvil": "assets/lex/vanilla/mythril-anvil.png",
+    "Sea King": "assets/lex/calamity/sea-king.png",
+    "Iron Anvil": "assets/lex/vanilla/iron-anvil.png",
+    "Cloud in a Bottle": "assets/lex/vanilla/cloud-in-a-bottle.png",
+    Ocean: "assets/lex/vanilla/coral.png",
+    Rogue: "assets/sprites/RogueEmblem.png",
+    Desert: "assets/lex/vanilla/sand-block.png",
+    "Death Mode": "assets/lex/calamity/rage.png",
+    "Hermes Boots": "assets/lex/vanilla/hermes-boots.png",
+    Shrine: "assets/item-sprites/LuxorsGift.png",
+    "The Hallow": "assets/lex/vanilla/crystal-shard.png",
+    "Brimstone Witch": "assets/lex/calamity/brimstone-witch.png",
+    "Sulphurous Sea": "assets/sprites/SulphuricScale.png",
+    "Brimstone Crag": "assets/sprites/CharredIdol.png",
+    "Snow biome": "assets/lex/vanilla/ice-block.png",
+    Schematic: "assets/sprites/EncryptedSchematicSunkenSea.png",
+    "Fallen Star": "assets/lex/vanilla/fallen-star.png",
+    "Life Fruit": "assets/lex/vanilla/life-fruit.png",
+    "Chlorophyte Ore": "assets/lex/vanilla/chlorophyte-ore.png",
+    Deerclops: "assets/lex/vanilla/deerclops.png",
+    "Plaguebringer armor": "assets/sprites/PlaguebringerCarapace.png",
+    Rage: "assets/lex/calamity/rage.png"
+  };
+  // Some dictionary concepts have no standalone texture in the game. In those
+  // cases the card says exactly what genuine related asset is being shown.
+  const LEX_ART_NOTE = {
+    Underworld: "Материал биома",
+    Abyss: "Материал биома",
+    "Mollusk armor": "Предмет комплекта",
+    "Victide armor": "Предмет комплекта",
+    "Revengeance Mode": "Связанный интерфейс",
+    "Wulfrum armor": "Предмет комплекта",
+    "Glowing Mushroom biome": "Материал биома",
+    Dungeon: "Материал биома",
+    Jungle: "Материал биома",
+    "Sunken Sea": "Материал биома",
+    "Acid Rain": "Материал события",
+    Space: "Объект локации",
+    Forest: "Материал биома",
+    Ocean: "Материал биома",
+    Rogue: "Эмблема класса",
+    Desert: "Материал биома",
+    "Death Mode": "Связанный интерфейс",
+    Shrine: "Награда святилища",
+    "The Hallow": "Материал биома",
+    "Sulphurous Sea": "Материал биома",
+    "Brimstone Crag": "Предмет биома",
+    "Snow biome": "Материал биома",
+    "Plaguebringer armor": "Предмет комплекта"
+  };
   const LEX_KIND = {
     "Босс": "boss", "Мини-босс": "boss", "Биом": "world", "Структура": "world", "Событие": "world",
     "Механика": "mechanic", "Сложность": "mechanic", "Класс": "mechanic", "Мод": "mechanic", "НПС": "npc",
@@ -744,6 +829,7 @@
   }
   function resolveArt(name, explicit = "") {
     if (explicit) return explicit;
+    if (LEX_ART[name]) return LEX_ART[name];
     if (REFERENCE_ART[name]) return REFERENCE_ART[name];
     const lex = CODEX.lookup ? CODEX.lookup(name) : null;
     const names = [name, lex && lex.en, lex && lex.ru].filter(Boolean);
@@ -1040,11 +1126,13 @@
   function lexCard(e) {
     const kind = LEX_KIND[e.type] || "mat";
     const art = BOSS_ART_BY_ID[e.id] || "";
+    const artNote = LEX_ART_NOTE[e.en || e.ru] || "";
     const wikiName = e.en || e.ru;
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(wikiName)}`;
     return `<article class="item-card has-art lex-card" data-kind="${escAttr(kind)}">
       <div class="item-shot lex-shot ${escAttr(kind)}">
         ${visualArt(e.en || e.ru, kind, art)}
+        ${artNote ? `<span class="art-provenance">${esc(artNote)}</span>` : ""}
         <span class="kind-pill">${esc(e.type)}</span>
         <span class="tag-cls all">RU / EN</span>
       </div>
