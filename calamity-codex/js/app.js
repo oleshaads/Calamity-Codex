@@ -723,32 +723,28 @@
     const purpose = catalogPurpose(item);
     const useWhen = CATALOG_STAGE[Math.min(Math.max(item.stage, 0), CATALOG_STAGE.length - 1)];
     const art = item.image
-      ? `<img class="catalog-item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async">`
-      : `<span class="catalog-fallback-art ${escAttr(item.kind)}" role="img" aria-label="Изображение категории">${KIND_SVG[item.kind] || KIND_SVG.mat || ITEM_KIND_MARK[item.kind] || "◆"}</span>`;
-    return `<article class="catalog-card catalog-card-rich" data-kind="${escAttr(item.kind)}">
-      <div class="catalog-card-visual ${escAttr(item.kind)}">
+      ? `<img class="item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async" data-kind="${escAttr(item.kind || "mat")}">`
+      : (KIND_SVG[item.kind] || KIND_SVG.mat || `<span class="item-slot" aria-hidden="true"></span>`);
+    return `<article class="item-card has-art catalog-item-card" data-kind="${escAttr(item.kind)}">
+      <div class="item-shot ${escAttr(item.cls)} ${escAttr(item.kind)}">
         ${art}
-        <span class="catalog-stage-mark">${item.stage ? `T${item.stage}` : "?"}</span>
+        ${favoriteButton("item", item.name, item.name)}
+        <span class="kind-pill">${esc(KIND_RU[item.kind] || item.kind)}</span>
+        <span class="tag-cls ${escAttr(item.cls)}">${esc(classLabel)}</span>
       </div>
-      <div class="catalog-card-copy">
-        <b>${esc(item.name)}</b>
-        <small>${esc(KIND_RU[item.kind] || item.kind)} · ${esc(classLabel)}</small>
-        <span>${esc(item.group)}</span>
-        <div class="catalog-effect">
-          <em>${item.tooltip ? "Механика из игры" : "Назначение"}</em>
-          <p>${esc(item.tooltip || purpose)}</p>
-        </div>
-        <div class="catalog-card-facts">
-          <div class="catalog-card-fact obtain"><span>Где взять</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>
-          <div class="catalog-card-fact purpose"><span>Зачем нужен</span><p>${esc(purpose)}</p></div>
-          <div class="catalog-card-fact timing"><span>Когда использовать</span><p>${esc(useWhen)}</p></div>
+      <div class="body">
+        <b>${esc(item.name)}<span class="en-sub">${esc(item.group)}</span></b>
+        <p class="desc">${esc(item.tooltip || purpose)}</p>
+        <div class="item-foot">
+          <div class="fact"><span>Где</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>
+          <div class="fact"><span>Зачем</span><p>${esc(purpose)}</p></div>
+          <div class="fact"><span>Когда</span><p>${esc(useWhen)}</p></div>
         </div>
         <div class="catalog-card-links">
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Рецепт и шансы на wiki ↗</a>
           ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть практическую рекомендацию ${escAttr(detailName)}">Рекомендация кодекса →</a>` : ""}
         </div>
       </div>
-      ${favoriteButton("item", item.name, item.name)}
     </article>`;
   }
 
@@ -1099,7 +1095,7 @@
         </div>
         ${visible.length
           ? mode === "catalog"
-            ? `<div class="catalog-grid rich-catalog">${visible.map(indexedItemCard).join("")}</div>
+            ? `<div class="item-grid full-catalog-grid">${visible.map(indexedItemCard).join("")}</div>
               ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(CATALOG_PAGE_SIZE, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
             : `<div class="item-grid">${visible.map((item) => itemCard(item, cls, "all")).join("")}</div>`
           : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй официальное английское название.</p><a class="btn ghost" href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a></div>`}
@@ -1244,7 +1240,7 @@
         </div>
         ${total ? `
           ${items.length ? shelf("Предметы с рекомендациями", items.length, `<div class="item-grid">${items.map((item) => itemCard(item, "all", "all")).join("")}</div>`, true) : ""}
-          ${indexedFavorites.length ? shelf("Предметы из полного индекса", indexedFavorites.length, `<div class="catalog-grid rich-catalog">${indexedFavorites.map(indexedItemCard).join("")}</div>`, true) : ""}
+          ${indexedFavorites.length ? shelf("Предметы из полного индекса", indexedFavorites.length, `<div class="item-grid full-catalog-grid">${indexedFavorites.map(indexedItemCard).join("")}</div>`, true) : ""}
           ${bosses.length ? shelf("Боссы", bosses.length, `<div class="item-grid">${bosses.map(bossCard).join("")}</div>`, true) : ""}
           ${crafts.length ? shelf("Крафты", crafts.length, `<div class="craft-grid">${crafts.map(craftCard).join("")}</div>`, true) : ""}
           <div class="favorites-more"><span>Нужно добавить ещё?</span><a href="#/items">Предметы</a><a href="#/bosses">Боссы</a><a href="#/crafts">Крафты</a></div>
