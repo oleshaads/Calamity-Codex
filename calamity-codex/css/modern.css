@@ -142,8 +142,8 @@ svg { display: block; }
   padding: 20px 14px 14px;
   border-right: 1px solid #34404c;
   background:
-    linear-gradient(180deg, rgba(20,27,37,.98), rgba(8,12,18,.985)),
-    url("../assets/emblem.webp") center / cover;
+    linear-gradient(180deg, rgba(20,27,37,.96), rgba(8,12,18,.98)),
+    url("../assets/themes/brimstone.jpg") center / cover;
   box-shadow: 12px 0 48px rgba(0,0,0,.24), inset -1px 0 rgba(255,255,255,.025);
 }
 .rail::before {
@@ -183,7 +183,7 @@ svg { display: block; }
   border-radius: inherit;
   pointer-events: none;
 }
-.brand-art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 47%; transform: scale(1.45); }
+.brand-art img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
 .brand-copy { min-width: 0; }
 .brand-copy b {
   display: block;
@@ -1087,9 +1087,24 @@ body[data-view="biomes"] .page-head-art { background-position: center 42%; }
 .item-shot.potion { background: radial-gradient(ellipse at 50% 72%, #173e3a, #0c1118 69%); }
 .item-shot.mat, .item-shot.tool { background: radial-gradient(ellipse at 50% 72%, #3c3420, #0c1118 69%); }
 .item-art { position: relative; z-index: 1; width: auto; height: 66px; max-width: 104px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 7px 2px rgba(0,0,0,.65)); transition: transform .2s ease; }
-.item-shot .item-ico { position: relative; z-index: 1; width: 56px; height: 56px; filter: drop-shadow(0 7px 2px rgba(0,0,0,.65)); }
 .item-card:hover .item-art { transform: translateY(-2px) scale(1.06); }
-.item-slot { position: relative; z-index: 1; width: 56px; height: 56px; border: 2px solid #65583e; border-radius: 3px; background: linear-gradient(145deg, #1a1714, #090c10); box-shadow: inset 0 0 0 1px #000, inset 0 0 12px #000; }
+.sprite-unavailable {
+  position: relative;
+  z-index: 1;
+  width: 70px;
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  border: 1px dashed #65583e;
+  border-radius: 4px;
+  color: #867965;
+  background: rgba(6,9,13,.7);
+  text-align: center;
+}
+.sprite-unavailable b { font-size: 22px; line-height: 1; }
+.sprite-unavailable small { font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .kind-pill { position: absolute; z-index: 2; left: 11px; bottom: 9px; padding: 3px 7px; border: 1px solid #4a5662; border-radius: 4px; color: var(--gold); background: rgba(7,10,15,.88); font-size: 8px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .item-shot .tag-cls { position: absolute; z-index: 2; right: 11px; bottom: 9px; }
 .item-card.mine { border-color: #6c5938; }

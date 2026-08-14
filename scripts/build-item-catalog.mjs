@@ -395,6 +395,74 @@ function fallbackObtain(item, sources) {
   return byGroup[item.groupId] || "Точный источник и шанс смотри на официальной wiki по ссылке в карточке.";
 }
 
+/**
+ * Build an original Russian reader-facing summary from structured catalog facts.
+ * The English tooltip remains source/search metadata only and is never rendered.
+ * Keyword checks merely select truthful mechanic sentences; no third-party
+ * translation is copied into the distributable catalog.
+ */
+function russianDescription(item) {
+  const tooltip = String(item.tooltip || "").toLocaleLowerCase("en-US");
+  const id = item.id.toLocaleLowerCase("en-US");
+  const sentences = [];
+  const add = (condition, text) => {
+    if (condition && !sentences.includes(text) && sentences.length < 3) sentences.push(text);
+  };
+
+  if (item.groupId === "weapons-magic") sentences.push("Магическое оружие: расходует ману и наносит магический урон.");
+  else if (item.groupId === "weapons-summon") sentences.push("Оружие призывателя: создаёт миньона или турель, которые сражаются за персонажа.");
+  else if (item.groupId === "weapons-rogue") sentences.push("Оружие плута: использует механику скрытности и наносит разбойничий урон.");
+  else if (["weapons-ranged", "weapons-draedon"].includes(item.groupId)) sentences.push("Дальнобойное оружие стрелка, рассчитанное на бой с дистанции.");
+  else if (item.groupId === "weapons-melee") sentences.push("Оружие воина для ближнего боя или атак ближнего класса на расстоянии.");
+  else if (item.groupId === "weapons-classless") sentences.push("Бесклассовое оружие: его эффект не привязан к одному основному классу урона.");
+  else if (item.groupId === "Accessories.Wings" || item.groupId === "wings") sentences.push("Крылья: дают полёт, замедляют падение и повышают мобильность.");
+  else if (item.groupId === "accessories") sentences.push("Аксессуар: даёт пассивный эффект, пока находится в соответствующем слоте.");
+  else if (item.groupId.startsWith("armor-vanity")) sentences.push("Декоративный элемент экипировки: меняет внешний вид персонажа без боевых характеристик.");
+  else if (item.groupId.startsWith("armor-")) sentences.push("Часть комплекта брони: даёт защиту и характеристики, а полный набор может открыть отдельный бонус.");
+  else if (item.groupId === "ammo") sentences.push("Боеприпас для подходящего оружия; влияет на урон или поведение выстрела.");
+  else if (item.groupId === "materials") sentences.push("Материал для крафта: сохраняй его для оружия, брони, аксессуаров или дальнейших компонентов.");
+  else if (item.groupId === "summon-items") sentences.push("Предмет для запуска связанного боя, события или особого условия прогрессии.");
+  else if (item.groupId === "treasure-bags") sentences.push("Сумка с наградами босса: открывается ради материалов, экипировки и экспертных предметов.");
+  else if (item.groupId === "pets") sentences.push("Предмет питомца: призывает декоративного спутника и подходит для коллекции.");
+  else if (item.groupId === "mounts") sentences.push("Предмет маунта: призывает средство передвижения с собственной механикой мобильности.");
+  else if (item.groupId === "lore") sentences.push("Предмет истории мира: фиксирует важную находку или победу и раскрывает сведения о Calamity.");
+  else if (item.groupId === "dyes") sentences.push("Краситель: меняет цвет экипировки, питомца или маунта.");
+  else if (item.groupId === "potions") sentences.push("Расходуемый предмет: применяется ради лечения, временного эффекта или постоянного усиления.");
+  else if (item.groupId === "fishing") {
+    if (/rod|pole/.test(id)) sentences.push("Рыболовный инструмент: используется для ловли в подходящем биоме.");
+    else if (/crate/.test(id)) sentences.push("Рыболовный ящик: открой его, чтобы получить материалы и тематические награды.");
+    else if (/bait|worm|butterfly/.test(id)) sentences.push("Наживка для рыбалки; сила влияет на шанс успешного улова.");
+    else sentences.push("Рыболовный предмет: связан с уловом, наживкой или наградами определённого биома.");
+  } else if (item.groupId === "tools") sentences.push("Инструмент для добычи, строительства, перемещения или исследования мира.");
+  else if (item.groupId === "placeables") {
+    if (/wall/.test(id)) sentences.push("Строительная стена: размещается на заднем плане для оформления построек.");
+    else if (/platform/.test(id)) sentences.push("Размещаемая платформа: служит полом, через который можно проходить по вертикали.");
+    else if (/chest|dresser|cabinet/.test(id)) sentences.push("Размещаемое хранилище или мебель для базы.");
+    else if (/torch|candle|lamp|lantern|chandelier/.test(id)) sentences.push("Размещаемый источник света для базы или декоративной постройки.");
+    else if (/chair|table|bed|bookcase|piano|sofa|toilet|sink|bathtub|clock/.test(id)) sentences.push("Размещаемый предмет мебели для строительства и оформления базы.");
+    else if (/workbench|anvil|forge|station|fabricator|accelerator|condenser/.test(id)) sentences.push("Размещаемая рабочая станция, открывающая связанные рецепты крафта.");
+    else if (/trophy|relic|banner/.test(id)) sentences.push("Размещаемый трофей, отмечающий победу или коллекционное достижение.");
+    else sentences.push("Размещаемый игровой объект для строительства, декора или работы базы.");
+  } else if (item.groupId === "draedon-items") sentences.push("Технологический предмет Дрейдона для исследования лабораторий, механизмов или высокоуровневого крафта.");
+  else sentences.push("Специализированный предмет Calamity; точное применение и ограничения указаны на официальной wiki.");
+
+  add(/right.?click|пкм/.test(tooltip), "Имеет альтернативное действие или атаку по ПКМ.");
+  add(/homing|homes in|seek(?:s|ing)? (?:out |nearby )?(?:enemies|targets)|tracks (?:enemies|targets)/.test(tooltip), "Снаряды способны самостоятельно наводиться на цель.");
+  add(/pierc/.test(tooltip), "Атака может пронзать несколько целей.");
+  add(/ricochet|bounce/.test(tooltip), "Снаряды могут отскакивать или рикошетить.");
+  add(/explod|explos/.test(tooltip), "Атака или снаряд создаёт взрывной эффект.");
+  add(/stealth strike/.test(tooltip), "Усиленный удар из скрытности получает особый эффект.");
+  add(/dash/.test(tooltip) && item.groupId === "accessories", "Открывает или улучшает боевой рывок.");
+  add(/flight time|flying|fly/.test(tooltip) && item.groupId === "accessories", "Повышает возможности полёта или воздушного перемещения.");
+  add(/movement speed/.test(tooltip) && item.groupId === "accessories", "Повышает скорость и общую мобильность персонажа.");
+  add(/immun/.test(tooltip) && item.groupId === "accessories", "Даёт защиту от связанных отрицательных эффектов.");
+  add(/permanent|permanently/.test(tooltip) && item.groupId === "potions", "После использования даёт постоянное улучшение текущему персонажу.");
+  add(/heals?|health|life regeneration/.test(tooltip) && item.groupId === "potions", "Восстанавливает здоровье или поддерживает его регенерацию.");
+  add(/mana/.test(tooltip) && item.groupId === "potions", "Восстанавливает ману или временно меняет её расход.");
+
+  return sentences.join(" ");
+}
+
 function imageCandidates(item, file, segment, pngByBase, relatedPngByBase) {
   const candidates = [];
   const key = item.id.toLocaleLowerCase("en-US");
@@ -498,11 +566,20 @@ for (let pass = 0; pass < 5; pass += 1) {
   }
 }
 
-const itemRecords = items.map((item) => {
+// Localization-only/internal records without a verified game sprite are not
+// reader-facing items. Omitting them is more honest than inventing category art.
+const publicItems = items.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).image);
+const publicGroupCounts = publicItems.reduce((counts, item) => {
+  counts.set(item.groupId, (counts.get(item.groupId) || 0) + 1);
+  return counts;
+}, new Map());
+groupRecords.forEach((group) => { group[4] = publicGroupCounts.get(group[0]) || 0; });
+
+const itemRecords = publicItems.map((item) => {
   const record = meta.get(item.id.toLocaleLowerCase("en-US"));
   const recipe = record.recipes[0];
   const obtain = recipeText(recipe) || fallbackObtain(item, drops.get(item.id.toLocaleLowerCase("en-US")));
-  return [item.name, item.groupId, item.id, item.tooltip, record.image ? 1 : 0, obtain, record.stage];
+  return [item.name, item.groupId, item.id, item.tooltip, 1, obtain, record.stage, russianDescription(item)];
 });
 
 let commit = "unknown";
@@ -516,9 +593,11 @@ try {
 
 const coverage = {
   tooltips: itemRecords.filter((item) => item[3]).length,
-  sprites: itemRecords.filter((item) => item[4]).length,
-  recipes: items.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).recipes.length).length,
-  sourceFiles: items.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).file).length
+  russianDescriptions: itemRecords.filter((item) => item[7]).length,
+  sprites: itemRecords.length,
+  recipes: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).recipes.length).length,
+  sourceFiles: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).file).length,
+  omittedWithoutSprite: items.length - publicItems.length
 };
 const payload = {
   modVersion: "2.2.2",
@@ -534,4 +613,4 @@ const banner = `/* Rich offline Calamity Mod item catalog. Generated; do not edi
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, `${banner}window.CALAMITY_ITEM_INDEX=${JSON.stringify(payload)};\n`);
 console.log(`Wrote ${itemRecords.length} unique items across ${groupRecords.length} groups to ${output}`);
-console.log(`Coverage: ${coverage.sprites} sprites, ${coverage.tooltips} tooltips, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files`);
+console.log(`Coverage: ${coverage.sprites} verified sprites, ${coverage.russianDescriptions} Russian descriptions, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files; ${coverage.omittedWithoutSprite} sprite-less records omitted`);

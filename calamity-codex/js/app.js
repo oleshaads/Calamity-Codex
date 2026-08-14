@@ -42,11 +42,12 @@
 
   function indexedItems() {
     if (indexedItemsCache) return indexedItemsCache;
-    indexedItemsCache = (ITEM_INDEX.items || []).map(([name, groupId, id, tooltip, image, obtain, stage]) => {
+    indexedItemsCache = (ITEM_INDEX.items || []).map(([name, groupId, id, tooltip, image, obtain, stage, description]) => {
       const group = ITEM_GROUPS.get(groupId) || { label: "Предмет", kind: "misc", cls: "all" };
       return {
         name, id, groupId, group: group.label, kind: group.kind, cls: group.cls,
-        tooltip: tooltip || "", image: Boolean(image), obtain: obtain || "", stage: Number(stage || 0)
+        tooltip: tooltip || "", description: description || "", image: Boolean(image),
+        obtain: obtain || "", stage: Number(stage || 0)
       };
     });
     return indexedItemsCache;
@@ -445,7 +446,7 @@
         </div>
         <div class="hero-visual" aria-hidden="true">
           <div class="crest-card">
-            <img src="assets/emblem.webp" alt="" width="704" height="384" />
+            <img src="assets/veteran.jpg" alt="" width="1400" height="800" />
             <div class="crest-content">
               <small>Текущая глава · ${String(current.id).padStart(2, "0")}</small>
               <h2>${esc(current.title)}</h2>
@@ -642,20 +643,11 @@
     "Plaguebringer / Plague Reaper armor": "Plaguebringer_armor",
     "God Slayer / Silva armor": "God_Slayer_armor"
   };
-  const KIND_SVG = {
-    weapon: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#e8c56b" d="M40 6 22 24l-2 8 8-2L46 12z"/><path fill="#9a9186" d="M20 28 8 40l4 2 10-12z"/></svg>',
-    armor: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#c8b896" d="M24 6 10 12v10c0 10 6 16 14 20 8-4 14-10 14-20V12z"/></svg>',
-    acc: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="26" r="10" fill="none" stroke="#d4ae5a" stroke-width="3"/><circle cx="24" cy="26" r="4" fill="#d4ae5a"/><path d="M20 10h8v6h-8z" fill="#8a8070"/></svg>',
-    tool: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#8aa4d4" d="M10 38 28 20l4 4L14 42z"/><path fill="#d4ae5a" d="M30 8l10 10-8 4-6-6z"/></svg>',
-    mat: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#7ad3a0" d="M24 6 40 18 34 40H14L8 18z"/></svg>',
-    summon: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#d07aff" d="M24 6c6 8 14 10 14 20 0 8-6 16-14 16S10 34 10 26C10 16 18 14 24 6z"/></svg>',
-    potion: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#6ecbff" d="M20 6h8v8l8 14c0 8-6 14-12 14S12 36 12 28l8-14z"/></svg>',
-    boss: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#df7680" d="m8 11 8 5a16 16 0 0 1 16 0l8-5-3 10a15 15 0 0 1 2 8c0 9-7 14-15 14S9 38 9 29a15 15 0 0 1 2-8z"/><path fill="#111820" d="M15 27h7l-4 6zm11 0h7l-3 6zM21 36h6v4h-6z"/></svg>',
-    world: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#75bd91" d="M5 39 17 17l7 10 6-9 13 21z"/><path fill="#b9e9ee" d="m13 25 4-8 4 6-4-2z"/><circle cx="35" cy="12" r="5" fill="#d9bd69"/></svg>',
-    mechanic: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="none" stroke="#b695dc" stroke-width="3" d="M24 5v38M7 14l34 20M41 14 7 34"/><circle cx="24" cy="24" r="9" fill="#2c1b3d" stroke="#d39bf0" stroke-width="3"/></svg>',
-    npc: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="15" r="9" fill="#8ebbe0"/><path fill="#6688a8" d="M8 43c1-12 7-18 16-18s15 6 16 18z"/></svg>',
-    misc: '<svg class="item-ico" viewBox="0 0 48 48" aria-hidden="true"><path fill="#9fb0bc" d="M8 15 24 6l16 9v20l-16 8-16-8z"/><path fill="#687985" d="m8 15 16 8 16-8v5l-16 8-16-8z"/></svg>'
-  };
+  function unavailableArt(kind = "misc") {
+    const mark = ITEM_KIND_MARK[kind] || "·";
+    return `<span class="sprite-unavailable" aria-label="Официальный спрайт не найден"><b aria-hidden="true">${esc(mark)}</b><small>нет спрайта</small></span>`;
+  }
+
 
   const BOSS_ART = {
     1: "assets/sprites/Slime_Crown.png",
@@ -665,9 +657,11 @@
     5: "assets/sprites/Worm_Food.png",
     6: "assets/boss-sprites/hive-mind.png",
     7: "assets/sprites/Abeemination.png",
+    8: "assets/sprites/Deer_Thing.png",
     10: "assets/boss-sprites/slime-god.png",
     11: "assets/sprites/Guide_Voodoo_Doll.png",
     13: "assets/boss-sprites/cryogen.png",
+    14: "assets/item-sprites/LoreMechs.png",
     15: "assets/boss-sprites/aquatic-scourge.png",
     16: "assets/boss-sprites/brimstone-elemental.png",
     17: "assets/boss-sprites/calamitas-clone.png",
@@ -677,6 +671,7 @@
     21: "assets/sprites/Lihzahrd_Power_Cell.png",
     22: "assets/boss-sprites/plaguebringer-goliath.png",
     23: "assets/boss-sprites/ravager.png",
+    24: "assets/item-sprites/LoreDukeFishron.png",
     25: "assets/boss-sprites/astrum-deus.png",
     26: "assets/sprites/Celestial_Sigil.png",
     27: "assets/boss-sprites/profaned-guardians.png",
@@ -767,7 +762,7 @@
     const src = resolveArt(name, explicit);
     return src
       ? `<img class="item-art" src="${escAttr(src)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(kind)}">`
-      : (KIND_SVG[kind] || KIND_SVG.mat);
+      : unavailableArt(kind);
   }
   function spriteKey(it) {
     if (it.sprite) return it.sprite;
@@ -795,9 +790,9 @@
         function fail() {
           img.removeEventListener("error", step);
           const wrap = img.parentElement;
-          const ico = KIND_SVG[img.dataset.kind] || KIND_SVG.mat;
+          const placeholder = unavailableArt(img.dataset.kind || "misc");
           img.remove();
-          if (wrap) wrap.insertAdjacentHTML("afterbegin", ico);
+          if (wrap) wrap.insertAdjacentHTML("afterbegin", placeholder);
         }
       });
     });
@@ -842,7 +837,7 @@
     const useWhen = CATALOG_STAGE[Math.min(Math.max(item.stage, 0), CATALOG_STAGE.length - 1)];
     const art = item.image
       ? `<img class="item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async" data-kind="${escAttr(item.kind || "mat")}">`
-      : (KIND_SVG[item.kind] || KIND_SVG.mat || `<span class="item-slot" aria-hidden="true"></span>`);
+      : unavailableArt(item.kind);
     return `<article class="item-card has-art catalog-item-card" data-kind="${escAttr(item.kind)}">
       <div class="item-shot ${escAttr(item.cls)} ${escAttr(item.kind)}">
         ${art}
@@ -852,7 +847,7 @@
       </div>
       <div class="body">
         <b>${esc(item.name)}<span class="en-sub">${esc(item.group)}</span></b>
-        <p class="desc">${esc(item.tooltip || purpose)}</p>
+        <p class="desc">${esc(item.description || purpose)}</p>
         <div class="item-foot">
           <div class="fact"><span>Где</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>
           <div class="fact"><span>Зачем</span><p>${esc(purpose)}</p></div>
@@ -886,7 +881,7 @@
     const local = (CODEX.spriteOf ? CODEX.spriteOf(it) : (CODEX.sprites && (CODEX.sprites[it.name] || CODEX.sprites[it.nameRu]))) || "";
     return `<article class="item-card has-art ${hide ? "hidden" : ""} ${dim ? "dim" : ""} ${mine && filter !== "all" ? "mine" : ""}">
       <div class="item-shot ${it.cls} ${it.kind || ""}">
-        ${local ? `<img class="item-art" alt="" src="${local}" loading="lazy" decoding="async" data-file="${escAttr(spriteKey(it))}" data-kind="${escAttr(it.kind || "mat")}" />` : `<div class="item-slot"></div>`}
+        ${local ? `<img class="item-art" alt="" src="${local}" loading="lazy" decoding="async" data-file="${escAttr(spriteKey(it))}" data-kind="${escAttr(it.kind || "mat")}" />` : unavailableArt(it.kind)}
         ${favoriteButton("item", it.name, title)}
         <span class="kind-pill">${esc(kind)}</span>
         <span class="tag-cls ${it.cls}">${CLS_RU[it.cls] || it.cls}</span>
@@ -1249,7 +1244,7 @@
       if (!search) return true;
       const blob = mode === "guide"
         ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
-        : `${item.name} ${item.id} ${item.group} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`;
+        : `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`;
       return blob.toLocaleLowerCase("ru").includes(search);
     });
     const requestedLimit = Number.parseInt(params.limit, 10);
@@ -1284,14 +1279,14 @@
             <span class="catalog-source-mark" aria-hidden="true">◆</span>
             <div>
               <b>Полные карточки собраны из официальных исходников</b>
-              <p>${fmt(indexCount)} предмета: локальные спрайты, внутриигровые описания, рецепты и подтверждённые источники. Если исходники не называют точный дроп, карточка честно ведёт к актуальной странице wiki.</p>
+              <p>${fmt(indexCount)} подтверждённых предметов: локальные игровые спрайты, русские описания, рецепты и проверяемые источники. Записи без самостоятельного официального изображения не маскируются выдуманной иллюстрацией и не включены в каталог.</p>
               <small>Calamity Mod ${esc(ITEM_INDEX.modVersion || CODEX.version)} · срез ${esc(sourceDate || "2026-08-15")} · ${esc(sourceCommit || "source")}</small>
             </div>
             <a href="https://github.com/CalamityTeam/CalamityModPublic" target="_blank" rel="noopener noreferrer">Исходные данные ↗</a>
           </section>
           <div class="catalog-stat-strip" aria-label="Покрытие полного каталога">
             <span><b>${fmt(coverage.sprites || 0)}</b><small>официальных спрайтов</small></span>
-            <span><b>${fmt(coverage.tooltips || 0)}</b><small>механик из игры</small></span>
+            <span><b>${fmt(coverage.russianDescriptions || 0)}</b><small>описаний на русском</small></span>
             <span><b>${fmt(coverage.recipes || 0)}</b><small>локальных рецептов</small></span>
             <span><b>${fmt(indexCount)}</b><small>подробных карточки</small></span>
           </div>
@@ -1586,7 +1581,7 @@
       }
     });
     indexedItems().forEach((item) => {
-      const blob = `${item.name} ${item.id} ${item.group} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`.toLocaleLowerCase("ru");
+      const blob = `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`.toLocaleLowerCase("ru");
       const key = String(item.name).toLocaleLowerCase("ru");
       if (blob.includes(q) && !itemHitNames.has(key)) {
         hits.push({
