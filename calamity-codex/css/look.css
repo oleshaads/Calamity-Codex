@@ -1,0 +1,82 @@
+/* Финальный визуал: читаемый кодекс */
+:root {
+  --ink: #f3ead8;
+  --ink-dim: #c9bba4;
+}
+
+body { color: var(--ink-dim); }
+
+.quest-side {
+  background: rgba(8,5,8,.82);
+  border: 1px solid color-mix(in srgb, var(--accent, #e8b84a) 28%, #2a1814);
+  box-shadow: 8px 16px 50px #0008;
+}
+.quest-side .q-item { position: relative; padding-left: 12px; }
+.quest-side .q-item::before {
+  content: "";
+  position: absolute; left: 21px; top: 36px; bottom: -8px;
+  width: 2px;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.quest-side .q-item:last-child::before { display: none; }
+.q-item.active .q-num {
+  background: var(--accent); color: #1a0c08;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.q-item.done .q-num { background: #2e8b57; color: #e8ffe8; }
+
+.quest {
+  background:
+    linear-gradient(180deg, rgba(28, 18, 16, .94), rgba(14, 8, 10, .96));
+  box-shadow:
+    0 30px 80px #000c,
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.block h3 {
+  color: #ffe7b0;
+  font-size: 16px;
+}
+.story { color: #f0e6d4; font-size: 17.5px; }
+.info-card p, .step p, .kill-card p { color: #ddd0bc; }
+
+.orn {
+  display: block; height: 20px; margin: 6px auto 18px;
+  background: url("../assets/ornament.svg") center/min(280px, 80%) no-repeat;
+  opacity: .7;
+}
+
+.page-head {
+  display: flex; flex-direction: column; gap: 6px;
+  padding-bottom: 8px;
+}
+.page-head::after {
+  content: "";
+  display: block; height: 20px;
+  background: url("../assets/ornament.svg") center/min(240px, 70%) no-repeat;
+  opacity: .55;
+}
+
+.hero::after {
+  content: "";
+  position: absolute; inset: auto 0 0 0; height: 140px;
+  background: linear-gradient(180deg, transparent, var(--void));
+  pointer-events: none;
+}
+
+.mode-card {
+  outline: 1px solid transparent;
+}
+.mode-card:hover { outline-color: #e8b84a; }
+
+.tt {
+  backdrop-filter: blur(12px);
+  border-width: 1px;
+}
+
+/* brighter item facts if old markup */
+.item-card .get b, .item-card p b { color: #ffe08a; }
+
+@media (max-width: 900px) {
+  .how-row { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,44 @@
+.tip {
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent, #e8b84a) 70%, #888);
+  cursor: help;
+  color: inherit;
+}
+.tip:hover { color: var(--accent, #e8b84a); background: color-mix(in srgb, var(--accent, #e8b84a) 12%, transparent); }
+
+.tt {
+  position: fixed; z-index: 80;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+  background: linear-gradient(180deg, #1a1016f5, #10080cf5);
+  border: 1px solid var(--accent, #e8b84a);
+  border-radius: 14px;
+  padding: 12px 14px 14px;
+  box-shadow: 0 18px 50px #000c, 0 0 24px color-mix(in srgb, var(--accent, #e8b84a) 25%, transparent);
+  color: #d7cbb8;
+  animation: ttIn .12s ease;
+}
+@keyframes ttIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.tt-type {
+  font-size: 10px; letter-spacing: .18em; text-transform: uppercase; font-weight: 800;
+  color: var(--accent, #e8b84a); margin-bottom: 4px;
+}
+.tt-ru { font-family: "Cinzel", serif; font-size: 18px; color: #f3e6c8; line-height: 1.2; }
+.tt-en { font-size: 12px; color: #8a7b72; margin: 2px 0 8px; font-family: "JetBrains Mono", monospace; }
+.tt p { font-size: 13px; line-height: 1.45; margin: 0 0 8px; }
+.tt p:last-child { margin-bottom: 0; }
+.tt b { color: #ffe08a; font-weight: 700; }
+
+.stats-line {
+  font-size: 12px; font-weight: 700; color: #9be7d8;
+  background: #0a1416; border-radius: 8px; padding: 6px 8px; margin: 6px 0;
+}
+.item-card .desc { color: #d7cbb8; font-size: 14px; margin: 6px 0; }
+.info-card { min-height: 88px; }
+.info-card p { font-size: 14px; color: #c9bba8; line-height: 1.5; }
+
+.obj-box {
+  background: color-mix(in srgb, var(--accent) 10%, #12090c);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, #3a241f);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;
+}
+.obj-box strong { color: var(--accent); letter-spacing: .12em; font-size: 11px; text-transform: uppercase; display: block; margin-bottom: 4px; }
