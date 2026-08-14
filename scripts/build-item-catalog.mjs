@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 /**
- * Build the offline item index from CalamityModPublic's English localization.
+ * Build the rich offline item catalog from the official CalamityModPublic source.
  *
  * Usage:
- *   node scripts/build-item-catalog.mjs /path/to/CalamityModPublic/Localization/en-US [output]
+ *   node scripts/build-item-catalog.mjs \
+ *     /path/to/CalamityModPublic/Localization/en-US \
+ *     [calamity-codex/js/catalog.js] \
+ *     [calamity-codex/assets/item-sprites]
+ *
+ * When the source checkout also contains Items/ and NPCs/, the builder adds
+ * official tooltips, crafting/drop hints, progression hints and local sprites.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -12,6 +18,9 @@ import { execFileSync } from "node:child_process";
 const sourceDir = path.resolve(process.argv[2] || "../CalamityModPublic/Localization/en-US");
 const output = path.resolve(process.argv[3] || "calamity-codex/js/catalog.js");
 const sourceRepo = path.resolve(sourceDir, "../..");
+const itemSourceDir = path.join(sourceRepo, "Items");
+const npcSourceDir = path.join(sourceRepo, "NPCs");
+const spriteOutput = path.resolve(process.argv[4] || path.join(path.dirname(output), "../assets/item-sprites"));
 
 const FILE_PREFIX = "Mods.CalamityMod.Items.";
 const FILE_SUFFIX = ".hjson";
@@ -45,44 +54,368 @@ const GROUPS = {
   "Weapons.Typeless": ["weapons-classless", "Бесклассовое оружие", "weapon", "all"]
 };
 
+const STATIONS_RU = {
+  Anvils: "у железной или свинцовой наковальни",
+  WorkBenches: "у верстака",
+  Furnaces: "у печи",
+  Hellforge: "у адской печи",
+  MythrilAnvil: "у мифриловой или орихалковой наковальни",
+  LunarCraftingStation: "у древнего манипулятора",
+  Bookcases: "у книжного шкафа",
+  TinkerersWorkbench: "у мастерской инженера",
+  AlchemyTable: "на алхимическом столе",
+  Bottles: "у поставленной бутылки",
+  CookingPots: "у котла",
+  Loom: "у ткацкого станка",
+  DyeVat: "в красильном чане",
+  Solidifier: "в затвердевателе",
+  HeavyWorkBench: "у тяжёлого верстака",
+  Autohammer: "в автокузнице",
+  CosmicAnvil: "у космической наковальни",
+  DraedonsForge: "в кузнице Дрейдона",
+  VoidCondenser: "в конденсаторе пустоты",
+  ParticleAccelerator: "в ускорителе частиц"
+};
+const RECIPE_GROUP_RU = {
+  AnyGoldBar: "золотой или платиновый слиток",
+  AnyIronBar: "железный или свинцовый слиток",
+  AnyEvilBar: "демонитовый или кримтановый слиток",
+  AnyQuiver: "любой колчан",
+  AnyWings: "любые крылья",
+  AnyWood: "любая древесина",
+  Birds: "любая птица",
+  Butterflies: "любая бабочка",
+  Fragment: "любой небесный фрагмент"
+};
+
+function walkFiles(dir, accept = () => true) {
+  if (!fs.existsSync(dir)) return [];
+  const result = [];
+  const stack = [dir];
+  while (stack.length) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else if (accept(full)) result.push(full);
+    }
+  }
+  return result;
+}
+
 function humanizeId(id) {
-  return id
+  return String(id || "")
     .replace(/Item$/, "")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
+    .replace(/_/g, " ")
     .trim();
 }
 
-function cleanDisplayName(value, id) {
-  let name = value.trim();
-  if ((name.startsWith('"') && name.endsWith('"')) || (name.startsWith("'") && name.endsWith("'"))) {
-    name = name.slice(1, -1);
+function unquote(value) {
+  const text = String(value || "").trim();
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+    return text.slice(1, -1).replace(/\\"/g, '"');
   }
+  return text;
+}
+
+function cleanDisplayName(value, id) {
+  const name = unquote(value);
   if (!name || name === "'''" || /\{\$[^}]+\}/.test(name)) return humanizeId(id);
-  return name.replace(/\\"/g, '"');
+  return name;
+}
+
+function cleanTooltip(value) {
+  return unquote(value)
+    .replace(/\{\$[^}]+\}/g, "")
+    .replace(/\[(?:c)?(?:buff|debuff):(?:[^/\]]+\/)?([^\]]+)\]/gi, (_, id) => humanizeId(id))
+    .replace(/\[(?:i|item):[^\]]+\]/gi, "предмет")
+    .replace(/\[c\/[0-9a-f]+:([^\]]+)\]/gi, "$1")
+    .replace(/<left>/gi, "ЛКМ")
+    .replace(/<right>/gi, "ПКМ")
+    .replace(/\[[A-Z][A-Z ]+\]/g, "")
+    .replace(/\\n/g, " · ")
+    .replace(/\s*\n\s*/g, " · ")
+    .replace(/\s*·\s*·\s*/g, " · ")
+    .replace(/\s+/g, " ")
+    .replace(/^\s*·\s*|\s*·\s*$/g, "")
+    .trim()
+    .slice(0, 520);
+}
+
+function parseTooltip(blockLines) {
+  const index = blockLines.findIndex((line) => /^\tTooltip:\s*/.test(line));
+  if (index < 0) return "";
+  const inline = blockLines[index].replace(/^\tTooltip:\s*/, "").trim();
+  if (inline && inline !== "'''") return cleanTooltip(inline);
+  if (inline === "'''") {
+    const collected = [];
+    for (let i = index + 1; i < blockLines.length; i += 1) {
+      if (blockLines[i].trim() === "'''") break;
+      collected.push(blockLines[i].replace(/^\t+/, ""));
+    }
+    return cleanTooltip(collected.join("\n"));
+  }
+  if (blockLines[index + 1]?.trim() === "'''") {
+    const collected = [];
+    for (let i = index + 2; i < blockLines.length; i += 1) {
+      if (blockLines[i].trim() === "'''") break;
+      collected.push(blockLines[i].replace(/^\t+/, ""));
+    }
+    return cleanTooltip(collected.join("\n"));
+  }
+  return "";
 }
 
 function readItems(file, groupId) {
   const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
   const result = [];
   let currentId = "";
+  let block = [];
+  const flush = () => {
+    if (!currentId) return;
+    const displayLine = block.find((line) => /^\tDisplayName:\s*/.test(line));
+    if (displayLine) {
+      const name = cleanDisplayName(displayLine.replace(/^\tDisplayName:\s*/, ""), currentId);
+      if (name) result.push({ name, groupId, id: currentId, tooltip: parseTooltip(block) });
+    }
+  };
   for (const line of lines) {
     const top = line.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*\{\s*$/);
     if (top) {
+      flush();
       currentId = top[1];
+      block = [];
+    } else if (currentId) {
+      block.push(line);
+    }
+  }
+  flush();
+  return result;
+}
+
+function classSegment(source, id) {
+  const match = new RegExp(`\\bclass\\s+${id}\\b`).exec(source);
+  if (!match) return source;
+  const open = source.indexOf("{", match.index);
+  if (open < 0) return source.slice(match.index);
+  let depth = 0;
+  let string = "";
+  for (let i = open; i < source.length; i += 1) {
+    const char = source[i];
+    const prev = source[i - 1];
+    if (string) {
+      if (char === string && prev !== "\\") string = "";
       continue;
     }
-    if (!currentId) continue;
+    if (char === '"' || char === "'") {
+      string = char;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    if (char === "}" && --depth === 0) return source.slice(match.index, i + 1);
+  }
+  return source.slice(match.index);
+}
+
+function sourceIndex() {
+  const files = walkFiles(itemSourceDir, (file) => file.endsWith(".cs"));
+  const byBase = new Map();
+  const byClass = new Map();
+  const sourceCache = new Map();
+  for (const file of files) {
+    const source = fs.readFileSync(file, "utf8");
+    sourceCache.set(file, source);
+    const base = path.basename(file, ".cs").toLocaleLowerCase("en-US");
+    if (!byBase.has(base)) byBase.set(base, file);
+    for (const match of source.matchAll(/\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+      const key = match[1].toLocaleLowerCase("en-US");
+      if (!byClass.has(key)) byClass.set(key, file);
+    }
+  }
+  return { files, byBase, byClass, sourceCache };
+}
+
+function findSourceFile(index, id) {
+  const key = id.toLocaleLowerCase("en-US");
+  return index.byBase.get(key) || index.byClass.get(key) || "";
+}
+
+function ingredientLabel(id, displayById) {
+  return displayById.get(String(id).toLocaleLowerCase("en-US")) || humanizeId(id);
+}
+
+function parseRecipes(segment, displayById) {
+  const recipes = [];
+  for (const match of segment.matchAll(/CreateRecipe(?:\([^;]{0,120}?\))?[\s\S]{0,4200}?Register\(\);/g)) {
+    const chain = match[0];
+    const ingredients = [];
+    const ingredientIds = [];
+    let item;
+    const typed = /AddIngredient<([A-Za-z_][A-Za-z0-9_]*)>\s*\(\s*(\d+)?\s*\)/g;
+    while ((item = typed.exec(chain))) {
+      const amount = Number(item[2] || 1);
+      ingredientIds.push(item[1]);
+      ingredients.push(`${amount > 1 ? `${amount} × ` : ""}${ingredientLabel(item[1], displayById)}`);
+    }
+    const vanilla = /AddIngredient\(\s*ItemID\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:,\s*(\d+))?\s*\)/g;
+    while ((item = vanilla.exec(chain))) {
+      const amount = Number(item[2] || 1);
+      ingredients.push(`${amount > 1 ? `${amount} × ` : ""}${humanizeId(item[1])}`);
+    }
+    const modContent = /AddIngredient\(\s*(?:ModContent\.)?ItemType<([A-Za-z_][A-Za-z0-9_]*)>\(\)\s*(?:,\s*(\d+))?\s*\)/g;
+    while ((item = modContent.exec(chain))) {
+      const amount = Number(item[2] || 1);
+      ingredientIds.push(item[1]);
+      ingredients.push(`${amount > 1 ? `${amount} × ` : ""}${ingredientLabel(item[1], displayById)}`);
+    }
+    const groups = /AddRecipeGroup\(\s*(?:RecipeGroupID\.)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s*(?:,\s*(\d+))?/g;
+    while ((item = groups.exec(chain))) {
+      const amount = Number(item[2] || 1);
+      const label = RECIPE_GROUP_RU[item[1]] || humanizeId(item[1]);
+      ingredients.push(`${amount > 1 ? `${amount} × ` : ""}${label}`);
+    }
+    const tile = chain.match(/AddTile<([A-Za-z_][A-Za-z0-9_]*)>\s*\(\s*\)/)
+      || chain.match(/AddTile\(\s*TileID\.([A-Za-z_][A-Za-z0-9_]*)\s*\)/);
+    const stationId = tile?.[1] || "";
+    if (ingredients.length || stationId) recipes.push({ ingredients, ingredientIds, stationId });
+  }
+  return recipes;
+}
+
+function rarityStage(segment, groupId) {
+  if (groupId === "armor-pre-hardmode") return 1;
+  if (groupId === "armor-hardmode") return 2;
+  if (groupId === "armor-post-ml") return 4;
+  const vanilla = segment.match(/Item\.rare\s*=\s*ItemRarityID\.([A-Za-z_][A-Za-z0-9_]*)/);
+  const custom = segment.match(/Item\.rare\s*=\s*(?:ModContent\.)?RarityType<([A-Za-z_][A-Za-z0-9_]*)>/);
+  const numeric = segment.match(/Item\.rare\s*=\s*(\d+)/);
+  const rarity = custom?.[1] || vanilla?.[1] || (numeric ? Number(numeric[1]) : "");
+  if (typeof rarity === "number") {
+    if (rarity <= 4) return 1;
+    if (rarity <= 9) return 2;
+    return 3;
+  }
+  if (["Gray", "White", "Blue", "Green", "Orange"].includes(rarity)) return 1;
+  if (["LightRed", "Pink", "LightPurple", "Lime", "Yellow"].includes(rarity)) return 2;
+  if (["Cyan", "Red", "Purple"].includes(rarity)) return 3;
+  if (["Turquoise", "PureGreen"].includes(rarity)) return 4;
+  if (["CosmicPurple", "BurnishedAuric"].includes(rarity)) return 5;
+  if (["HotPink", "CalamityRed"].includes(rarity)) return 6;
+  return 0;
+}
+
+function recipeText(recipe) {
+  if (!recipe) return "";
+  const visible = recipe.ingredients.slice(0, 5);
+  const rest = recipe.ingredients.length - visible.length;
+  const parts = visible.join(" + ") + (rest > 0 ? ` + ещё ${rest}` : "");
+  const station = STATIONS_RU[recipe.stationId] || (recipe.stationId ? `у станции «${humanizeId(recipe.stationId)}»` : "");
+  if (parts && station) return `Скрафтить: ${parts} · ${station}.`;
+  if (parts) return `Скрафтить из: ${parts}.`;
+  return station ? `Создаётся ${station}.` : "";
+}
+
+function npcNames() {
+  const file = path.join(sourceDir, "Mods.CalamityMod.NPCs.hjson");
+  const names = new Map();
+  if (!fs.existsSync(file)) return names;
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
+  let id = "";
+  for (const line of lines) {
+    const top = line.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*\{\s*$/);
+    if (top) id = top[1];
     const display = line.match(/^\tDisplayName:\s*(.*)$/);
-    if (display) {
-      const name = cleanDisplayName(display[1], currentId);
-      if (name) result.push([name, groupId, currentId]);
-      currentId = "";
-    } else if (/^\S/.test(line) && line.trim()) {
-      currentId = "";
+    if (id && display) names.set(id.toLocaleLowerCase("en-US"), cleanDisplayName(display[1], id));
+  }
+  return names;
+}
+
+function dropSources(idSet, displayById) {
+  const result = new Map();
+  const add = (id, label, type) => {
+    if (!label || /Global|DropHelper|Loot/i.test(label)) return;
+    const key = id.toLocaleLowerCase("en-US");
+    if (!result.has(key)) result.set(key, []);
+    const entries = result.get(key);
+    if (!entries.some((entry) => entry.label === label) && entries.length < 3) entries.push({ label, type });
+  };
+  const npcDisplay = npcNames();
+  for (const file of walkFiles(npcSourceDir, (entry) => entry.endsWith(".cs"))) {
+    const source = fs.readFileSync(file, "utf8");
+    const base = path.basename(file, ".cs");
+    const fileLabel = npcDisplay.get(base.toLocaleLowerCase("en-US")) || humanizeId(base);
+    for (const match of source.matchAll(/(?:ModContent\.)?ItemType<([A-Za-z_][A-Za-z0-9_]*)>/g)) {
+      if (!idSet.has(match[1].toLocaleLowerCase("en-US"))) continue;
+      const context = source.slice(Math.max(0, match.index - 260), match.index + 220);
+      if (!/loot|drop|Common|NotScalingWithLuck|LeadingConditionRule/i.test(context)) continue;
+      let label = fileLabel;
+      if (/Global|DropHelper|Loot/i.test(label)) {
+        const before = source.slice(Math.max(0, match.index - 1400), match.index);
+        const cases = [...before.matchAll(/case\s+(?:NPCID\.)?([A-Za-z_][A-Za-z0-9_]*):/g)];
+        const modNpcs = [...before.matchAll(/NPCType<([A-Za-z_][A-Za-z0-9_]*)>/g)];
+        const npcId = modNpcs.at(-1)?.[1] || cases.at(-1)?.[1] || "";
+        label = npcDisplay.get(npcId.toLocaleLowerCase("en-US")) || humanizeId(npcId);
+      }
+      add(match[1], label, "drop");
+    }
+  }
+  const bags = path.join(itemSourceDir, "TreasureBags");
+  for (const file of walkFiles(bags, (entry) => entry.endsWith(".cs"))) {
+    const source = fs.readFileSync(file, "utf8");
+    const base = path.basename(file, ".cs");
+    const label = displayById.get(base.toLocaleLowerCase("en-US")) || humanizeId(base);
+    for (const match of source.matchAll(/(?:ModContent\.)?ItemType<([A-Za-z_][A-Za-z0-9_]*)>/g)) {
+      if (idSet.has(match[1].toLocaleLowerCase("en-US")) && match[1] !== base) add(match[1], label, "bag");
     }
   }
   return result;
+}
+
+function fallbackObtain(item, sources) {
+  if (sources?.length) {
+    const bags = sources.filter((entry) => entry.type === "bag").map((entry) => entry.label);
+    const drops = sources.filter((entry) => entry.type === "drop").map((entry) => entry.label);
+    if (bags.length) return `Открыть ${bags.slice(0, 2).join(" или ")}; шанс указан на официальной wiki.`;
+    if (drops.length) return `Добывается с ${drops.slice(0, 2).join(" или ")}; точный шанс указан на официальной wiki.`;
+  }
+  const byGroup = {
+    fishing: "Получается во время рыбалки; нужный биом и силу удочки уточни на официальной wiki.",
+    lore: "Выдаётся за исследование мира или победу над связанным боссом; точное условие есть на официальной wiki.",
+    materials: "Добывается с противников, в мире или через крафт; точный источник зависит от материала.",
+    placeables: "Добывается в соответствующем биоме либо создаётся как декоративный предмет.",
+    potions: "Создаётся алхимией, покупается или находится как расходник; точный рецепт есть на официальной wiki.",
+    "summon-items": "Создаётся или добывается перед соответствующим боссом или событием.",
+    "treasure-bags": "Выпадает с соответствующего босса в экспертном режиме и выше.",
+    dyes: "Покупается, создаётся или сдаётся Красильщику за необычное растение.",
+    pets: "Получается как редкая награда, покупка или предмет из сумки босса.",
+    mounts: "Получается как награда, дроп или покупка; точный источник есть на официальной wiki."
+  };
+  return byGroup[item.groupId] || "Точный источник и шанс смотри на официальной wiki по ссылке в карточке.";
+}
+
+function imageCandidates(item, file, segment, pngByBase, relatedPngByBase) {
+  const candidates = [];
+  const key = item.id.toLocaleLowerCase("en-US");
+  const shortKey = item.id.replace(/Item$/, "").toLocaleLowerCase("en-US");
+  const exact = pngByBase.get(key);
+  if (exact) candidates.push(exact);
+  for (const match of segment.matchAll(/"CalamityMod\/([^"\r\n]+)"/g)) {
+    const candidate = path.join(sourceRepo, `${match[1]}.png`);
+    if (fs.existsSync(candidate)) candidates.push(candidate);
+  }
+  if (file) {
+    const beside = path.join(path.dirname(file), `${path.basename(file, ".cs")}.png`);
+    if (fs.existsSync(beside)) candidates.push(beside);
+  }
+  const withoutItem = pngByBase.get(shortKey);
+  if (withoutItem) candidates.push(withoutItem);
+  // Catchable critters expose an Item localization entry but reuse their NPC
+  // sprite rather than shipping a separate inventory PNG.
+  const related = relatedPngByBase.get(key) || relatedPngByBase.get(shortKey);
+  if (related) candidates.push(related);
+  return candidates;
 }
 
 if (!fs.existsSync(sourceDir)) {
@@ -91,31 +424,86 @@ if (!fs.existsSync(sourceDir)) {
 }
 
 const groupRecords = [];
-const items = [];
+const rawItems = [];
 for (const [sourceName, [id, label, kind, cls]] of Object.entries(GROUPS)) {
   const file = path.join(sourceDir, `${FILE_PREFIX}${sourceName}${FILE_SUFFIX}`);
   if (!fs.existsSync(file)) throw new Error(`Missing localization file: ${file}`);
   const groupItems = readItems(file, id);
   groupRecords.push([id, label, kind, cls, groupItems.length]);
-  items.push(...groupItems);
+  rawItems.push(...groupItems);
 }
 
-// A display name can occur more than once for legacy/internal variants. The index
-// is for readers, so keep one visible record per official English name.
+// A display name can occur more than once for legacy/internal variants. The
+// reader-facing catalog keeps one record per official visible English name.
 const seen = new Set();
-const uniqueItems = items
-  .filter(([name]) => {
-    const key = name.toLocaleLowerCase("en-US");
+const items = rawItems
+  .filter((item) => {
+    const key = item.name.toLocaleLowerCase("en-US");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   })
-  .sort((a, b) => a[0].localeCompare(b[0], "en", { sensitivity: "base" }));
-const groupCounts = uniqueItems.reduce((counts, [, group]) => {
-  counts.set(group, (counts.get(group) || 0) + 1);
+  .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+const groupCounts = items.reduce((counts, item) => {
+  counts.set(item.groupId, (counts.get(item.groupId) || 0) + 1);
   return counts;
 }, new Map());
 groupRecords.forEach((group) => { group[4] = groupCounts.get(group[0]) || 0; });
+
+const displayById = new Map(items.map((item) => [item.id.toLocaleLowerCase("en-US"), item.name]));
+const idSet = new Set(displayById.keys());
+const sources = sourceIndex();
+const drops = dropSources(idSet, displayById);
+const pngByBase = new Map();
+for (const file of walkFiles(itemSourceDir, (entry) => entry.endsWith(".png"))) {
+  const key = path.basename(file, ".png").toLocaleLowerCase("en-US");
+  if (!pngByBase.has(key)) pngByBase.set(key, file);
+}
+const relatedPngByBase = new Map();
+for (const directory of [npcSourceDir, path.join(sourceRepo, "Projectiles")]) {
+  for (const file of walkFiles(directory, (entry) => entry.endsWith(".png"))) {
+    const key = path.basename(file, ".png").toLocaleLowerCase("en-US");
+    if (!relatedPngByBase.has(key)) relatedPngByBase.set(key, file);
+  }
+}
+
+if (fs.existsSync(spriteOutput)) fs.rmSync(spriteOutput, { recursive: true, force: true });
+fs.mkdirSync(spriteOutput, { recursive: true });
+
+const meta = new Map();
+for (const item of items) {
+  const file = findSourceFile(sources, item.id);
+  const source = file ? sources.sourceCache.get(file) : "";
+  const segment = source ? classSegment(source, item.id) : "";
+  const recipes = parseRecipes(segment, displayById);
+  const ownStage = rarityStage(segment, item.groupId);
+  const image = imageCandidates(item, file, segment, pngByBase, relatedPngByBase)[0] || "";
+  if (image) fs.copyFileSync(image, path.join(spriteOutput, `${item.id}.png`));
+  meta.set(item.id.toLocaleLowerCase("en-US"), { file, segment, recipes, stage: ownStage, image: Boolean(image) });
+}
+
+// Recipes built from later materials inherit the latest known progression tier.
+for (let pass = 0; pass < 5; pass += 1) {
+  for (const item of items) {
+    const record = meta.get(item.id.toLocaleLowerCase("en-US"));
+    for (const recipe of record.recipes) {
+      for (const ingredient of recipe.ingredientIds) {
+        record.stage = Math.max(record.stage, meta.get(ingredient.toLocaleLowerCase("en-US"))?.stage || 0);
+      }
+      if (recipe.stationId === "MythrilAnvil") record.stage = Math.max(record.stage, 2);
+      if (recipe.stationId === "LunarCraftingStation") record.stage = Math.max(record.stage, 3);
+      if (["CosmicAnvil", "VoidCondenser"].includes(recipe.stationId)) record.stage = Math.max(record.stage, 4);
+      if (["DraedonsForge", "ParticleAccelerator"].includes(recipe.stationId)) record.stage = Math.max(record.stage, 5);
+    }
+  }
+}
+
+const itemRecords = items.map((item) => {
+  const record = meta.get(item.id.toLocaleLowerCase("en-US"));
+  const recipe = record.recipes[0];
+  const obtain = recipeText(recipe) || fallbackObtain(item, drops.get(item.id.toLocaleLowerCase("en-US")));
+  return [item.name, item.groupId, item.id, item.tooltip, record.image ? 1 : 0, obtain, record.stage];
+});
 
 let commit = "unknown";
 let sourceDate = "unknown";
@@ -123,19 +511,27 @@ try {
   commit = execFileSync("git", ["-C", sourceRepo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   sourceDate = execFileSync("git", ["-C", sourceRepo, "log", "-1", "--format=%cI"], { encoding: "utf8" }).trim();
 } catch {
-  // Generation still works from an exported localization directory.
+  // Generation still works from an exported source directory.
 }
 
+const coverage = {
+  tooltips: itemRecords.filter((item) => item[3]).length,
+  sprites: itemRecords.filter((item) => item[4]).length,
+  recipes: items.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).recipes.length).length,
+  sourceFiles: items.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).file).length
+};
 const payload = {
   modVersion: "2.2.2",
   source: "CalamityTeam/CalamityModPublic",
   commit,
   sourceDate,
   generatedAt: "2026-08-15",
+  coverage,
   groups: groupRecords,
-  items: uniqueItems
+  items: itemRecords
 };
-const banner = `/* Offline Calamity Mod item index. Generated; do not edit by hand.\n * Source: ${payload.source}@${commit}\n * Build: node scripts/build-item-catalog.mjs <Localization/en-US>\n */\n`;
+const banner = `/* Rich offline Calamity Mod item catalog. Generated; do not edit by hand.\n * Source: ${payload.source}@${commit}\n * Build: node scripts/build-item-catalog.mjs <Localization/en-US>\n */\n`;
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, `${banner}window.CALAMITY_ITEM_INDEX=${JSON.stringify(payload)};\n`);
-console.log(`Wrote ${uniqueItems.length} unique items across ${groupRecords.length} groups to ${output}`);
+console.log(`Wrote ${itemRecords.length} unique items across ${groupRecords.length} groups to ${output}`);
+console.log(`Coverage: ${coverage.sprites} sprites, ${coverage.tooltips} tooltips, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files`);

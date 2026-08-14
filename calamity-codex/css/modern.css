@@ -1053,6 +1053,64 @@ body[data-view="biomes"] .page-head-art { background-position: center 42%; }
 .catalog-more .btn { min-width: 230px; flex-direction: column; gap: 2px; }
 .catalog-more .btn small { color: #6e7b84; font-size: 8px; font-weight: 700; }
 
+/* Rich catalog cards: 2,573 practical records without loading them all at once. */
+.catalog-grid.rich-catalog { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; align-items: stretch; }
+.catalog-card-rich {
+  min-height: 100%;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border-color: #394956;
+  background: linear-gradient(158deg, #17222c, #0d141b 72%);
+}
+.catalog-card-rich::before { z-index: 3; left: 22px; right: 22px; opacity: .48; }
+.catalog-card-rich > .favorite-btn { top: 12px; right: 12px; border-color: rgba(111,131,143,.7); background: rgba(8,13,18,.76); backdrop-filter: blur(5px); }
+.catalog-card-visual {
+  position: relative;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid #354550;
+  background:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    radial-gradient(circle at 50% 42%, rgba(82,183,174,.2), transparent 44%),
+    linear-gradient(135deg, #152a2b, #0b1219 70%);
+  background-size: 12px 12px, 12px 12px, auto, auto;
+}
+.catalog-card-visual::before,
+.catalog-card-visual::after { content: ""; position: absolute; width: 34px; height: 58px; opacity: .22; transform: rotate(38deg); border: 1px solid #6bc0ba; background: linear-gradient(130deg, rgba(104,216,201,.22), transparent 68%); clip-path: polygon(50% 0,100% 70%,50% 100%,0 70%); }
+.catalog-card-visual::before { left: 21px; bottom: -29px; }
+.catalog-card-visual::after { right: 36px; top: -36px; transform: rotate(-29deg); }
+.catalog-card-visual.weapon { background-color: #271a14; background-image: linear-gradient(rgba(255,255,255,.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.015) 1px, transparent 1px), radial-gradient(circle at 50% 42%, rgba(244,132,72,.21), transparent 43%), linear-gradient(135deg, #2a1c17, #0b1219 70%); }
+.catalog-card-visual.armor { background-color: #182237; background-image: radial-gradient(circle at 50% 42%, rgba(130,165,220,.23), transparent 44%), linear-gradient(135deg, #1d293a, #0b1219 72%); }
+.catalog-card-visual.acc { background-color: #282315; background-image: radial-gradient(circle at 50% 42%, rgba(229,196,116,.2), transparent 44%), linear-gradient(135deg, #292418, #0b1219 72%); }
+.catalog-card-visual.summon { background-color: #27182e; background-image: radial-gradient(circle at 50% 42%, rgba(202,114,230,.22), transparent 44%), linear-gradient(135deg, #291932, #0b1219 72%); }
+.catalog-card-visual.potion { background-color: #15271d; background-image: radial-gradient(circle at 50% 42%, rgba(101,214,147,.21), transparent 44%), linear-gradient(135deg, #172b20, #0b1219 72%); }
+.catalog-item-art { position: relative; z-index: 2; width: auto; height: auto; max-width: 118px; max-height: 82px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 9px 3px rgba(0,0,0,.72)); transition: transform .2s ease, filter .2s ease; }
+.catalog-card-rich:hover .catalog-item-art { transform: translateY(-3px) scale(1.07); filter: drop-shadow(0 12px 4px rgba(0,0,0,.75)); }
+.catalog-fallback-art { position: relative; z-index: 2; width: 66px; height: 66px; display: grid; place-items: center; border: 1px solid rgba(126,188,184,.46); transform: rotate(45deg); border-radius: 9px; background: rgba(7,14,19,.62); box-shadow: inset 0 0 22px rgba(104,216,201,.1), 0 10px 25px rgba(0,0,0,.34); }
+.catalog-fallback-art .item-ico { width: 43px; height: 43px; transform: rotate(-45deg); filter: drop-shadow(0 5px 4px rgba(0,0,0,.55)); }
+.catalog-stage-mark { position: absolute; z-index: 2; left: 12px; top: 11px; min-width: 28px; padding: 4px 6px; border: 1px solid rgba(96,130,132,.64); border-radius: 4px; color: #7dc2bd; background: rgba(7,14,19,.7); font: 800 8px/1 var(--sans); letter-spacing: .08em; text-align: center; }
+.catalog-card-rich .catalog-card-copy { padding: 15px 16px 16px; }
+.catalog-card-rich .catalog-card-copy > b { padding-right: 29px; font-size: 21px; line-height: 1.08; }
+.catalog-card-rich .catalog-card-copy > small { color: #a3b0b7; }
+.catalog-card-rich .catalog-card-copy > span { color: #657b84; }
+.catalog-effect { margin-top: 12px; padding: 10px 11px; border: 1px solid #35434d; border-radius: 5px; background: rgba(7,12,17,.45); box-shadow: inset 3px 0 #4e8a86; }
+.catalog-effect em { display: block; margin-bottom: 4px; color: #6fbcb5; font-size: 8px; font-style: normal; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.catalog-effect p { color: #b7c3c5; font-size: 10px; line-height: 1.55; }
+.catalog-card-facts { display: grid; gap: 1px; margin-top: 11px; overflow: hidden; border: 1px solid #33414b; border-radius: 5px; background: #33414b; }
+.catalog-card-fact { position: relative; min-height: 67px; padding: 10px 11px 10px 41px; background: rgba(13,20,27,.96); }
+.catalog-card-fact::before { position: absolute; left: 11px; top: 12px; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid #465760; transform: rotate(45deg); color: #86d9d0; background: #101b22; font: 800 10px/1 var(--serif); }
+.catalog-card-fact.obtain::before { content: "↧"; }
+.catalog-card-fact.purpose::before { content: "◆"; color: #d6bd77; }
+.catalog-card-fact.timing::before { content: "◷"; color: #a9b8df; }
+.catalog-card-fact > span { display: block; margin-bottom: 3px; color: #71818a; font-size: 8px; font-weight: 900; letter-spacing: .075em; text-transform: uppercase; }
+.catalog-card-fact > p { color: #c4cbca; font-size: 10px; line-height: 1.48; }
+.catalog-card-rich .catalog-card-links { padding-top: 1px; }
+.catalog-card-rich .catalog-card-links a { font-size: 9px; }
+
 /* ---------- content grids and cards ---------- */
 .item-grid, .craft-grid, .grid-2, .grid-3, .biome-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 12px; }
 .item-card, .craft-card, .recipe-card, .card, .biome-card {

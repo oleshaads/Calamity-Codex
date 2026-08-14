@@ -42,9 +42,12 @@
 
   function indexedItems() {
     if (indexedItemsCache) return indexedItemsCache;
-    indexedItemsCache = (ITEM_INDEX.items || []).map(([name, groupId, id]) => {
+    indexedItemsCache = (ITEM_INDEX.items || []).map(([name, groupId, id, tooltip, image, obtain, stage]) => {
       const group = ITEM_GROUPS.get(groupId) || { label: "Предмет", kind: "misc", cls: "all" };
-      return { name, id, groupId, group: group.label, kind: group.kind, cls: group.cls };
+      return {
+        name, id, groupId, group: group.label, kind: group.kind, cls: group.cls,
+        tooltip: tooltip || "", image: Boolean(image), obtain: obtain || "", stage: Number(stage || 0)
+      };
     });
     return indexedItemsCache;
   }
@@ -681,21 +684,68 @@
       });
     });
   }
+  const CATALOG_STAGE = [
+    "По мере открытия соответствующего контента; проверь условие источника.",
+    "Прехардмод: бери до Стены плоти, как только станет доступен источник.",
+    "Хардмод: после Стены плоти, когда доступны указанные ингредиенты или противник.",
+    "Поздний хардмод: после механических боссов и ближе к Лунному лорду.",
+    "После Лунного лорда: для ранней постмунлорд-прогрессии.",
+    "Поздний постмунлорд: для эндгейм-боссов и дорогих улучшений.",
+    "Финал Каламити: после ключевых эндгейм-боссов."
+  ];
+  function catalogPurpose(item) {
+    if (item.groupId === "summon-items") return "Вызывает связанного босса или событие и нужен для продолжения прогрессии.";
+    if (item.groupId === "pets") return "Призывает декоративного спутника; полезен для коллекции и атмосферы.";
+    if (item.groupId === "mounts") return "Даёт средство передвижения с собственной мобильностью или особой механикой.";
+    if (item.groupId === "treasure-bags") return "Открой, чтобы получить экспертные награды, материалы и предметы босса.";
+    if (item.groupId === "lore") return "Хранит сведения о мире и отмечает важную победу или находку.";
+    if (item.groupId === "dyes") return "Меняет цвет экипировки, питомца или маунта; нужен для внешнего вида.";
+    if (item.groupId === "placeables") return "Используется в строительстве, декоре либо как функциональный размещаемый объект.";
+    const byKind = {
+      weapon: `Оружие для класса «${CLS_RU[item.cls] || "Все классы"}»: используй его для урона и указанных в механике эффектов.`,
+      armor: "Экипируй ради защиты, характеристик и бонуса полного комплекта.",
+      acc: "Экипируй в слот аксессуара ради пассивного бонуса; позднее может войти в улучшенный аксессуар.",
+      ammo: "Боеприпас расходуется подходящим оружием и меняет его урон или поведение выстрела.",
+      tool: "Инструмент ускоряет добычу, строительство, рыбалку или исследование мира.",
+      mat: "Сохраняй как материал для оружия, брони, аксессуаров и следующих ступеней крафта.",
+      summon: "Используется для призыва существа, спутника, маунта либо важного события.",
+      potion: "Расходник даёт временный эффект, лечение или постоянное улучшение персонажа.",
+      misc: "Коллекционный или специализированный предмет; точное назначение раскрывает механика выше."
+    };
+    return byKind[item.kind] || byKind.misc;
+  }
   function indexedItemCard(item) {
     const detail = detailedNameMap().get(String(item.name).toLocaleLowerCase("ru"));
     const wikiTitle = encodeURIComponent(String(item.name).replace(/ /g, "_"));
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/${wikiTitle}`;
     const classLabel = item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls);
     const detailName = detail && (detail.nameRu || detail.name);
-    return `<article class="catalog-card" data-kind="${escAttr(item.kind)}">
-      <span class="catalog-card-mark ${escAttr(item.kind)}" aria-hidden="true">${ITEM_KIND_MARK[item.kind] || "◆"}</span>
+    const purpose = catalogPurpose(item);
+    const useWhen = CATALOG_STAGE[Math.min(Math.max(item.stage, 0), CATALOG_STAGE.length - 1)];
+    const art = item.image
+      ? `<img class="catalog-item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async">`
+      : `<span class="catalog-fallback-art ${escAttr(item.kind)}" role="img" aria-label="Изображение категории">${KIND_SVG[item.kind] || KIND_SVG.mat || ITEM_KIND_MARK[item.kind] || "◆"}</span>`;
+    return `<article class="catalog-card catalog-card-rich" data-kind="${escAttr(item.kind)}">
+      <div class="catalog-card-visual ${escAttr(item.kind)}">
+        ${art}
+        <span class="catalog-stage-mark">${item.stage ? `T${item.stage}` : "?"}</span>
+      </div>
       <div class="catalog-card-copy">
         <b>${esc(item.name)}</b>
         <small>${esc(KIND_RU[item.kind] || item.kind)} · ${esc(classLabel)}</small>
         <span>${esc(item.group)}</span>
+        <div class="catalog-effect">
+          <em>${item.tooltip ? "Механика из игры" : "Назначение"}</em>
+          <p>${esc(item.tooltip || purpose)}</p>
+        </div>
+        <div class="catalog-card-facts">
+          <div class="catalog-card-fact obtain"><span>Где взять</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>
+          <div class="catalog-card-fact purpose"><span>Зачем нужен</span><p>${esc(purpose)}</p></div>
+          <div class="catalog-card-fact timing"><span>Когда использовать</span><p>${esc(useWhen)}</p></div>
+        </div>
         <div class="catalog-card-links">
-          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Официальная wiki ↗</a>
-          ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть подробную карточку ${escAttr(detailName)}">Совет в кодексе →</a>` : ""}
+          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Рецепт и шансы на wiki ↗</a>
+          ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть практическую рекомендацию ${escAttr(detailName)}">Рекомендация кодекса →</a>` : ""}
         </div>
       </div>
       ${favoriteButton("item", item.name, item.name)}
@@ -967,7 +1017,7 @@
       if (!search) return true;
       const blob = mode === "guide"
         ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
-        : `${item.name} ${item.id} ${item.group} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`;
+        : `${item.name} ${item.id} ${item.group} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`;
       return blob.toLocaleLowerCase("ru").includes(search);
     });
     const requestedLimit = Number.parseInt(params.limit, 10);
@@ -976,27 +1026,24 @@
       : CATALOG_PAGE_SIZE;
     const visible = mode === "catalog" ? list.slice(0, limit) : list;
     const kindOptions = Object.entries(KIND_RU).filter(([id]) => pool.some((item) => item.kind === id));
-    const countByKind = indexedItems().reduce((counts, item) => {
-      counts[item.kind] = (counts[item.kind] || 0) + 1;
-      return counts;
-    }, {});
     const indexCount = indexedItems().length;
     const sourceCommit = String(ITEM_INDEX.commit || "").slice(0, 7);
     const sourceDate = String(ITEM_INDEX.sourceDate || "").slice(0, 10);
+    const coverage = ITEM_INDEX.coverage || {};
     const fmt = (value) => Number(value).toLocaleString("ru-RU");
 
     app.innerHTML = `
       <div class="page items-page">
-        ${mast("Арсенал Calamity", "Полный официальный индекс отдельно от практических рекомендаций — ничего важного не теряется в длинном списке.")}
+        ${mast("Арсенал Calamity", "У каждого предмета есть изображение, источник, назначение и этап применения; отдельный режим сохраняет маршрут прохождения.")}
         <nav class="catalog-mode-switch" aria-label="Режим каталога предметов">
           <a class="catalog-mode ${mode === "catalog" ? "active" : ""}" href="#/items">
             <i aria-hidden="true">I</i>
-            <span><b>Полный индекс</b><small>Каждый предмет Calamity Mod 2.2.2</small></span>
+            <span><b>Полный каталог</b><small>Изображения, получение, польза и этап для каждого предмета</small></span>
             <em>${fmt(indexCount)}</em>
           </a>
           <a class="catalog-mode ${mode === "guide" ? "active" : ""}" href="#/items?mode=guide">
             <i aria-hidden="true">II</i>
-            <span><b>Рекомендации</b><small>Где взять, зачем и когда использовать</small></span>
+            <span><b>Маршрут прохождения</b><small>Отобранные рекомендации по главам кодекса</small></span>
             <em>${fmt(CODEX.items.length)}</em>
           </a>
         </nav>
@@ -1004,17 +1051,17 @@
           <section class="catalog-source">
             <span class="catalog-source-mark" aria-hidden="true">◆</span>
             <div>
-              <b>Официальный состав мода — уже внутри кодекса</b>
-              <p>${fmt(indexCount)} названий собраны из исходных локализаций Calamity Mod ${esc(ITEM_INDEX.modVersion || CODEX.version)}. Индекс работает офлайн; карточки ведут на официальную wiki.</p>
-              <small>Срез ${esc(sourceDate || "2026-08-15")} · ${esc(sourceCommit || "source")}</small>
+              <b>Полные карточки собраны из официальных исходников</b>
+              <p>${fmt(indexCount)} предмета: локальные спрайты, внутриигровые описания, рецепты и подтверждённые источники. Если исходники не называют точный дроп, карточка честно ведёт к актуальной странице wiki.</p>
+              <small>Calamity Mod ${esc(ITEM_INDEX.modVersion || CODEX.version)} · срез ${esc(sourceDate || "2026-08-15")} · ${esc(sourceCommit || "source")}</small>
             </div>
             <a href="https://github.com/CalamityTeam/CalamityModPublic" target="_blank" rel="noopener noreferrer">Исходные данные ↗</a>
           </section>
-          <div class="catalog-stat-strip" aria-label="Состав полного индекса">
-            <span><b>${fmt(countByKind.weapon || 0)}</b><small>оружия</small></span>
-            <span><b>${fmt(countByKind.acc || 0)}</b><small>аксессуар</small></span>
-            <span><b>${fmt(countByKind.armor || 0)}</b><small>брони</small></span>
-            <span><b>${fmt(countByKind.misc || 0)}</b><small>строительство и прочее</small></span>
+          <div class="catalog-stat-strip" aria-label="Покрытие полного каталога">
+            <span><b>${fmt(coverage.sprites || 0)}</b><small>официальных спрайтов</small></span>
+            <span><b>${fmt(coverage.tooltips || 0)}</b><small>механик из игры</small></span>
+            <span><b>${fmt(coverage.recipes || 0)}</b><small>локальных рецептов</small></span>
+            <span><b>${fmt(indexCount)}</b><small>подробных карточки</small></span>
           </div>
         ` : `
           <section class="catalog-source guide-source">
@@ -1038,7 +1085,7 @@
         <div class="filter-bar">
           <label class="search-wrap">
             <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-            <input id="item-s" type="search" aria-label="Поиск предметов" placeholder="${mode === "catalog" ? "Официальное название или категория…" : "Название или «где взять»…"}" value="${escAttr(searchRaw)}" />
+            <input id="item-s" type="search" aria-label="Поиск предметов" placeholder="${mode === "catalog" ? "Название, механика, рецепт или источник…" : "Название или «где взять»…"}" value="${escAttr(searchRaw)}" />
             ${search ? `<button class="catalog-search-clear" type="button" id="item-search-clear" aria-label="Очистить поиск">×</button>` : ""}
           </label>
           ${mode === "guide" ? `<select id="item-q" aria-label="Фильтр предметов по этапу">
@@ -1052,7 +1099,7 @@
         </div>
         ${visible.length
           ? mode === "catalog"
-            ? `<div class="catalog-grid">${visible.map(indexedItemCard).join("")}</div>
+            ? `<div class="catalog-grid rich-catalog">${visible.map(indexedItemCard).join("")}</div>
               ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(CATALOG_PAGE_SIZE, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
             : `<div class="item-grid">${visible.map((item) => itemCard(item, cls, "all")).join("")}</div>`
           : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй официальное английское название.</p><a class="btn ghost" href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a></div>`}
@@ -1197,7 +1244,7 @@
         </div>
         ${total ? `
           ${items.length ? shelf("Предметы с рекомендациями", items.length, `<div class="item-grid">${items.map((item) => itemCard(item, "all", "all")).join("")}</div>`, true) : ""}
-          ${indexedFavorites.length ? shelf("Предметы из полного индекса", indexedFavorites.length, `<div class="catalog-grid">${indexedFavorites.map(indexedItemCard).join("")}</div>`, true) : ""}
+          ${indexedFavorites.length ? shelf("Предметы из полного индекса", indexedFavorites.length, `<div class="catalog-grid rich-catalog">${indexedFavorites.map(indexedItemCard).join("")}</div>`, true) : ""}
           ${bosses.length ? shelf("Боссы", bosses.length, `<div class="item-grid">${bosses.map(bossCard).join("")}</div>`, true) : ""}
           ${crafts.length ? shelf("Крафты", crafts.length, `<div class="craft-grid">${crafts.map(craftCard).join("")}</div>`, true) : ""}
           <div class="favorites-more"><span>Нужно добавить ещё?</span><a href="#/items">Предметы</a><a href="#/bosses">Боссы</a><a href="#/crafts">Крафты</a></div>
@@ -1283,7 +1330,7 @@
       }
     });
     indexedItems().forEach((item) => {
-      const blob = `${item.name} ${item.id} ${item.group} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`.toLocaleLowerCase("ru");
+      const blob = `${item.name} ${item.id} ${item.group} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`.toLocaleLowerCase("ru");
       const key = String(item.name).toLocaleLowerCase("ru");
       if (blob.includes(q) && !itemHitNames.has(key)) {
         hits.push({
