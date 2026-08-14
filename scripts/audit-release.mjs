@@ -63,14 +63,21 @@ for (const [name, expected] of Object.entries({
 
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const rebornCssPath = path.join(root, "css/reborn.css");
+const architectureCssPath = path.join(root, "css/architecture.css");
 check(indexHtml.includes('href="css/reborn.css"'), "Reborn interface stylesheet is not connected");
+check(indexHtml.includes('href="css/architecture.css"'), "Architectural interface stylesheet is not connected");
 check(fs.existsSync(rebornCssPath) && fs.statSync(rebornCssPath).size > 20000, "Reborn interface stylesheet is incomplete");
+check(fs.existsSync(architectureCssPath) && fs.statSync(architectureCssPath).size > 25000, "Architectural interface rebuild is incomplete");
 const rebornCss = fs.readFileSync(rebornCssPath, "utf8");
+const architectureCss = fs.readFileSync(architectureCssPath, "utf8");
 check(rebornCss.includes("@media (max-width: 700px)"), "Reborn interface has no mobile layout");
 check(rebornCss.includes("--cyan: #61e6c5"), "Reborn design tokens are missing");
+check(architectureCss.includes(".route-bento") && architectureCss.includes(".section-banner"), "New application structure is missing");
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 check(app.includes("esc(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
+check(app.includes('class="landing"') && app.includes('class="command-center"'), "Command-centre home structure is missing");
+check(app.includes('class="section-banner"'), "New section banner structure is missing");
 check(!app.includes("KIND_SVG"), "Generated category SVG fallbacks are still present");
 check(app.includes("нет спрайта"), "Honest missing-sprite state is absent for non-catalog references");
 
@@ -110,7 +117,7 @@ check(fs.existsSync(path.resolve("scripts/build-official-art.sh")), "Official ar
 check(fs.existsSync(path.resolve("scripts/fetch-lexicon-art.sh")), "Dictionary artwork fetch script is missing");
 
 console.log(`PASS: ${items.length} catalog cards have verified local sprites and Russian descriptions`);
-console.log("PASS: Reborn interface stylesheet is connected with responsive layouts and design tokens");
+console.log("PASS: command-centre home, horizontal app navigation, section banners and responsive workspaces are connected");
 console.log(`PASS: ${index.coverage.staticAnimationFrames} animated sprite strips are normalized; ${index.coverage.synchronizedGuideSprites} guide copies are synchronized`);
 console.log(`PASS: ${officialArt.length} decorative assets have documented official-game provenance and ${themeHashes.size} distinct themes`);
 console.log(`PASS: ${lexFiles.length} dictionary textures have pinned sources and honest representative labels`);
