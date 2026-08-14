@@ -61,6 +61,14 @@ for (const [name, expected] of Object.entries({
   }
 }
 
+const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const rebornCssPath = path.join(root, "css/reborn.css");
+check(indexHtml.includes('href="css/reborn.css"'), "Reborn interface stylesheet is not connected");
+check(fs.existsSync(rebornCssPath) && fs.statSync(rebornCssPath).size > 20000, "Reborn interface stylesheet is incomplete");
+const rebornCss = fs.readFileSync(rebornCssPath, "utf8");
+check(rebornCss.includes("@media (max-width: 700px)"), "Reborn interface has no mobile layout");
+check(rebornCss.includes("--cyan: #61e6c5"), "Reborn design tokens are missing");
+
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 check(app.includes("esc(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
 check(!app.includes("KIND_SVG"), "Generated category SVG fallbacks are still present");
@@ -102,6 +110,7 @@ check(fs.existsSync(path.resolve("scripts/build-official-art.sh")), "Official ar
 check(fs.existsSync(path.resolve("scripts/fetch-lexicon-art.sh")), "Dictionary artwork fetch script is missing");
 
 console.log(`PASS: ${items.length} catalog cards have verified local sprites and Russian descriptions`);
+console.log("PASS: Reborn interface stylesheet is connected with responsive layouts and design tokens");
 console.log(`PASS: ${index.coverage.staticAnimationFrames} animated sprite strips are normalized; ${index.coverage.synchronizedGuideSprites} guide copies are synchronized`);
 console.log(`PASS: ${officialArt.length} decorative assets have documented official-game provenance and ${themeHashes.size} distinct themes`);
 console.log(`PASS: ${lexFiles.length} dictionary textures have pinned sources and honest representative labels`);
