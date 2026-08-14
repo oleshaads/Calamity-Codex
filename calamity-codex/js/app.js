@@ -28,8 +28,40 @@
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VI",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.jpg",      accent: "#eea85b", fx: "embers" },
     biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.jpg",    accent: "#91d47f", fx: "leaves" }
   };
-  const KIND_RU = { weapon: "Оружие", armor: "Броня", acc: "Аксессуар", tool: "Инструмент", mat: "Материал", summon: "Призыв", potion: "Расходник" };
-  const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все" };
+  const KIND_RU = {
+    weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
+    tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
+  };
+  const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
+  const ITEM_INDEX = window.CALAMITY_ITEM_INDEX || { modVersion: CODEX.version, groups: [], items: [] };
+  const ITEM_GROUPS = new Map((ITEM_INDEX.groups || []).map(([id, label, kind, cls, count]) => [id, { id, label, kind, cls, count }]));
+  const ITEM_KIND_MARK = { weapon: "⚔", armor: "◈", acc: "◇", ammo: "➶", tool: "⚒", mat: "◆", summon: "✦", potion: "⚗", misc: "▦" };
+  const CATALOG_PAGE_SIZE = 96;
+  let indexedItemsCache = null;
+  let detailedNameCache = null;
+
+  function indexedItems() {
+    if (indexedItemsCache) return indexedItemsCache;
+    indexedItemsCache = (ITEM_INDEX.items || []).map(([name, groupId, id]) => {
+      const group = ITEM_GROUPS.get(groupId) || { label: "Предмет", kind: "misc", cls: "all" };
+      return { name, id, groupId, group: group.label, kind: group.kind, cls: group.cls };
+    });
+    return indexedItemsCache;
+  }
+
+  function detailedNameMap() {
+    if (detailedNameCache) return detailedNameCache;
+    detailedNameCache = new Map();
+    (CODEX.items || []).forEach((item) => {
+      const lex = CODEX.lookup ? CODEX.lookup(item.name) : null;
+      [item.name, item.nameRu, lex && lex.en, lex && lex.ru].filter(Boolean).forEach((name) => {
+        const key = String(name).trim().toLocaleLowerCase("ru");
+        if (key && !detailedNameCache.has(key)) detailedNameCache.set(key, item);
+      });
+    });
+    return detailedNameCache;
+  }
+
   const T = (s) => (CODEX.linkify ? CODEX.linkify(s) : s);
   const RU = (s) => (CODEX.ru ? CODEX.ru(s) : s);
   const loc = (s) => {
@@ -47,7 +79,7 @@
   function sectionFacts(view) {
     if (view === "wiki") return [[CODEX.quests.length, "глав пути"], [5, "разделов"]];
     if (view === "bosses") return [[CODEX.bosses.length, "основных"], [CODEX.minis.length, "мини-боссов"]];
-    if (view === "items") return [[CODEX.items.length, "предметов"], [CODEX.classes.length, "классов"]];
+    if (view === "items") return [[indexedItems().length || CODEX.items.length, "в полном индексе"], [CODEX.items.length, "с советами"]];
     if (view === "favorites") {
       const saved = getFavorites();
       return [[saved.item.size + saved.boss.size + saved.craft.size, "в рюкзаке"], [3, "коллекции"]];
@@ -446,7 +478,7 @@
 
         <div class="stat-row" aria-label="Содержимое кодекса">
           <div class="stat"><b>${CODEX.quests.length}</b><span>глав приключения</span></div>
-          <div class="stat"><b>${CODEX.items.length}</b><span>предметов</span></div>
+          <div class="stat"><b>${indexedItems().length.toLocaleString("ru-RU")}</b><span>предметов в индексе</span></div>
           <div class="stat"><b>${CODEX.bosses.length}</b><span>боссов</span></div>
           <div class="stat"><b>${CODEX.crafts.length}</b><span>рецепт крафта</span></div>
         </div>
@@ -649,8 +681,28 @@
       });
     });
   }
-  function itemCard(it, cls, filter) {
+  function indexedItemCard(item) {
+    const detail = detailedNameMap().get(String(item.name).toLocaleLowerCase("ru"));
+    const wikiTitle = encodeURIComponent(String(item.name).replace(/ /g, "_"));
+    const wikiUrl = `https://calamitymod.wiki.gg/wiki/${wikiTitle}`;
+    const classLabel = item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls);
+    const detailName = detail && (detail.nameRu || detail.name);
+    return `<article class="catalog-card" data-kind="${escAttr(item.kind)}">
+      <span class="catalog-card-mark ${escAttr(item.kind)}" aria-hidden="true">${ITEM_KIND_MARK[item.kind] || "◆"}</span>
+      <div class="catalog-card-copy">
+        <b>${esc(item.name)}</b>
+        <small>${esc(KIND_RU[item.kind] || item.kind)} · ${esc(classLabel)}</small>
+        <span>${esc(item.group)}</span>
+        <div class="catalog-card-links">
+          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Официальная wiki ↗</a>
+          ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть подробную карточку ${escAttr(detailName)}">Совет в кодексе →</a>` : ""}
+        </div>
+      </div>
+      ${favoriteButton("item", item.name, item.name)}
+    </article>`;
+  }
 
+  function itemCard(it, cls, filter) {
     const mine = cls === "all" || it.cls === "all" || it.cls === cls;
     const hide = filter === "mine" && !mine;
     const dim = filter === "all" && !mine;
@@ -898,67 +950,152 @@
 
   function renderItems(params) {
     fillRail("");
+    const mode = params.mode === "guide" ? "guide" : "catalog";
     const cls = params.cls || "all";
     const kind = params.kind || "all";
-    const qid = params.q || "all";
-    const search = (params.s || "").toLowerCase();
+    const qid = mode === "guide" ? (params.q || "all") : "all";
+    const searchRaw = params.s || "";
+    const search = searchRaw.trim().toLocaleLowerCase("ru");
     const favoriteOnly = params.fav === "1";
     const favoriteItems = getFavorites().item;
-    const list = CODEX.items.filter((i) => {
-      if (favoriteOnly && !favoriteItems.has(String(i.name))) return false;
-      if (cls !== "all" && i.cls !== "all" && i.cls !== cls) return false;
-      if (kind !== "all" && i.kind !== kind) return false;
-      if (qid !== "all" && String(i.q) !== String(qid)) return false;
-      if (search && !`${i.name} ${i.nameRu || ""} ${i.get} ${i.why} ${i.rec || ""} ${i.desc || ""}`.toLowerCase().includes(search)) return false;
-      return true;
+    const pool = mode === "guide" ? CODEX.items : indexedItems();
+    const list = pool.filter((item) => {
+      if (favoriteOnly && !favoriteItems.has(String(item.name))) return false;
+      if (cls !== "all" && item.cls !== "all" && item.cls !== cls) return false;
+      if (kind !== "all" && item.kind !== kind) return false;
+      if (qid !== "all" && String(item.q) !== String(qid)) return false;
+      if (!search) return true;
+      const blob = mode === "guide"
+        ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
+        : `${item.name} ${item.id} ${item.group} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`;
+      return blob.toLocaleLowerCase("ru").includes(search);
     });
+    const requestedLimit = Number.parseInt(params.limit, 10);
+    const limit = mode === "catalog" && Number.isFinite(requestedLimit)
+      ? Math.max(CATALOG_PAGE_SIZE, requestedLimit)
+      : CATALOG_PAGE_SIZE;
+    const visible = mode === "catalog" ? list.slice(0, limit) : list;
+    const kindOptions = Object.entries(KIND_RU).filter(([id]) => pool.some((item) => item.kind === id));
+    const countByKind = indexedItems().reduce((counts, item) => {
+      counts[item.kind] = (counts[item.kind] || 0) + 1;
+      return counts;
+    }, {});
+    const indexCount = indexedItems().length;
+    const sourceCommit = String(ITEM_INDEX.commit || "").slice(0, 7);
+    const sourceDate = String(ITEM_INDEX.sourceDate || "").slice(0, 10);
+    const fmt = (value) => Number(value).toLocaleString("ru-RU");
+
     app.innerHTML = `
-      <div class="page">
-        ${mast("Предметы", "Русское имя сразу. На карточке — что это, где взять, зачем.")}
-        <div class="chips">
+      <div class="page items-page">
+        ${mast("Арсенал Calamity", "Полный официальный индекс отдельно от практических рекомендаций — ничего важного не теряется в длинном списке.")}
+        <nav class="catalog-mode-switch" aria-label="Режим каталога предметов">
+          <a class="catalog-mode ${mode === "catalog" ? "active" : ""}" href="#/items">
+            <i aria-hidden="true">I</i>
+            <span><b>Полный индекс</b><small>Каждый предмет Calamity Mod 2.2.2</small></span>
+            <em>${fmt(indexCount)}</em>
+          </a>
+          <a class="catalog-mode ${mode === "guide" ? "active" : ""}" href="#/items?mode=guide">
+            <i aria-hidden="true">II</i>
+            <span><b>Рекомендации</b><small>Где взять, зачем и когда использовать</small></span>
+            <em>${fmt(CODEX.items.length)}</em>
+          </a>
+        </nav>
+        ${mode === "catalog" ? `
+          <section class="catalog-source">
+            <span class="catalog-source-mark" aria-hidden="true">◆</span>
+            <div>
+              <b>Официальный состав мода — уже внутри кодекса</b>
+              <p>${fmt(indexCount)} названий собраны из исходных локализаций Calamity Mod ${esc(ITEM_INDEX.modVersion || CODEX.version)}. Индекс работает офлайн; карточки ведут на официальную wiki.</p>
+              <small>Срез ${esc(sourceDate || "2026-08-15")} · ${esc(sourceCommit || "source")}</small>
+            </div>
+            <a href="https://github.com/CalamityTeam/CalamityModPublic" target="_blank" rel="noopener noreferrer">Исходные данные ↗</a>
+          </section>
+          <div class="catalog-stat-strip" aria-label="Состав полного индекса">
+            <span><b>${fmt(countByKind.weapon || 0)}</b><small>оружия</small></span>
+            <span><b>${fmt(countByKind.acc || 0)}</b><small>аксессуар</small></span>
+            <span><b>${fmt(countByKind.armor || 0)}</b><small>брони</small></span>
+            <span><b>${fmt(countByKind.misc || 0)}</b><small>строительство и прочее</small></span>
+          </div>
+        ` : `
+          <section class="catalog-source guide-source">
+            <span class="catalog-source-mark" aria-hidden="true">✦</span>
+            <div>
+              <b>Короткий список для прохождения</b>
+              <p>Здесь остаются ${fmt(CODEX.items.length)} подробные русские карточки: этап, получение, крафт и практическая польза. Это рекомендации, а не ограничение полного каталога.</p>
+            </div>
+            <a href="#/items">Открыть весь индекс →</a>
+          </section>
+        `}
+        <div class="chips item-class-chips">
           <button class="chip favorite-chip ${favoriteOnly ? "active" : ""}" data-p="fav" data-v="${favoriteOnly ? "all" : "1"}"><span aria-hidden="true">★</span> Избранное <em>${favoriteItems.size}</em></button>
           <button class="chip ${cls === "all" ? "active" : ""}" data-p="cls" data-v="all">Все классы</button>
-          ${CODEX.classes.map((c) => `<button class="chip ${cls === c.id ? "active" : ""}" data-p="cls" data-v="${c.id}">${c.name}</button>`).join("")}
+          ${CODEX.classes.map((itemClass) => `<button class="chip ${cls === itemClass.id ? "active" : ""}" data-p="cls" data-v="${itemClass.id}">${itemClass.name}</button>`).join("")}
         </div>
-        <div class="chips">
-          <button class="chip ${kind === "all" ? "active" : ""}" data-p="kind" data-v="all">Тип: все</button>
-          ${Object.entries(KIND_RU).map(([k, n]) => `<button class="chip ${kind === k ? "active" : ""}" data-p="kind" data-v="${k}">${n}</button>`).join("")}
+        <div class="chips item-kind-chips">
+          <button class="chip ${kind === "all" ? "active" : ""}" data-p="kind" data-v="all">Все типы <em>${fmt(pool.length)}</em></button>
+          ${kindOptions.map(([id, label]) => `<button class="chip ${kind === id ? "active" : ""}" data-p="kind" data-v="${id}">${label}<em>${fmt(pool.filter((item) => item.kind === id).length)}</em></button>`).join("")}
         </div>
         <div class="filter-bar">
           <label class="search-wrap">
             <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-            <input id="item-s" type="search" aria-label="Поиск предметов" placeholder="Название или «где взять»…" value="${escAttr(params.s || "")}" />
+            <input id="item-s" type="search" aria-label="Поиск предметов" placeholder="${mode === "catalog" ? "Официальное название или категория…" : "Название или «где взять»…"}" value="${escAttr(searchRaw)}" />
+            ${search ? `<button class="catalog-search-clear" type="button" id="item-search-clear" aria-label="Очистить поиск">×</button>` : ""}
           </label>
-          <select id="item-q" aria-label="Фильтр предметов по квесту">
-            <option value="all" ${qid === "all" ? "selected" : ""}>Все квесты</option>
-            ${CODEX.quests.map((q) => `<option value="${q.id}" ${String(qid) === String(q.id) ? "selected" : ""}>${q.id}. ${q.title}</option>`).join("")}
-          </select>
+          ${mode === "guide" ? `<select id="item-q" aria-label="Фильтр предметов по этапу">
+            <option value="all" ${qid === "all" ? "selected" : ""}>Все этапы</option>
+            ${CODEX.quests.map((quest) => `<option value="${quest.id}" ${String(qid) === String(quest.id) ? "selected" : ""}>${quest.id}. ${quest.title}</option>`).join("")}
+          </select>` : `<a class="official-wiki-link" href="https://calamitymod.wiki.gg/wiki/Items" target="_blank" rel="noopener noreferrer">Официальная wiki <span aria-hidden="true">↗</span></a>`}
         </div>
-        <p class="found">Найдено: ${list.length}</p>
-        ${list.length
-          ? `<div class="item-grid">${list.map((it) => itemCard(it, cls, "all")).join("")}</div>`
-          : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй другое название.</p><a class="btn ghost" href="#/items">Сбросить фильтры</a></div>`}
+        <div class="catalog-found">
+          <p class="found">Найдено: <b>${fmt(list.length)}</b>${mode === "catalog" && visible.length < list.length ? ` · показано ${fmt(visible.length)}` : ""}</p>
+          ${search || cls !== "all" || kind !== "all" || favoriteOnly || qid !== "all" ? `<a href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a>` : ""}
+        </div>
+        ${visible.length
+          ? mode === "catalog"
+            ? `<div class="catalog-grid">${visible.map(indexedItemCard).join("")}</div>
+              ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(CATALOG_PAGE_SIZE, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
+            : `<div class="item-grid">${visible.map((item) => itemCard(item, cls, "all")).join("")}</div>`
+          : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй официальное английское название.</p><a class="btn ghost" href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a></div>`}
       </div>
     `;
+
     const build = (over = {}, replace = false) => {
-      const n = { cls, kind, q: qid, s: params.s || "", fav: favoriteOnly ? "1" : "all", ...over };
-      const qs = new URLSearchParams();
-      Object.entries(n).forEach(([k, v]) => { if ((v && v !== "all") || (k === "s" && v)) qs.set(k, v); });
-      const nextHash = "#/items" + (qs.toString() ? "?" + qs.toString() : "");
+      const next = { mode, cls, kind, q: qid, s: searchRaw, fav: favoriteOnly ? "1" : "all", limit, ...over };
+      const changesFilter = Object.keys(over).some((key) => ["cls", "kind", "q", "s", "fav"].includes(key));
+      if (mode === "catalog" && changesFilter && over.limit == null) next.limit = CATALOG_PAGE_SIZE;
+      const query = new URLSearchParams();
+      if (next.mode === "guide") query.set("mode", "guide");
+      if (next.cls && next.cls !== "all") query.set("cls", next.cls);
+      if (next.kind && next.kind !== "all") query.set("kind", next.kind);
+      if (next.mode === "guide" && next.q && next.q !== "all") query.set("q", next.q);
+      if (next.s) query.set("s", next.s);
+      if (next.fav === "1") query.set("fav", "1");
+      if (next.mode === "catalog" && next.limit > CATALOG_PAGE_SIZE) query.set("limit", String(next.limit));
+      const nextHash = "#/items" + (query.toString() ? `?${query}` : "");
       if (replace) {
         history.replaceState(null, "", nextHash);
         route();
-      } else location.hash = nextHash;
+      } else {
+        location.hash = nextHash;
+      }
     };
-    app.querySelectorAll("[data-p]").forEach((b) => b.onclick = () => build({ [b.dataset.p]: b.dataset.v }));
-    const inp = $("#item-s");
-    let t;
-    inp.oninput = () => { clearTimeout(t); t = setTimeout(() => build({ s: inp.value }, true), 220); };
-    const qsel = $("#item-q");
-    if (qsel) qsel.onchange = () => build({ q: qsel.value });
-    bindSprites(app);
+    app.querySelectorAll("[data-p]").forEach((button) => {
+      button.onclick = () => build({ [button.dataset.p]: button.dataset.v });
+    });
+    const input = $("#item-s");
+    let timer;
+    input.oninput = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => build({ s: input.value }, true), 220);
+    };
+    const clearSearch = $("#item-search-clear");
+    if (clearSearch) clearSearch.onclick = () => build({ s: "" }, true);
+    const questSelect = $("#item-q");
+    if (questSelect) questSelect.onchange = () => build({ q: questSelect.value });
+    const more = $("#catalog-more");
+    if (more) more.onclick = () => build({ limit: visible.length + CATALOG_PAGE_SIZE }, true);
+    if (mode === "guide") bindSprites(app);
   }
-
   function renderBosses(params = {}) {
     fillRail("");
     const era = params.era || "all";
@@ -1039,6 +1176,8 @@
     fillRail("");
     const favorites = getFavorites();
     const items = CODEX.items.filter((item) => favorites.item.has(String(item.name)));
+    const detailedKeys = new Set(items.map((item) => String(item.name)));
+    const indexedFavorites = indexedItems().filter((item) => favorites.item.has(String(item.name)) && !detailedKeys.has(String(item.name)));
     const bosses = CODEX.bosses.filter((boss) => favorites.boss.has(String(boss.n)));
     const craftMap = new Map();
     [...CODEX.crafts, ...CODEX.quests.flatMap((quest) => quest.crafts || [])].forEach((craft) => {
@@ -1046,17 +1185,19 @@
       if (key && !craftMap.has(key)) craftMap.set(key, craft);
     });
     const crafts = [...craftMap.entries()].filter(([key]) => favorites.craft.has(key)).map(([, craft]) => craft);
-    const total = items.length + bosses.length + crafts.length;
+    const itemTotal = items.length + indexedFavorites.length;
+    const total = itemTotal + bosses.length + crafts.length;
     app.innerHTML = `
       <div class="page favorites-page">
         ${mast("Рюкзак героя", "Личная подборка предметов, противников и рецептов. Нажми на звезду ещё раз, чтобы убрать запись.")}
         <div class="favorite-summary" aria-label="Сводка избранного">
-          <a href="#/items?fav=1"><span>◆</span><b>${items.length}</b><small>предметов</small></a>
+          <a href="#/items?fav=1"><span>◆</span><b>${itemTotal}</b><small>предметов</small></a>
           <a href="#/bosses"><span>☠</span><b>${bosses.length}</b><small>боссов</small></a>
           <a href="#/crafts"><span>⚒</span><b>${crafts.length}</b><small>рецептов</small></a>
         </div>
         ${total ? `
-          ${items.length ? shelf("Предметы", items.length, `<div class="item-grid">${items.map((item) => itemCard(item, "all", "all")).join("")}</div>`, true) : ""}
+          ${items.length ? shelf("Предметы с рекомендациями", items.length, `<div class="item-grid">${items.map((item) => itemCard(item, "all", "all")).join("")}</div>`, true) : ""}
+          ${indexedFavorites.length ? shelf("Предметы из полного индекса", indexedFavorites.length, `<div class="catalog-grid">${indexedFavorites.map(indexedItemCard).join("")}</div>`, true) : ""}
           ${bosses.length ? shelf("Боссы", bosses.length, `<div class="item-grid">${bosses.map(bossCard).join("")}</div>`, true) : ""}
           ${crafts.length ? shelf("Крафты", crafts.length, `<div class="craft-grid">${crafts.map(craftCard).join("")}</div>`, true) : ""}
           <div class="favorites-more"><span>Нужно добавить ещё?</span><a href="#/items">Предметы</a><a href="#/bosses">Боссы</a><a href="#/crafts">Крафты</a></div>
@@ -1132,10 +1273,27 @@
       if (`${x.ru} ${x.en} ${x.desc} ${x.where}`.toLowerCase().includes(q))
         hits.push({ href: `#/lex`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Словарь", mark: "A" });
     });
+    const itemHitNames = new Set();
     (CODEX.items || []).forEach((x) => {
       const title = x.nameRu || x.name;
-      if (`${x.name} ${title} ${x.get} ${x.why} ${x.desc || ""}`.toLowerCase().includes(q))
-        hits.push({ href: `#/items?s=${encodeURIComponent(x.name)}`, title, sub: x.get, type: "Предмет", mark: "◆" });
+      if (`${x.name} ${title} ${x.get} ${x.why} ${x.desc || ""}`.toLowerCase().includes(q)) {
+        hits.push({ href: `#/items?mode=guide&s=${encodeURIComponent(x.name)}`, title, sub: x.get, type: "Рекомендация", mark: "◆" });
+        itemHitNames.add(String(x.name).toLocaleLowerCase("ru"));
+        itemHitNames.add(String(title).toLocaleLowerCase("ru"));
+      }
+    });
+    indexedItems().forEach((item) => {
+      const blob = `${item.name} ${item.id} ${item.group} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`.toLocaleLowerCase("ru");
+      const key = String(item.name).toLocaleLowerCase("ru");
+      if (blob.includes(q) && !itemHitNames.has(key)) {
+        hits.push({
+          href: `#/items?s=${encodeURIComponent(item.name)}`,
+          title: item.name,
+          sub: `${item.group} · ${item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls)}`,
+          type: "Полный индекс",
+          mark: ITEM_KIND_MARK[item.kind] || "◆"
+        });
+      }
     });
     CODEX.bosses.forEach((x) => {
       if (`${x.name} ${x.en || ""} ${x.drops} ${x.summon}`.toLowerCase().includes(q))
