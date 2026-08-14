@@ -31,6 +31,8 @@ required=(
   Backgrounds/AstralSurfaceMiddle.png Backgrounds/AstralSurfaceMiddleGlow.png
   Backgrounds/AstralSurfaceClose.png Backgrounds/AstralSurfaceCloseGlow.png
   Backgrounds/AstralSurfaceFront.png Backgrounds/AstralSurfaceFrontGlow.png
+  Backgrounds/AstralDesertSurfaceFar.png Backgrounds/AstralDesertSurfaceMiddle.png
+  Backgrounds/AstralDesertSurfaceClose.png Backgrounds/AstralSnowSurfaceMiddle.png
   Backgrounds/SulphurSeaSurfaceClose.png Backgrounds/BasaltGullyBG.png
   Backgrounds/SunkenSeaShoresBG0.png Backgrounds/SunkenSeaShoresBG1.png
   Backgrounds/SunkenSeaShoresBG2.png Backgrounds/SunkenSeaShoresBG3.png
@@ -38,6 +40,8 @@ required=(
   Backgrounds/SunkenSeaBurrowsBG1.png Backgrounds/SunkenSeaBurrowsBG2.png
   Backgrounds/SunkenSeaBurrowsBG3.png Backgrounds/SunkenSeaBurrowsBG4.png
   Backgrounds/MapBackgrounds/AbyssBGLayer1.png
+  Backgrounds/MapBackgrounds/AbyssBGLayer23.png
+  Backgrounds/MapBackgrounds/AbyssBGLayer4.png
 )
 for file in "${required[@]}"; do
   test -f "$SOURCE_REPO/$file" || { echo "Missing official source asset: $file" >&2; exit 1; }
@@ -54,16 +58,34 @@ crop_scene() {
 
 # Build the same parallax stacks the mod draws in game, flattened into static
 # interface scenes. Layer order follows the official background style classes.
-build_astral() {
-  local canvas="$TMP/scene-astral.png"
+build_astral_layers() {
+  local canvas="$1"
+  shift
   crop_scene "$SOURCE_REPO/Skies/AstralSky.png" "$canvas" 1920 1080 center
   local layer
-  for layer in AstralSurfaceHorizon AstralSurfaceFar AstralSurfaceMiddle AstralSurfaceMiddleGlow \
-               AstralSurfaceClose AstralSurfaceCloseGlow AstralSurfaceFront AstralSurfaceFrontGlow; do
+  for layer in "$@"; do
     convert "$SOURCE_REPO/Backgrounds/$layer.png" -filter Lanczos -resize 1920x "$TMP/layer.png"
     composite -gravity south "$TMP/layer.png" "$canvas" "$TMP/next.png"
     mv "$TMP/next.png" "$canvas"
   done
+}
+
+build_astral() {
+  build_astral_layers "$TMP/scene-astral.png" \
+    AstralSurfaceHorizon AstralSurfaceFar AstralSurfaceMiddle AstralSurfaceMiddleGlow \
+    AstralSurfaceClose AstralSurfaceCloseGlow AstralSurfaceFront AstralSurfaceFrontGlow
+}
+
+build_astral_desert() {
+  build_astral_layers "$TMP/scene-astral-desert.png" \
+    AstralSurfaceHorizon AstralDesertSurfaceFar AstralDesertSurfaceMiddle AstralDesertSurfaceClose \
+    AstralSurfaceFront AstralSurfaceFrontGlow
+}
+
+build_astral_snow() {
+  build_astral_layers "$TMP/scene-astral-snow.png" \
+    AstralSurfaceHorizon AstralSurfaceFar AstralSnowSurfaceMiddle \
+    AstralSurfaceClose AstralSurfaceCloseGlow AstralSurfaceFront AstralSurfaceFrontGlow
 }
 
 build_sulphur() {
@@ -89,13 +111,21 @@ build_sunken() {
 }
 
 build_astral
+build_astral_desert
+build_astral_snow
 build_sulphur
 build_sunken Shores
 build_sunken Burrows
 convert "$SOURCE_REPO/Backgrounds/BasaltGullyBG.png" -filter point -resize 1920x1152! \
   -gravity center -crop 1920x1080+0+0 +repage "$TMP/scene-basalt.png"
-convert "$SOURCE_REPO/Backgrounds/MapBackgrounds/AbyssBGLayer1.png" -filter point \
-  -resize 1920x1080! "$TMP/scene-abyss.png"
+# The three abyss map textures represent successive depths rather than overlay
+# layers. Stack them vertically so the resulting scene keeps all landmarks.
+for spec in "1:AbyssBGLayer1" "2:AbyssBGLayer23" "3:AbyssBGLayer4"; do
+  number="${spec%%:*}"; layer="${spec#*:}"
+  convert "$SOURCE_REPO/Backgrounds/MapBackgrounds/$layer.png" -filter point \
+    -resize 1920x360! "$TMP/abyss-$number.png"
+done
+convert "$TMP/abyss-1.png" "$TMP/abyss-2.png" "$TMP/abyss-3.png" -append "$TMP/scene-abyss.png"
 crop_scene "$SOURCE_REPO/MainMenu/ClassicMenuBackground.png" "$TMP/scene-classic.png" 1920 1080 center
 convert "$SOURCE_REPO/MainMenu/ModernMenuBackground.png" -filter point -resize 1920x1080! "$TMP/scene-modern.png"
 
@@ -113,10 +143,10 @@ crop_scene "$TMP/scene-modern.png" "$OUT/themes/forest.jpg" 1600 900 center
 crop_scene "$TMP/scene-basalt.png" "$OUT/themes/wulfrum.jpg" 1600 900 center
 crop_scene "$TMP/scene-sulphur.png" "$OUT/themes/sea.jpg" 1600 900 center
 crop_scene "$SOURCE_REPO/Skies/CalamitasBackground.png" "$OUT/themes/brimstone.jpg" 1600 900 center
-crop_scene "$TMP/scene-basalt.png" "$OUT/themes/hell.jpg" 1600 900 center
-crop_scene "$TMP/scene-astral.png" "$OUT/themes/desert.jpg" 1600 900 center
-crop_scene "$SOURCE_REPO/Skies/AstralSky.png" "$OUT/themes/ice.jpg" 1600 900 center
-crop_scene "$TMP/scene-modern.png" "$OUT/themes/evil.jpg" 1600 900 center
+crop_scene "$TMP/scene-classic.png" "$OUT/themes/hell.jpg" 1600 900 center
+crop_scene "$TMP/scene-astral-desert.png" "$OUT/themes/desert.jpg" 1600 900 center
+crop_scene "$TMP/scene-astral-snow.png" "$OUT/themes/ice.jpg" 1600 900 center
+crop_scene "$TMP/scene-astral.png" "$OUT/themes/evil.jpg" 1600 900 center
 crop_scene "$TMP/scene-sunken-burrows.png" "$OUT/themes/mushroom.jpg" 1600 900 center
 crop_scene "$TMP/scene-abyss.png" "$OUT/themes/dungeon.jpg" 1600 900 center
 

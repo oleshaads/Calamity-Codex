@@ -21,6 +21,7 @@ const sourceRepo = path.resolve(sourceDir, "../..");
 const itemSourceDir = path.join(sourceRepo, "Items");
 const npcSourceDir = path.join(sourceRepo, "NPCs");
 const spriteOutput = path.resolve(process.argv[4] || path.join(path.dirname(output), "../assets/item-sprites"));
+const guideSpriteOutput = path.join(path.dirname(spriteOutput), "sprites");
 
 const FILE_PREFIX = "Mods.CalamityMod.Items.";
 const FILE_SUFFIX = ".hjson";
@@ -463,6 +464,42 @@ function russianDescription(item) {
   return sentences.join(" ");
 }
 
+function animationFrameCount(segment) {
+  const match = String(segment || "").match(
+    /(?:Terraria\.DataStructures\.)?DrawAnimationVertical\s*\(\s*[^,]+,\s*(\d+)\s*\)/
+  );
+  return match ? Number(match[1]) : 1;
+}
+
+function writeCatalogSprite(source, destination, frameCount) {
+  if (frameCount <= 1) {
+    fs.copyFileSync(source, destination);
+    return;
+  }
+
+  // Terraria stores vertical item animations as one PNG strip. Browsers do not
+  // understand that layout and would squeeze the entire strip into a tiny,
+  // unreadable line. Export the first complete in-game frame for static cards.
+  const dimensions = execFileSync("identify", ["-format", "%w %h", source], { encoding: "utf8" }).trim();
+  const [width, height] = dimensions.split(/\s+/).map(Number);
+  const dividedHeight = height / frameCount;
+  // A few food/alcohol sheets keep a one-pixel separator between frames.
+  const separatedHeight = (height - (frameCount - 1)) / frameCount;
+  const frameHeight = Number.isInteger(dividedHeight) ? dividedHeight
+    : Number.isInteger(separatedHeight) ? separatedHeight
+      : 0;
+  if (!width || !height || !frameHeight) {
+    throw new Error(`Invalid ${frameCount}-frame item texture: ${source} (${dimensions || "unknown size"})`);
+  }
+  execFileSync("convert", [
+    source,
+    "-crop", `${width}x${frameHeight}+0+0`,
+    "+repage",
+    "-define", "png:exclude-chunks=date,time",
+    destination
+  ]);
+}
+
 function imageCandidates(item, file, segment, pngByBase, relatedPngByBase) {
   const candidates = [];
   const key = item.id.toLocaleLowerCase("en-US");
@@ -539,6 +576,7 @@ if (fs.existsSync(spriteOutput)) fs.rmSync(spriteOutput, { recursive: true, forc
 fs.mkdirSync(spriteOutput, { recursive: true });
 
 const meta = new Map();
+let synchronizedGuideSprites = 0;
 for (const item of items) {
   const file = findSourceFile(sources, item.id);
   const source = file ? sources.sourceCache.get(file) : "";
@@ -546,8 +584,22 @@ for (const item of items) {
   const recipes = parseRecipes(segment, displayById);
   const ownStage = rarityStage(segment, item.groupId);
   const image = imageCandidates(item, file, segment, pngByBase, relatedPngByBase)[0] || "";
-  if (image) fs.copyFileSync(image, path.join(spriteOutput, `${item.id}.png`));
-  meta.set(item.id.toLocaleLowerCase("en-US"), { file, segment, recipes, stage: ownStage, image: Boolean(image) });
+  const animationFrames = animationFrameCount(segment);
+  if (image) {
+    const destination = path.join(spriteOutput, `${item.id}.png`);
+    writeCatalogSprite(image, destination, animationFrames);
+    // The hand-picked progression catalog reuses some of these files. Keep its
+    // duplicate copies normalized too, otherwise the same item is correct in
+    // the full catalog but still appears as a squeezed strip in guide cards.
+    const guideDestination = path.join(guideSpriteOutput, `${item.id}.png`);
+    if (animationFrames > 1 && fs.existsSync(guideDestination)) {
+      fs.copyFileSync(destination, guideDestination);
+      synchronizedGuideSprites += 1;
+    }
+  }
+  meta.set(item.id.toLocaleLowerCase("en-US"), {
+    file, segment, recipes, stage: ownStage, image: Boolean(image), animationFrames
+  });
 }
 
 // Recipes built from later materials inherit the latest known progression tier.
@@ -595,6 +647,8 @@ const coverage = {
   tooltips: itemRecords.filter((item) => item[3]).length,
   russianDescriptions: itemRecords.filter((item) => item[7]).length,
   sprites: itemRecords.length,
+  staticAnimationFrames: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).animationFrames > 1).length,
+  synchronizedGuideSprites,
   recipes: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).recipes.length).length,
   sourceFiles: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).file).length,
   omittedWithoutSprite: items.length - publicItems.length
@@ -613,4 +667,4 @@ const banner = `/* Rich offline Calamity Mod item catalog. Generated; do not edi
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, `${banner}window.CALAMITY_ITEM_INDEX=${JSON.stringify(payload)};\n`);
 console.log(`Wrote ${itemRecords.length} unique items across ${groupRecords.length} groups to ${output}`);
-console.log(`Coverage: ${coverage.sprites} verified sprites, ${coverage.russianDescriptions} Russian descriptions, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files; ${coverage.omittedWithoutSprite} sprite-less records omitted`);
+console.log(`Coverage: ${coverage.sprites} verified sprites (${coverage.staticAnimationFrames} animation strips normalized, ${coverage.synchronizedGuideSprites} guide copies synchronized), ${coverage.russianDescriptions} Russian descriptions, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files; ${coverage.omittedWithoutSprite} sprite-less records omitted`);

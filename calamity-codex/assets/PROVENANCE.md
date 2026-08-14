@@ -6,9 +6,9 @@
 
 Источник: официальный репозиторий `CalamityTeam/CalamityModPublic`, commit `1a8cebd27ec5615316b78f71973446b5528d2b78` (2026-08-08).
 
-- `item-sprites/*.png` — текстуры из `Items/`, а для предметов с общей текстурой — связанные официальные `NPCs/` или `Projectiles/` PNG. Точная политика выбора зафиксирована в `scripts/build-item-catalog.mjs`.
+- `item-sprites/*.png` — текстуры из `Items/`, а для предметов с общей текстурой — связанные официальные `NPCs/` или `Projectiles/` PNG. Для 101 текстуры с зарегистрированным `DrawAnimationVertical` сохраняется первый полный кадр официальной полосы; пиксели кадра не перерисовываются. Точная политика выбора и извлечения зафиксирована в `scripts/build-item-catalog.mjs`.
 - `boss-sprites/*.png` — официальные boss-head PNG из `NPCs/*`.
-- `hero.jpg`, `crest.jpg`, `novice.jpg`, `veteran.jpg`, `emblem.*`, `favicon.png`, `headers/*`, `themes/*` — кропы или статические композиции из `MainMenu/`, `Skies/`, `Backgrounds/` и перечисленных выше спрайтов. Команды пересборки находятся в `scripts/build-official-art.sh`.
+- `hero.jpg`, `crest.jpg`, `novice.jpg`, `veteran.jpg`, `emblem.*`, `favicon.png`, `headers/*`, `themes/*` — кропы или статические композиции из `MainMenu/`, `Skies/`, `Backgrounds/` и перечисленных выше спрайтов. Темы пустыни и снега используют собственные Astral Desert / Astral Snow слои, а фон Бездны объединяет три последовательных игровых слоя глубины. Команды пересборки находятся в `scripts/build-official-art.sh`.
 
 Композиции панорам являются оформлением интерфейса, а не скриншотами игрового процесса.
 
