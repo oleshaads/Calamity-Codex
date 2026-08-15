@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Rebuilds the decorative image set of the site:
-#   1. Section mastheads (headers/*.webp), the home crest and emblem.webp are
-#      crops of the committed user-supplied theme art with genuine local game
-#      sprites composited on top (ImageMagick only, fully reproducible).
-#   2. When a checkout of the official Calamity repo is provided, the four
-#      in-game biome scenes (sunken sea, sulphurous sea, astral surface,
-#      planetoid sky) are rebuilt from the pinned official parallax layers.
-# The authored biome illustrations (abyss, jungle, hallow, evil-island) are
-# static assets; their provenance is documented in assets/PROVENANCE.md.
+# Rebuilds the decorative interface compositions of the site:
+#   - section mastheads (headers/*.webp): one distinct theme per route with
+#     genuine local game sprites composited on top;
+#   - the home crest (crest.jpg): portrait crop of the sunken-sea scene;
+#   - emblem.webp: webp copy of the committed logo image.
+# All biome scenes (themes/*.jpg) are static authored illustrations whose
+# provenance is documented in assets/PROVENANCE.md; this script does not
+# overwrite them.
 #
-# Usage: ./scripts/build-official-art.sh [/path/to/CalamityModPublic] [out-dir]
-SOURCE_REPO="${1:-}"
-OUT="${2:-calamity-codex/assets}"
-CALAMITY_REF="1a8cebd27ec5615316b78f71973446b5528d2b78"
+# Usage: ./scripts/build-official-art.sh [out-dir]
+OUT="${1:-calamity-codex/assets}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -66,69 +63,5 @@ convert "$OUT/themes/sunken-sea.jpg" -filter Lanczos -resize 900x1100^ \
 
 # WebP copy of the committed logo image.
 convert "$OUT/emblem.png" -quality 94 "$OUT/emblem.webp"
-
-# ---------------------------------------------------------------------------
-# Official in-game biome scenes from the pinned Calamity checkout.
-# ---------------------------------------------------------------------------
-if [ -n "$SOURCE_REPO" ]; then
-  if source_ref="$(git -C "$SOURCE_REPO" rev-parse HEAD 2>/dev/null)"; then
-    test "$source_ref" = "$CALAMITY_REF" || {
-      echo "Official source checkout must be pinned to $CALAMITY_REF (got $source_ref)" >&2
-      exit 1
-    }
-  else
-    echo "Cannot verify source revision: $SOURCE_REPO is not a Git checkout" >&2
-    exit 1
-  fi
-
-  required=(
-    Skies/AstralSky.png Skies/SulphurSeaSky.png Skies/SulphurSeaSkyFront.png
-    Skies/SulphurSeaSurface.png Backgrounds/SulphurSeaSurfaceClose.png
-    Backgrounds/SunkenSeaShoresBG0.png Backgrounds/SunkenSeaShoresBG1.png
-    Backgrounds/SunkenSeaShoresBG2.png Backgrounds/SunkenSeaShoresBG3.png
-    Backgrounds/SunkenSeaShoresBG4.png Backgrounds/AstralSurfaceHorizon.png
-    Backgrounds/AstralSurfaceFar.png Backgrounds/AstralSurfaceMiddle.png
-    Backgrounds/AstralSurfaceMiddleGlow.png Backgrounds/AstralSurfaceClose.png
-    Backgrounds/AstralSurfaceCloseGlow.png Backgrounds/AstralSurfaceFront.png
-    Backgrounds/AstralSurfaceFrontGlow.png
-  )
-  for file in "${required[@]}"; do
-    test -f "$SOURCE_REPO/$file" || { echo "Missing official source asset: $file" >&2; exit 1; }
-  done
-
-  stack() { # stack <canvas> <layer...> — Lanczos-resize layers to canvas width, anchor south
-    local canvas="$1"; shift
-    for layer in "$@"; do
-      convert "$SOURCE_REPO/$layer" -filter Lanczos -resize 1376x "$TMP/layer.png"
-      composite -gravity south "$TMP/layer.png" "$canvas" "$TMP/next.png"
-      mv "$TMP/next.png" "$canvas"
-    done
-  }
-
-  # Sunken Sea: sky gradient strip + terrain layers.
-  convert "$SOURCE_REPO/Backgrounds/SunkenSeaShoresBG4.png" -resize 1376x768! "$TMP/sun.png"
-  stack "$TMP/sun.png" Backgrounds/SunkenSeaShoresBG3.png Backgrounds/SunkenSeaShoresBG2.png \
-        Backgrounds/SunkenSeaShoresBG1.png Backgrounds/SunkenSeaShoresBG0.png
-  convert "$TMP/sun.png" -quality 91 "$OUT/themes/sunken-sea.jpg"
-
-  # Sulphurous Sea: sky + sky front + water surface + close surface.
-  convert "$SOURCE_REPO/Skies/SulphurSeaSky.png" -resize 1376x768! "$TMP/sul.png"
-  stack "$TMP/sul.png" Skies/SulphurSeaSkyFront.png Skies/SulphurSeaSurface.png \
-        Backgrounds/SulphurSeaSurfaceClose.png
-  convert "$TMP/sul.png" -quality 91 "$OUT/themes/sulphur.jpg"
-
-  # Astral Infection: astral sky + the official surface layer stack.
-  convert "$SOURCE_REPO/Skies/AstralSky.png" -filter Lanczos -resize 1376x768^ \
-    -gravity center -crop 1376x768+0+0 +repage "$TMP/ast.png"
-  stack "$TMP/ast.png" Backgrounds/AstralSurfaceHorizon.png Backgrounds/AstralSurfaceFar.png \
-        Backgrounds/AstralSurfaceMiddle.png Backgrounds/AstralSurfaceMiddleGlow.png \
-        Backgrounds/AstralSurfaceClose.png Backgrounds/AstralSurfaceCloseGlow.png \
-        Backgrounds/AstralSurfaceFront.png Backgrounds/AstralSurfaceFrontGlow.png
-  convert "$TMP/ast.png" -quality 91 "$OUT/themes/astral.jpg"
-
-  # Planetoids: the plain astral star sky.
-  convert "$SOURCE_REPO/Skies/AstralSky.png" -filter Lanczos -resize 1376x768^ \
-    -gravity center -crop 1376x768+0+0 +repage -quality 91 "$OUT/themes/sky.jpg"
-fi
 
 printf 'Rebuilt decorative artwork in %s\n' "$OUT"
