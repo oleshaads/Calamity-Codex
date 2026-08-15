@@ -59,7 +59,75 @@ check(app.includes("Награда святилища"), "Shrine representative 
 check(fs.existsSync(path.resolve("scripts/build-official-art.sh")), "Official artwork rebuild script is missing");
 check(fs.existsSync(path.resolve("scripts/fetch-lexicon-art.sh")), "Dictionary artwork fetch script is missing");
 
+// --- Wiki reference cards (armor/materials/hp/mechanics) must resolve real local art ---
+// The UI tables live inside the app IIFE, so they are extracted from source.
+const tableOf = (name) => {
+  const match = app.match(new RegExp(`const ${name} = \\{([\\s\\S]*?)\\n  \\};`));
+  check(match, `Art table ${name} was not found in app.js`);
+  const entries = {};
+  for (const m of match[1].matchAll(/("(?:[^"\\]|\\.)*"|[A-Za-z][\w]*):\s*"((?:[^"\\]|\\.)*)"/g)) {
+    const key = m[1].startsWith("\"") ? JSON.parse(m[1]) : m[1];
+    entries[key] = JSON.parse(`"${m[2]}"`);
+  }
+  return entries;
+};
+const dataContext = { window: {} };
+dataContext.window = dataContext;
+vm.createContext(dataContext);
+for (const script of ["js/data.js", "js/extra.js", "js/lexicon.js", "js/plain.js", "js/plain-late.js", "js/polish.js", "js/sprites.js"]) {
+  vm.runInContext(fs.readFileSync(path.join(root, script), "utf8"), dataContext, { filename: script });
+}
+const CODEX = dataContext.CODEX;
+const LEX_ART = tableOf("LEX_ART");
+const REFERENCE_ART = tableOf("REFERENCE_ART");
+const WIKI_ART = tableOf("WIKI_ART");
+check(Object.keys(WIKI_ART).length === 23, `Expected 23 explicit wiki art entries, got ${Object.keys(WIKI_ART).length}`);
+for (const [name, relative] of Object.entries(WIKI_ART)) {
+  check(fs.existsSync(path.join(root, relative)), `Wiki art for "${name}" is missing locally: ${relative}`);
+}
+const normalizeArt = (s) => String(s || "").toLocaleLowerCase("ru").replace(/[^a-zа-яё0-9]+/gi, " ").trim();
+const spriteIndex = new Map();
+for (const [name, relative] of Object.entries(CODEX.sprites || {})) {
+  for (const part of [name, ...String(name).split(/\s*\/\s*/)]) {
+    const key = normalizeArt(part);
+    if (key && !spriteIndex.has(key)) spriteIndex.set(key, relative);
+  }
+}
+for (const item of items) {
+  const key = normalizeArt(item[0]);
+  if (key && !spriteIndex.has(key)) spriteIndex.set(key, `assets/item-sprites/${encodeURIComponent(item[2])}.png`);
+}
+const wikiResolves = (name) => {
+  // Mirrors app.js resolveArt(): exact-name table hits only, then the
+  // sprite-name index over the exact name and the dictionary en/ru names.
+  if (LEX_ART[name] || REFERENCE_ART[name] || WIKI_ART[name]) return true;
+  const lex = CODEX.lookup ? CODEX.lookup(name) : null;
+  for (const candidate of [name, lex && lex.en, lex && lex.ru].filter(Boolean)) {
+    if (spriteIndex.get(normalizeArt(candidate))) return true;
+    for (const part of String(candidate).split(/\s*\/\s*/)) {
+      if (spriteIndex.get(normalizeArt(part))) return true;
+    }
+  }
+  return false;
+};
+const unresolved = [...CODEX.armors, ...CODEX.materials, ...CODEX.hpUps, ...CODEX.mechanics]
+  .map((entry) => entry.name)
+  .filter((name) => !wikiResolves(name));
+check(unresolved.length === 0, `Wiki reference cards without local art: ${unresolved.join(", ")}`);
+
+// Every biome card must reference its own local image: no missing files,
+// no two biomes sharing one scene.
+const biomeImages = (CODEX.biomes || []).map((biome) => String(biome.img || ""));
+check(biomeImages.length >= 18, `Expected at least 18 biome cards, got ${biomeImages.length}`);
+for (const img of biomeImages) {
+  check(img.startsWith("assets/"), `Biome image path is not local: ${img}`);
+  check(fs.existsSync(path.join(root, img)), `Biome image is missing locally: ${img}`);
+}
+check(new Set(biomeImages).size === biomeImages.length, `Biome cards share one image: ${biomeImages.join(", ")}`);
+
 console.log(`PASS: ${items.length} catalog cards have verified local sprites and Russian descriptions`);
-console.log(`PASS: ${officialArt.length} decorative assets have documented official-game provenance`);
+console.log(`PASS: ${officialArt.length} decorative assets are present with documented provenance`);
 console.log(`PASS: ${lexFiles.length} dictionary textures have pinned sources and honest representative labels`);
 console.log("PASS: generated item fallback art is absent; missing reference sprites are labeled honestly");
+console.log(`PASS: all ${Object.keys(WIKI_ART).length} wiki reference cards resolve verified local art`);
+console.log(`PASS: all ${biomeImages.length} biome cards have their own local image`);

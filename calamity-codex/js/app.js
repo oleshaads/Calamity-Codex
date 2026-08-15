@@ -802,6 +802,36 @@
     "Snow biome": "Материал биома",
     "Plaguebringer armor": "Предмет комплекта"
   };
+  // The wiki section (armor sets, materials, permanent upgrades, mechanics)
+  // uses short Russian names from the localized data files. The dictionary
+  // tables above are keyed by English names, so those cards need their own
+  // explicit mapping to the genuine in-game textures that already ship
+  // locally. Without it the cards degrade to the empty "нет спрайта" state.
+  const WIKI_ART = {
+    "Вульфрум": "assets/sprites/WulfrumJacket.png",
+    "Виктайд": "assets/sprites/VictideBreastplate.png",
+    "Сернистый": "assets/sprites/SulphurousBreastplate.png",
+    "Моллюск": "assets/sprites/MolluskShellmet.png",
+    "Святой / хлорифит": "assets/sprites/Chlorophyte_Plate_Mail.png",
+    "Чумной / жнец": "assets/sprites/PlaguebringerCarapace.png",
+    "Астральный": "assets/sprites/AstralBreastplate.png",
+    "Аурик-тесла": "assets/sprites/AuricTeslaBodyArmor.png",
+    "Три эссенции": "assets/sprites/EssenceofSunlight.png",
+    "Крионит": "assets/sprites/CryonicOre.png",
+    "Клетки / люменил / каша": "assets/sprites/DepthCells.png",
+    "Заражённая пластина": "assets/sprites/InfectedArmorPlating.png",
+    "Панцирь / плазма / эфир": "assets/sprites/ArmoredShell.png",
+    "Топливо / эндотерм / тёмное солнце": "assets/sprites/NightmareFuel.png",
+    "Аурик": "assets/sprites/AuricOre.png",
+    "Фрукт жизни": "assets/lex/vanilla/life-fruit.png",
+    "Плут": "assets/sprites/RogueEmblem.png",
+    "Возмездие": "assets/lex/calamity/adrenaline.png",
+    "Режим смерти": "assets/lex/calamity/rage.png",
+    "Апгрейды шкал": "assets/sprites/ElectrolyteGelPack.png",
+    "Реворк руд": "assets/lex/vanilla/demon-altar.png",
+    "Чертежи Дрейдона": "assets/sprites/EncryptedSchematicSunkenSea.png",
+    "Эффект босса": "assets/sprites/Suspicious_Looking_Eye.png"
+  };
   const LEX_KIND = {
     "Босс": "boss", "Мини-босс": "boss", "Биом": "world", "Структура": "world", "Событие": "world",
     "Механика": "mechanic", "Сложность": "mechanic", "Класс": "mechanic", "Мод": "mechanic", "НПС": "npc",
@@ -829,8 +859,12 @@
   }
   function resolveArt(name, explicit = "") {
     if (explicit) return explicit;
+    // Exact-name lookups only: CODEX.lookup() is intentionally fuzzy, so its
+    // en/ru results must not be trusted for table hits ("Guide Voodoo Doll"
+    // would wrongly match the "Guide" entry).
     if (LEX_ART[name]) return LEX_ART[name];
     if (REFERENCE_ART[name]) return REFERENCE_ART[name];
+    if (WIKI_ART[name]) return WIKI_ART[name];
     const lex = CODEX.lookup ? CODEX.lookup(name) : null;
     const names = [name, lex && lex.en, lex && lex.ru].filter(Boolean);
     const index = getArtNameIndex();

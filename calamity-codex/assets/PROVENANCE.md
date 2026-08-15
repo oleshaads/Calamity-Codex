@@ -1,27 +1,56 @@
 # Происхождение изображений
 
-Все изображения интерфейса — настоящие игровые ассеты или статические композиции из них. Синтетические иллюстрации и нарисованные заменители предметов не используются.
+В поставке три группы изображений: пользовательский декоративный набор (восстановлен из авторского архива), официальные игровые ассеты Calamity/Terraria и несколько авторских иллюстраций для биомов, у которых нет подходящей игровой сцены. Каждая группа описана отдельно; внутри карточек предметы всегда показываются настоящими игровыми спрайтами.
 
-## Calamity Mod
+## Пользовательский декоративный набор
+
+Следующие файлы — оригинальные изображения сайта, восстановленные из авторского архива `workspace-019fffff-2c50-7338-8c2c-4b802fa0dddc.zip` (закреплён в истории репозитория):
+
+- `emblem.png`, `hero.jpg`, `novice.jpg`, `veteran.jpg` — логотип и домашние сцены;
+- `themes/forest.jpg`, `themes/wulfrum.jpg`, `themes/sea.jpg`, `themes/brimstone.jpg`, `themes/hell.jpg`, `themes/desert.jpg`, `themes/ice.jpg`, `themes/evil.jpg`, `themes/mushroom.jpg`, `themes/dungeon.jpg` — тематические фоны разделов и биомов.
+
+Авторство этих файлов — автор сайта; происхождение источника неизвестно, поэтому они не выдаются за игровые ассеты.
+
+## Официальные игровые сцены биомов
 
 Источник: официальный репозиторий `CalamityTeam/CalamityModPublic`, commit `1a8cebd27ec5615316b78f71973446b5528d2b78` (2026-08-08).
 
+- `themes/sunken-sea.jpg` — послойная сцена Sunken Sea (`Backgrounds/SunkenSeaShoresBG0..4`);
+- `themes/sulphur.jpg` — послойная сцена Sulphurous Sea (`Skies/SulphurSeaSky*` + `Backgrounds/SulphurSeaSurfaceClose`);
+- `themes/astral.jpg` — астральная сцена (`Skies/AstralSky` + `Backgrounds/AstralSurface*`);
+- `themes/sky.jpg` — звёздное небо (`Skies/AstralSky`), используется для планетойдов.
+
+Слои разворачиваются по ширине канваса с привязкой к нижнему краю, как их рисует игра; пиксели слоёв не изменяются. Пересборка — `scripts/build-official-art.sh /path/to/CalamityModPublic`.
+
+## Авторские иллюстрации биомов
+
+У Бездны, Джунглей, Святых земель и Острова зла в закреплённом checkout нет отдельной игровой сцены. Для них подготовлены авторские иллюстрации в стилистике декоративного набора (сгенерированы нейросетью по описанию; не являются игровыми ассетами):
+
+- `themes/abyss.jpg`, `themes/jungle.jpg`, `themes/hallow.jpg`, `themes/evil-island.jpg`.
+
+## Композиции интерфейса
+
+Из восстановленного декоративного набора собираются (ImageMagick, детерминированно):
+
+- `headers/wiki.webp`, `headers/bosses.webp`, `headers/items.webp`, `headers/favorites.webp`, `headers/lex.webp`, `headers/crafts.webp`, `headers/biomes.webp` — панорамы разделов 1800×600; у каждой своя тема, поверх размещены настоящие локальные игровые спрайты (Ark of the Cosmos, boss-head Supreme Calamitas и Exo Mechs, Lore Calamitas, Core of Calamity, Encrypted Schematic, Draedon's Forge). Панорама биомов — единая сцена леса без коллажа;
+- `crest.jpg` — вертикальный кроп официальной сцены Sunken Sea для домашнего crest;
+- `emblem.webp` — webp-копия `emblem.png`;
+- `favicon.png` — кроп официального `MainMenu/Logo.png` (crest логотипа).
+
+Панорамы и композиции являются оформлением интерфейса, а не скриншотами игрового процесса.
+
+## Calamity Mod: спрайты предметов и боссов
+
+Источник: `CalamityTeam/CalamityModPublic`, commit `1a8cebd27ec5615316b78f71973446b5528d2b78`.
+
 - `item-sprites/*.png` — текстуры из `Items/`, а для предметов с общей текстурой — связанные официальные `NPCs/` или `Projectiles/` PNG. Точная политика выбора зафиксирована в `scripts/build-item-catalog.mjs`.
+- `item-sprites/Riftburst.png` — спрайт предмета Riftburst, пересобранный как однокадровый PNG из ранее поставленного GIF-файла; пиксели кадра сохранены без изменений, формат приведён к честному PNG, чтобы файл гарантированно отображался любым браузером.
 - `boss-sprites/*.png` — официальные boss-head PNG из `NPCs/*`.
-- `hero.jpg`, `crest.jpg`, `novice.jpg`, `veteran.jpg`, `emblem.*`, `favicon.png`, `headers/*`, `themes/*` — кропы или статические композиции из `MainMenu/`, `Skies/`, `Backgrounds/` и перечисленных выше спрайтов. Команды пересборки находятся в `scripts/build-official-art.sh`.
-
-Композиции панорам являются оформлением интерфейса, а не скриншотами игрового процесса.
-
-### Ассеты словаря Calamity
-
-`lex/calamity/*.png` загружаются непосредственно из того же официального репозитория на закреплённом commit `1a8cebd27ec5615316b78f71973446b5528d2b78`: это Laboratory Icon, штатные UI-текстуры Adrenaline/Rage и четыре оригинальных town-NPC head.
+- `lex/calamity/*.png` — Laboratory Icon, штатные UI-текстуры Adrenaline/Rage и четыре оригинальных town-NPC head из того же checkout.
 
 ## Terraria
 
-Небольшие vanilla-спрайты в `sprites/` используются для этапов базовой Terraria. `sprites/Deer_Thing.png` — игровой спрайт предмета Deer Thing (Item ID 5120), каноническая страница: <https://terraria.wiki.gg/wiki/Deer_Thing>. Локальная копия сверена с публичным набором `EzraGillooly/terraria-compass` (`public/icons/items/deer-thing.png`).
-
-### Ассеты словаря Terraria
-
+- `sprites/*.png` — ванильные спрайты инвентаря и предметов для этапов базовой Terraria. `sprites/Deer_Thing.png` — игровой спрайт предмета Deer Thing (Item ID 5120), каноническая страница: <https://terraria.wiki.gg/wiki/Deer_Thing>. Локальная копия сверена с публичным набором `EzraGillooly/terraria-compass` (`public/icons/items/deer-thing.png`).
 - `lex/vanilla/*.png` (обычные предметы и bestiary NPC) — отдельные оригинальные игровые текстуры из публичного набора `Live-yan/terraviewer-images`, commit `d8b7a655e210fe377186a083635733ece85c3594`. Идентификаторы `item_*` и `npc_*` явно закреплены в `scripts/fetch-lexicon-art.sh`; имена не подбираются приблизительно.
 - `lex/vanilla/demon-altar.png` — настоящая tile/station-текстура Demon Altar из публичного Terraria recipe viewer `64mb/terraria-web-book`, commit `a825a5d87d18c63c22a461265b2d9188579b204f`, путь `assets/terraria/tool/demon_altar.png`.
 - Исходный `item_75.png` (Fallen Star) является вертикальной игровой анимационной полосой. Скрипт детерминированно вырезает первый полный кадр `22×26`; цвет, пиксели и форма кадра не изменяются.

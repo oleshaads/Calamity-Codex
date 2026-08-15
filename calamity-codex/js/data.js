@@ -1220,7 +1220,7 @@ CODEX.materials = [
 CODEX.biomes = [
   {
     name: "Затонувшее море", en: "Sunken Sea",
-    img: "assets/themes/sea.jpg", danger: "Низкая", dangerLvl: "low",
+    img: "assets/themes/sunken-sea.jpg", danger: "Низкая", dangerLvl: "low",
     desc: "Светлый грот под пустыней: ракушки, бирюзовые кристаллы, спокойная вода. Это не зелёный океан у данжа.",
     where: "Дойди до жёлтой пустыни, копай вниз через песок. После подземной пустыни появится голубая вода и светлый камень.",
     when: "С первых часов. Огромную раковину не трогай, пока не убит Пустынный бич.",
@@ -1230,7 +1230,7 @@ CODEX.biomes = [
   },
   {
     name: "Сернистое море", en: "Sulphurous Sea",
-    img: "assets/themes/sea.jpg", filter: "hue-rotate(70deg) saturate(1.35) contrast(1.05)",
+    img: "assets/themes/sulphur.jpg",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Ядовитый океан со стороны данжа. Вода зелёная и жжёт. Отсюда спуск в Бездну, сюда же приходит кислотный дождь.",
     where: "Океан у кирпичной крепости со стариком. Если вода синяя и не жжёт — ты не там, это чистый океан.",
@@ -1241,7 +1241,7 @@ CODEX.biomes = [
   },
   {
     name: "Бездна", en: "The Abyss",
-    img: "assets/themes/dungeon.jpg", filter: "hue-rotate(160deg) saturate(.65) brightness(.7)",
+    img: "assets/themes/abyss.jpg",
     danger: "Смертельная", dangerLvl: "dead",
     desc: "Четыре слоя чёрной воды под сернистым морем. Воздух кончается сразу, хищники снимают новичка за секунды.",
     where: "Спускайся с зелёного берега вниз. Слой 1 ещё серый. Дальше — кромешная тьма.",
@@ -1263,7 +1263,7 @@ CODEX.biomes = [
   },
   {
     name: "Астральная инфекция", en: "Astral Infection",
-    img: "assets/themes/mushroom.jpg", filter: "hue-rotate(90deg) saturate(1.35) contrast(1.1)",
+    img: "assets/themes/astral.jpg",
     danger: "Высокая", dangerLvl: "high",
     desc: "Фиолетово-бирюзовый биом хардмода: заражённая земля, метеорит и маяк. Враги жёсткие с первой минуты хардмода.",
     where: "Появляется само, когда падает Стена плоти. На карте — чужая палитра и кратер-метеорит.",
@@ -1274,7 +1274,7 @@ CODEX.biomes = [
   },
   {
     name: "Планетойды", en: "Planetoids",
-    img: "assets/themes/forest.jpg", filter: "saturate(.7) hue-rotate(-8deg) brightness(.85)",
+    img: "assets/themes/sky.jpg",
     danger: "Низкая", dangerLvl: "low",
     desc: "Круглые острова выше обычных парящих. На большом центральном — космическая лаборатория Дрейдона.",
     where: "Зелье гравитации, столб из верёвки или крюк — лети выше облаков, пока небо не станет чёрным.",
@@ -1307,7 +1307,7 @@ CODEX.biomes = [
   },
   {
     name: "Остров зла", en: "Evil Island",
-    img: "assets/themes/evil.jpg",
+    img: "assets/themes/evil-island.jpg",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Кусок порчи или багрянца в небе — того зла, которого нет внизу в твоём мире.",
     where: "Над данжем или над джунглями. Лети зельем гравитации.",
@@ -1362,7 +1362,7 @@ CODEX.biomes = [
   },
   {
     name: "Джунгли", en: "Jungle",
-    img: "assets/themes/forest.jpg", filter: "hue-rotate(25deg) saturate(1.4) contrast(1.05)",
+    img: "assets/themes/jungle.jpg",
     danger: "Высокая", dangerLvl: "high",
     desc: "Густой биом: ульи, храм, Плантера, чума, потом Ярон. Фрукты жизни здесь растут с начала хардмода.",
     where: "Обычно напротив пустыни. Подземные джунгли — ниже, с грязью и лианами.",
@@ -1395,7 +1395,7 @@ CODEX.biomes = [
   },
   {
     name: "Святые земли", en: "The Hallow",
-    img: "assets/themes/desert.jpg", filter: "sepia(.35) saturate(1.4) brightness(1.1)",
+    img: "assets/themes/hallow.jpg",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Розовая радуга хардмода. После Лунного лорда здесь профанные враги и бой Провиденс.",
     where: "Полоса, которая врезается в мир после Стены плоти, обычно со стороны джунглей.",
