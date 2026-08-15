@@ -17,15 +17,16 @@
 
 - `themes/sunken-sea.jpg` — послойная сцена Sunken Sea (`Backgrounds/SunkenSeaShoresBG0..4`);
 - `themes/sulphur.jpg` — послойная сцена Sulphurous Sea (`Skies/SulphurSeaSky*` + `Backgrounds/SulphurSeaSurfaceClose`);
-- `themes/astral.jpg` — астральная сцена (`Skies/AstralSky` + `Backgrounds/AstralSurface*`).
+- `themes/astral.jpg` — астральная сцена (`Skies/AstralSky` + `Backgrounds/AstralSurface*`);
+- `themes/sky.jpg` — официальное звёздное небо (`Skies/AstralSky`), используется для планетойдов.
 
 Слои разворачиваются по ширине канваса с привязкой к нижнему краю, как их рисует игра; пиксели слоёв не изменяются. Пересборка — `scripts/build-official-art.sh /path/to/CalamityModPublic`.
 
 ## Авторские иллюстрации биомов
 
-У Бездны, Джунглей, Святых земель, Острова зла и Планетойдов в закреплённом checkout нет подходящей отдельной игровой сцены. Для них подготовлены авторские иллюстрации в стилистике Террарии (сгенерированы нейросетью по описанию; не являются игровыми ассетами):
+У Бездны, Джунглей, Святых земель и Острова зла в закреплённом checkout нет подходящей отдельной игровой сцены. Для них подготовлены авторские иллюстрации в стилистике Террарии (сгенерированы нейросетью по описанию; не являются игровыми ассетами):
 
-- `themes/abyss.jpg`, `themes/jungle.jpg`, `themes/hallow.jpg`, `themes/evil-island.jpg`, `themes/sky.jpg`.
+- `themes/abyss.jpg`, `themes/jungle.jpg`, `themes/hallow.jpg`, `themes/evil-island.jpg`.
 
 Авторская тема `themes/dungeon.jpg` слегка осветлена (гамма 1.28) для читаемости на тёмном интерфейсе.
 
