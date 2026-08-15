@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0b0c0f" />
+  <meta name="theme-color" content="#06070b" />
   <meta name="color-scheme" content="dark" />
   <title>Каламити Кодекс — путеводитель по Terraria Calamity</title>
   <meta name="description" content="Русский спутник по Terraria + Calamity: 30 квестов, 2500+ предметов, боссы, крафты и биомы." />
@@ -15,7 +15,57 @@
   <canvas id="embers" aria-hidden="true"></canvas>
 
   <div class="shell">
-    <aside class="rail" id="rail" aria-label="Основная навигация">
+    <!-- ============ Top navigation (desktop) ============ -->
+    <header class="topnav">
+      <a class="brand" href="#/" aria-label="Каламити Кодекс — на главную">
+        <span class="brand-art"><img src="assets/favicon.png" alt="" width="96" height="96" /></span>
+        <span class="brand-copy">
+          <b>Каламити</b>
+          <small>кодекс · 2.2.2</small>
+        </span>
+      </a>
+
+      <nav class="topnav-links" id="topnav-links" aria-label="Основная навигация">
+        <a href="#/" data-nav="home">Главная</a>
+        <a href="#/novice?q=1" data-nav="novice">Путь новичка<em>30</em></a>
+        <a href="#/wiki" data-nav="wiki">Справочник</a>
+        <a href="#/bosses" data-nav="bosses">Боссы<em>36</em></a>
+        <a href="#/items" data-nav="items">Предметы<em>2.5K</em></a>
+        <a href="#/favorites" data-nav="favorites">Избранное<em data-favorites-count>0</em></a>
+        <a href="#/lex" data-nav="lex">Словарь</a>
+        <a href="#/crafts" data-nav="crafts">Крафты</a>
+        <a href="#/biomes" data-nav="biomes">Биомы</a>
+      </nav>
+
+      <div class="topnav-tools">
+        <label class="search" aria-label="Глобальный поиск">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="global-search" type="search" placeholder="Поиск по кодексу…" autocomplete="off" spellcheck="false" />
+          <kbd>Ctrl K</kbd>
+        </label>
+
+        <a class="journey-mini" href="#/novice?q=1" title="Продолжить путь новичка">
+          <span class="journey-gem" aria-hidden="true"></span>
+          <span class="journey-copy"><small>Прогресс</small><b id="journey-count">0%</b></span>
+        </a>
+
+        <a class="favorite-mini" href="#/favorites" data-nav="favorites" aria-label="Открыть избранное" title="Рюкзак героя">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg>
+          <span class="favorite-count" data-favorites-count>0</span>
+        </a>
+
+        <button class="burger" id="menu-btn" type="button" aria-label="Открыть меню" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <div id="search-panel" class="search-drop hidden" role="dialog" aria-label="Результаты поиска"></div>
+    <main id="app" tabindex="-1"></main>
+
+    <!-- ============ Mobile off-canvas drawer ============ -->
+    <div id="rail-scrim" class="rail-scrim" hidden></div>
+    <aside class="rail" id="rail" aria-label="Меню">
       <a class="rail-brand" href="#/" aria-label="Каламити Кодекс — на главную">
         <span class="brand-art"><img src="assets/favicon.png" alt="" width="96" height="96" /></span>
         <span class="brand-copy">
@@ -74,38 +124,6 @@
         <p><span class="status-dot"></span> Каталог доступен офлайн</p>
       </div>
     </aside>
-
-    <div class="stage">
-      <header class="stage-bar">
-        <button class="burger" id="menu-btn" type="button" aria-label="Открыть меню" aria-expanded="false">
-          <span></span><span></span><span></span>
-        </button>
-
-        <div class="page-context" aria-live="polite">
-          <small>Calamity Codex</small>
-          <b id="route-title">Главная</b>
-        </div>
-
-        <label class="search" aria-label="Глобальный поиск">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-          <input id="global-search" type="search" placeholder="Поиск по кодексу…" autocomplete="off" spellcheck="false" />
-          <kbd>Ctrl K</kbd>
-        </label>
-
-        <a class="favorite-mini" href="#/favorites" data-nav="favorites" aria-label="Открыть избранное" title="Рюкзак героя">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg>
-          <span class="favorite-count" data-favorites-count>0</span>
-        </a>
-
-        <a class="journey-mini" href="#/novice?q=1" title="Продолжить путь новичка">
-          <span class="journey-gem" aria-hidden="true"></span>
-          <span><small>Прогресс</small><b id="journey-count">0%</b></span>
-        </a>
-      </header>
-
-      <div id="search-panel" class="search-drop hidden" role="dialog" aria-label="Результаты поиска"></div>
-      <main id="app" tabindex="-1"></main>
-    </div>
   </div>
 
   <nav class="mobile-tabs" aria-label="Быстрая навигация">
@@ -116,7 +134,6 @@
   </nav>
 
   <button class="to-top" id="to-top" type="button" aria-label="Наверх">↑</button>
-  <div id="rail-scrim" class="rail-scrim" hidden></div>
   <div id="tt" class="tt" hidden></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
