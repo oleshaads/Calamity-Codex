@@ -17,27 +17,27 @@
 
 - `themes/sunken-sea.jpg` — послойная сцена Sunken Sea (`Backgrounds/SunkenSeaShoresBG0..4`);
 - `themes/sulphur.jpg` — послойная сцена Sulphurous Sea (`Skies/SulphurSeaSky*` + `Backgrounds/SulphurSeaSurfaceClose`);
-- `themes/astral.jpg` — астральная сцена (`Skies/AstralSky` + `Backgrounds/AstralSurface*`);
-- `themes/sky.jpg` — звёздное небо (`Skies/AstralSky`), используется для планетойдов.
+- `themes/astral.jpg` — астральная сцена (`Skies/AstralSky` + `Backgrounds/AstralSurface*`).
 
 Слои разворачиваются по ширине канваса с привязкой к нижнему краю, как их рисует игра; пиксели слоёв не изменяются. Пересборка — `scripts/build-official-art.sh /path/to/CalamityModPublic`.
 
 ## Авторские иллюстрации биомов
 
-У Бездны, Джунглей, Святых земель и Острова зла в закреплённом checkout нет отдельной игровой сцены. Для них подготовлены авторские иллюстрации в стилистике декоративного набора (сгенерированы нейросетью по описанию; не являются игровыми ассетами):
+У Бездны, Джунглей, Святых земель, Острова зла и Планетойдов в закреплённом checkout нет подходящей отдельной игровой сцены. Для них подготовлены авторские иллюстрации в стилистике Террарии (сгенерированы нейросетью по описанию; не являются игровыми ассетами):
 
-- `themes/abyss.jpg`, `themes/jungle.jpg`, `themes/hallow.jpg`, `themes/evil-island.jpg`.
+- `themes/abyss.jpg`, `themes/jungle.jpg`, `themes/hallow.jpg`, `themes/evil-island.jpg`, `themes/sky.jpg`.
 
-## Композиции интерфейса
+Авторская тема `themes/dungeon.jpg` слегка осветлена (гамма 1.28) для читаемости на тёмном интерфейсе.
 
-Из восстановленного декоративного набора собираются (ImageMagick, детерминированно):
+## Баннеры разделов (заголовки страниц)
 
-- `headers/wiki.webp`, `headers/bosses.webp`, `headers/items.webp`, `headers/favorites.webp`, `headers/lex.webp`, `headers/crafts.webp`, `headers/biomes.webp` — панорамы разделов 1800×600; у каждой своя тема, поверх размещены настоящие локальные игровые спрайты (Ark of the Cosmos, boss-head Supreme Calamitas и Exo Mechs, Lore Calamitas, Core of Calamity, Encrypted Schematic, Draedon's Forge);
-- `crest.jpg` — вертикальный кроп официальной сцены Sunken Sea для домашнего crest;
+`headers/wiki.webp`, `headers/bosses.webp`, `headers/items.webp`, `headers/favorites.webp`, `headers/lex.webp`, `headers/crafts.webp`, `headers/biomes.webp` — по одной авторской иллюстрации на раздел, сгенерированной нейросетью в стилистике Террарии под тематику страницы (библиотека, бестиарий, арсенал, рюкзак с сокровищами, фолиант, кузница, панорама мира). Используются как фон баннеров-заголовков страниц; текст накладывается на затемнённую левую часть. Не являются игровыми ассетами.
+
+## Прочие композиции интерфейса
+
+- `crest.jpg` — вертикальный кроп официальной сцены Sunken Sea (ассет домашнего crest; в текущей разметке главной не используется);
 - `emblem.webp` — webp-копия `emblem.png`;
 - `favicon.png` — кроп официального `MainMenu/Logo.png` (crest логотипа).
-
-В текущем оформлении сайта шапки разделов текстовые (как в исходной авторской версии), поэтому панорамы и crest хранятся как готовые ассеты и в интерфейсе не показываются. Панорамы и композиции являются оформлением, а не скриншотами игрового процесса.
 
 ## Calamity Mod: спрайты предметов и боссов
 

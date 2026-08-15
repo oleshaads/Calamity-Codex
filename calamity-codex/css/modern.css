@@ -1600,3 +1600,148 @@ body[data-view="biomes"] .page-head-art { background-position: center 42%; }
 @media (max-width: 760px) {
   .mode-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Craft cards with item art (crafts page + novice quest crafts).
+   ============================================================ */
+.craft-card { padding: 0; overflow: hidden; }
+.craft-card::before { display: none; }
+.craft-shot {
+  position: relative;
+  height: 94px;
+  display: grid;
+  place-items: center;
+  border-bottom: 1px solid #33404c;
+  background: radial-gradient(ellipse at 50% 66%, #3c3420 0%, #0b1017 69%);
+}
+.craft-shot img {
+  position: relative;
+  z-index: 1;
+  height: 66px;
+  max-width: 72%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 2px rgba(0,0,0,.62));
+}
+.craft-body { display: flex; flex: 1; flex-direction: column; padding: 12px 14px 14px; }
+.craft-body > b { margin: 0; }
+.craft-body .station-tag { margin-bottom: 6px; }
+.craft-card .ings-list { margin-top: 10px; gap: 5px; }
+.craft-card .ings-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  grid-template-columns: none;
+}
+.craft-card .ings-list li::before { display: none; }
+.ings-bullet {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: #5b9e96;
+  font-size: 13px;
+  font-weight: 800;
+}
+.ings-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 1px rgba(0,0,0,.5));
+}
+
+/* ============================================================
+   New section mastheads: clean banner with page-matching art.
+   ============================================================ */
+.page-head {
+  position: relative;
+  isolation: isolate;
+  min-height: 252px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  margin-bottom: 24px;
+  padding: 34px 38px;
+  border: 1px solid #36424e;
+  border-radius: 8px;
+  background: #0b1017;
+  box-shadow: 0 22px 55px rgba(0,0,0,.3);
+}
+.page-head-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  background-image: var(--page-cover);
+  background-position: center 42%;
+  background-size: cover;
+  filter: saturate(.94) contrast(1.05);
+}
+.page-head::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(6,9,14,.94) 0%, rgba(7,10,15,.78) 44%, rgba(7,10,15,.16) 78%, rgba(7,10,15,.52) 100%),
+    linear-gradient(0deg, rgba(6,9,14,.6), transparent 62%);
+}
+.page-head::after { content: none; }
+.page-head-copy {
+  position: relative;
+  z-index: 2;
+  display: block;
+  max-width: 780px;
+}
+.page-head small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--page-accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+}
+.page-head h1 {
+  color: #fff6e6;
+  font-family: var(--serif);
+  font-size: clamp(32px, 4.4vw, 48px);
+  font-weight: 700;
+  line-height: 1.05;
+  text-shadow: 0 3px 18px rgba(0,0,0,.55);
+}
+.page-head p {
+  color: #d9d3c4;
+  margin-top: 10px;
+  max-width: 560px;
+  font-size: 15px;
+}
+.page-head-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.page-head-facts span {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 5px;
+  background: rgba(5,8,12,.55);
+}
+.page-head-facts b { color: var(--page-accent); font-size: 15px; font-weight: 800; }
+.page-head-facts em {
+  color: #b9c0c6;
+  font-size: 9px;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.page-head-sigil, .page-head-coordinate { display: none; }

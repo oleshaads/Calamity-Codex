@@ -93,11 +93,24 @@
     if (view === "biomes") return [[CODEX.biomes.length, "биомов"], [4, "уровня риска"]];
     return [];
   }
-  const mast = (title, lead) => `
-    <div class="page-head">
-      <h1>${esc(title)}</h1>
-      <p>${esc(lead)}</p>
-    </div>`;
+  const mast = (title, lead) => {
+    const view = document.body.dataset.view || "wiki";
+    const theme = SECTION_THEMES[view] || SECTION_THEMES.wiki;
+    const cover = new URL(theme.cover, document.baseURI).href;
+    const facts = sectionFacts(view);
+    return `
+      <header class="page-head" style="--page-cover:url('${cover}');--page-accent:${theme.accent}">
+        <div class="page-head-art" aria-hidden="true"></div>
+        <div class="page-head-copy">
+          <small>${theme.eyebrow}</small>
+          <h1>${esc(title)}</h1>
+          <p>${esc(lead)}</p>
+          <div class="page-head-facts" aria-label="Краткая сводка">
+            ${facts.map(([value, label]) => `<span><b>${esc(value)}</b><em>${esc(label)}</em></span>`).join("")}
+          </div>
+        </div>
+      </header>`;
+  };
   const shelf = (title, count, inner, open = false) => `
     <details class="shelf"${open ? " open" : ""}>
       <summary>
@@ -493,6 +506,49 @@
     }
     return { station, ings };
   };
+  let catalogArtCache;
+  function catalogArtIndex() {
+    if (catalogArtCache) return catalogArtCache;
+    catalogArtCache = new Map();
+    indexedItems().forEach((item) => {
+      const key = normalizeArtName(item.name);
+      if (item.image && key && !catalogArtCache.has(key)) catalogArtCache.set(key, `assets/item-sprites/${encodeURIComponent(item.id)}.png`);
+    });
+    return catalogArtCache;
+  }
+  // Generic craft entries that describe a family of items rather than one
+  // item; they get a representative genuine sprite instead of the anvil.
+  const CRAFT_ART = {
+    "Wulfrum оружие": "assets/sprites/WulfrumScrewdriver.png",
+    "Emblem своего класса + Rogue Emblem": "assets/sprites/RogueEmblem.png",
+    "Наковальня": "assets/sprites/Iron_Anvil.png",
+    "Оружие вульфрума своего класса": "assets/sprites/WulfrumScrewdriver.png",
+    "Взломостойка": "assets/sprites/CodebreakerBase.png",
+    "Оружие из призм своего класса": "assets/sprites/SeaPrism.png",
+    "Виктайд — нагрудник и штаны": "assets/sprites/VictideBreastplate.png",
+    "Шлем СВОЕГО класса": "assets/sprites/VictideHeadMelee.png",
+    "Еда червя или кровавый позвоночник": "assets/sprites/Worm_Food.png",
+    "Зелья на бой": "assets/sprites/BloodOrb.png",
+    "Святая броня": "assets/sprites/Hallowed_Bar.png",
+    "Бездонный костюм": "assets/sprites/AbyssalDivingGear.png",
+    "Чумная броня": "assets/sprites/PlaguebringerCarapace.png",
+    "Приманка голиафа": "assets/sprites/Abombination.png",
+    "Люминитовая кирка": "assets/sprites/Luminite_Bar.png",
+    "Богоубийца или сильва": "assets/sprites/GodSlayerChestplate.png",
+    "Охлаждающая ячейка": "assets/sprites/AuricQuantumCoolingCell.png",
+    "Материя чуда → экзо-оружие": "assets/sprites/Exoblade.png",
+    "Остатки рецептов тенеспека": "assets/sprites/ShadowspecBar.png"
+  };
+  function craftStationSprite(station) {
+    const s = String(station || "").toLocaleLowerCase("ru");
+    if (s.includes("алхим")) return "assets/sprites/Alchemy_Table.png";
+    if (s.includes("печ")) return "assets/sprites/Furnace.png";
+    if (s.includes("верстак")) return "assets/sprites/Work_Bench.png";
+    if (s.includes("космическ")) return "assets/sprites/CosmicAnvilItem.png";
+    if (s.includes("манипулятор")) return "assets/lex/vanilla/ancient-manipulator.png";
+    if (s.includes("алтарь")) return "assets/lex/vanilla/demon-altar.png";
+    return "assets/sprites/Iron_Anvil.png";
+  }
   function craftCard(c) {
     const src = c.t ? { name: c.t, ings: c.r, why: c.w, station: c.station } : c;
     const { ru, en } = plainName(src.name);
@@ -500,12 +556,30 @@
     const ings = splitIngs(pulled.ings);
     const why = String(src.why || "").trim();
     const station = pulled.station;
+    const cleanName = String(src.name).replace(/\s*\([^)]*\)\s*$/, "").trim();
+    const nameKey = normalizeArtName(cleanName.split(/\s*\/\s*/)[0]);
+    const detail = detailedNameMap().get(cleanName.toLocaleLowerCase("ru"));
+    const art = catalogArtIndex().get(nameKey)
+      || CRAFT_ART[cleanName]
+      || (detail && CODEX.spriteOf ? CODEX.spriteOf(detail) : "")
+      || resolveArt(cleanName)
+      || craftStationSprite(station);
+    const icons = ings.map((x) => {
+      const clean = String(x).replace(/^\d+\s*[×x]\s*/i, "").replace(/\s+и\s+/g, " / ").trim();
+      const hit = resolveArt(clean);
+      return hit
+        ? `<img class="ings-icon" src="${escAttr(hit)}" alt="" loading="lazy" decoding="async" />`
+        : `<span class="ings-bullet" aria-hidden="true">+</span>`;
+    });
     return `<article class="craft-card">
-      ${favoriteButton("craft", src.name, ru)}
-      ${station ? `<div class="station-tag">${esc(station)}</div>` : ""}
-      <b>${esc(ru)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</b>
-      ${ings.length ? `<ul class="ings-list">${ings.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
-      ${why ? `<div class="item-foot"><div class="fact"><span>Зачем</span><p>${esc(why)}</p></div></div>` : ""}
+      <div class="craft-shot">${art ? `<img src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : ""}</div>
+      <div class="craft-body">
+        ${favoriteButton("craft", src.name, ru)}
+        ${station ? `<div class="station-tag">${esc(station)}</div>` : ""}
+        <b>${esc(ru)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</b>
+        ${ings.length ? `<ul class="ings-list">${ings.map((x, i) => `<li>${icons[i]}<span>${esc(x)}</span></li>`).join("")}</ul>` : ""}
+        ${why ? `<div class="item-foot"><div class="fact"><span>Зачем</span><p>${esc(why)}</p></div></div>` : ""}
+      </div>
     </article>`;
   }
   function biomeCard(b) {
