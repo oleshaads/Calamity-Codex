@@ -1424,3 +1424,179 @@ body[data-view="biomes"] .page-head-art { background-position: center 42%; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   #embers { display: none; }
 }
+
+/* ============================================================
+   Restored original author design (home hero + page mastheads).
+   Overrides the redesigned banner/crest layout; placed last so it
+   wins over every rule above and inside media queries.
+   ============================================================ */
+.hero {
+  position: relative;
+  min-height: 72vh;
+  display: grid;
+  align-items: end;
+  grid-template-columns: 1fr;
+  gap: 0;
+  isolation: auto;
+  overflow: visible;
+  padding: 0;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(12,10,13,.2), rgba(12,10,13,.78) 72%, var(--bg)),
+    url("../assets/hero.jpg") center/cover no-repeat;
+  transform: none;
+  image-rendering: auto;
+}
+.hero::before, .hero::after { content: none; }
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  padding: 64px var(--pad) 32px;
+  max-width: 720px;
+}
+.kicker {
+  display: inline-block;
+  align-items: initial;
+  gap: 0;
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid #5a4a28;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: #0006;
+}
+.kicker::before { content: none; }
+.hero h1 {
+  max-width: none;
+  color: #f6edd8;
+  font-family: var(--serif);
+  font-size: clamp(42px, 6.5vw, 68px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+.hero h1 span { display: block; color: var(--gold); }
+.lede { margin: 14px 0 22px; color: #ddd2bf; font-size: 16px; max-width: 540px; }
+.hero .mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mode-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 190px;
+  border-radius: var(--r);
+  border: 1px solid #3a3228;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: #fff;
+  background: #0c0a0d;
+  box-shadow: none;
+}
+.mode-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+.mode-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, transparent, #0c0a0df5);
+}
+.mode-card:hover { border-color: var(--gold); transform: none; }
+.mode-card .tag {
+  align-self: flex-start;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border: 1px solid #ffffff33;
+  padding: 3px 8px;
+  border-radius: 99px;
+  margin-bottom: 8px;
+}
+.mode-card h2 { font-family: var(--serif); font-size: 26px; line-height: 1.15; }
+.mode-card p { color: #cfc4b2; font-size: 13.5px; margin-top: 4px; }
+.mode-card .mode-arrow, .jump-icon, .jump > i, .hero-actions, .hero-trust,
+.hero-visual, .crest-card, .hero-rune, .journey-dashboard, .home-section-head { display: none; }
+
+.jump-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+.jump {
+  display: block;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  color: var(--text);
+}
+.jump:hover { border-color: #5a4a28; }
+.jump small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.jump b { display: block; font-family: var(--serif); font-size: 22px; font-weight: 600; color: #f3e6c8; }
+.home-strip { padding: 8px var(--pad) 72px; }
+.stat-row, .era-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  margin-bottom: 16px;
+}
+.stat, .era-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+.stat b { display: block; font-family: var(--serif); font-size: 30px; line-height: 1.1; color: var(--gold); }
+.stat span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.era-card h3 { font-family: var(--serif); font-size: 22px; color: var(--gold); margin-bottom: 8px; }
+.era-card ol { padding-left: 18px; color: #d5cbb8; font-size: 14px; }
+.era-card li { margin: 3px 0; }
+
+/* Simple author masthead: title + lead, no banner art. */
+.page-head {
+  --page-accent: var(--accent);
+  position: static;
+  isolation: auto;
+  min-height: 0;
+  display: block;
+  align-items: initial;
+  overflow: visible;
+  margin-bottom: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.page-head::before, .page-head::after { content: none; }
+.page-head h1 {
+  font-family: var(--serif);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #f3e6c8;
+}
+.page-head p { color: var(--muted); margin-top: 8px; max-width: 560px; font-size: 15px; }
+.page-head-art, .page-head-copy, .page-head-facts, .page-head-sigil,
+.page-head-coordinate { display: none; }
+
+@media (max-width: 760px) {
+  .mode-grid { grid-template-columns: 1fr; }
+}

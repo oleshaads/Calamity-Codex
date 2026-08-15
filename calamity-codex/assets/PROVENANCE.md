@@ -32,12 +32,12 @@
 
 Из восстановленного декоративного набора собираются (ImageMagick, детерминированно):
 
-- `headers/wiki.webp`, `headers/bosses.webp`, `headers/items.webp`, `headers/favorites.webp`, `headers/lex.webp`, `headers/crafts.webp`, `headers/biomes.webp` — панорамы разделов 1800×600; у каждой своя тема, поверх размещены настоящие локальные игровые спрайты (Ark of the Cosmos, boss-head Supreme Calamitas и Exo Mechs, Lore Calamitas, Core of Calamity, Encrypted Schematic, Draedon's Forge). Панорама биомов — единая сцена леса без коллажа;
+- `headers/wiki.webp`, `headers/bosses.webp`, `headers/items.webp`, `headers/favorites.webp`, `headers/lex.webp`, `headers/crafts.webp`, `headers/biomes.webp` — панорамы разделов 1800×600; у каждой своя тема, поверх размещены настоящие локальные игровые спрайты (Ark of the Cosmos, boss-head Supreme Calamitas и Exo Mechs, Lore Calamitas, Core of Calamity, Encrypted Schematic, Draedon's Forge);
 - `crest.jpg` — вертикальный кроп официальной сцены Sunken Sea для домашнего crest;
 - `emblem.webp` — webp-копия `emblem.png`;
 - `favicon.png` — кроп официального `MainMenu/Logo.png` (crest логотипа).
 
-Панорамы и композиции являются оформлением интерфейса, а не скриншотами игрового процесса.
+В текущем оформлении сайта шапки разделов текстовые (как в исходной авторской версии), поэтому панорамы и crest хранятся как готовые ассеты и в интерфейсе не показываются. Панорамы и композиции являются оформлением, а не скриншотами игрового процесса.
 
 ## Calamity Mod: спрайты предметов и боссов
 

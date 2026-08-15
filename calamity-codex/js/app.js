@@ -93,26 +93,11 @@
     if (view === "biomes") return [[CODEX.biomes.length, "биомов"], [4, "уровня риска"]];
     return [];
   }
-  const mast = (title, lead) => {
-    const view = document.body.dataset.view || "wiki";
-    const theme = SECTION_THEMES[view] || SECTION_THEMES.wiki;
-    const cover = new URL(theme.cover, document.baseURI).href;
-    const facts = sectionFacts(view);
-    return `
-      <header class="page-head" style="--page-cover:url('${cover}');--page-accent:${theme.accent}">
-        <div class="page-head-art" aria-hidden="true"></div>
-        <div class="page-head-copy">
-          <small><i aria-hidden="true"></i>${theme.eyebrow}</small>
-          <h1>${esc(title)}</h1>
-          <p>${esc(lead)}</p>
-          <div class="page-head-facts" aria-label="Краткая сводка">
-            ${facts.map(([value, label]) => `<span><b>${esc(value)}</b><em>${esc(label)}</em></span>`).join("")}
-          </div>
-        </div>
-        <div class="page-head-sigil" aria-hidden="true"><span>${theme.mark}</span><i>${theme.no}</i></div>
-        <div class="page-head-coordinate" aria-hidden="true">CALAMITY // CODEX // ${theme.no}</div>
-      </header>`;
-  };
+  const mast = (title, lead) => `
+    <div class="page-head">
+      <h1>${esc(title)}</h1>
+      <p>${esc(lead)}</p>
+    </div>`;
   const shelf = (title, count, inner, open = false) => `
     <details class="shelf"${open ? " open" : ""}>
       <summary>
@@ -399,13 +384,13 @@
 
     if (view === "home") { applyTheme(null); renderHome(); }
     else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
-    else if (view === "wiki") { applySectionTheme(view); renderWiki(params); }
-    else if (view === "bosses") { applySectionTheme(view); renderBosses(params); }
-    else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || ""); }
-    else if (view === "items") { applySectionTheme(view); renderItems(params); }
-    else if (view === "favorites") { applySectionTheme(view); renderFavorites(); }
-    else if (view === "lex") { applySectionTheme(view); renderLex(params); }
-    else if (view === "biomes") { applySectionTheme(view); renderBiomes(); }
+    else if (view === "wiki") { applyTheme(null); renderWiki(params); }
+    else if (view === "bosses") { applyTheme(null); renderBosses(params); }
+    else if (view === "crafts") { applyTheme(null); renderCrafts(params.q || ""); }
+    else if (view === "items") { applyTheme(null); renderItems(params); }
+    else if (view === "favorites") { applyTheme(null); renderFavorites(); }
+    else if (view === "lex") { applyTheme(null); renderLex(params); }
+    else if (view === "biomes") { applyTheme(null); renderBiomes(); }
 
     if (viewChanged) {
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
@@ -423,103 +408,45 @@
     applyTheme(null);
     fillRail("");
     document.body.style.setProperty("--theme-image", "none");
-    const progress = updateJourneyProgress();
-    const current = progress.current || CODEX.quests[0];
-    const currentHref = `#/novice?q=${current.id}`;
-    const modeLabel = progress.done.size ? "Продолжить путь" : "Начать приключение";
     app.innerHTML = `
       <section class="hero">
         <div class="hero-bg"></div>
         <div class="hero-inner">
-          <div class="kicker">Terraria · Calamity ${CODEX.version}</div>
+          <div class="kicker">Террария · Каламити ${CODEX.version}</div>
           <h1>Каламити<span>Кодекс</span></h1>
-          <p class="lede">Интерактивный путеводитель по огромному миру Calamity. Пройди мод шаг за шагом или найди нужный предмет за несколько секунд.</p>
-          <div class="hero-actions">
-            <a class="btn btn-lg" href="${currentHref}"><span class="btn-icon">⚔</span>${modeLabel}</a>
-            <a class="btn btn-lg ghost" href="#/wiki">Открыть справочник <span aria-hidden="true">→</span></a>
+          <p class="lede">С квеста 1 — если только поставил мод. Справочник — если уже в игре и нужно быстро.</p>
+          <div class="mode-grid">
+            <a class="mode-card" href="#/novice?q=1">
+              <img src="assets/novice.jpg" alt="" />
+              <span class="tag">Я новичок</span>
+              <h2>С квеста 1</h2>
+              <p>Дом, дроны, небо, море, червь… до ведьмы. Выбери класс слева. Подчёркнутое слово — наведи мышь.</p>
+            </a>
+            <a class="mode-card" href="#/wiki">
+              <img src="assets/veteran.jpg" alt="" />
+              <span class="tag">Уже играю</span>
+              <h2>Сжатый справочник</h2>
+              <p>Боссы, сеты, материалы, биомы — коротко, по этапам.</p>
+            </a>
           </div>
-          <div class="hero-trust">
-            <span><i>◆</i> ${CODEX.quests.length} этапов прогрессии</span>
-            <span><i>◆</i> Работает офлайн</span>
-            <span><i>◆</i> Прогресс сохраняется</span>
-          </div>
-        </div>
-        <div class="hero-visual" aria-hidden="true">
-          <div class="crest-card">
-            <img class="crest-scene" src="assets/crest.jpg" alt="" width="900" height="1100" />
-            <img class="crest-emblem" src="assets/emblem.png" alt="Calamity" width="704" height="384" />
-            <div class="crest-content">
-              <small>Текущая глава · ${String(current.id).padStart(2, "0")}</small>
-              <h2>${esc(current.title)}</h2>
-              <p>${esc(current.subtitle)}</p>
-              <div class="crest-progress"><i style="width:${progress.percent}%"></i></div>
-            </div>
-          </div>
-          <div class="hero-rune">${progress.percent}%</div>
         </div>
       </section>
-
       <section class="home-strip">
-        <div class="home-section-head">
-          <div><small>Выбери свой маршрут</small><h2>Как будем играть?</h2></div>
-          <p>Два режима для разного опыта. В любой момент можно переключиться между прохождением и базой знаний.</p>
-        </div>
-        <div class="mode-grid">
-          <a class="mode-card" href="${currentHref}">
-            <img src="assets/novice.jpg" alt="" />
-            <span class="tag">Пошаговое прохождение</span>
-            <h2>${progress.done.size ? `Продолжить с главы ${current.id}` : "Начать с нуля"}</h2>
-            <p>Тридцать понятных квестов: куда идти, что собрать, что скрафтить и кого победить. Чеклисты и выбор класса внутри.</p>
-            <span class="mode-arrow" aria-hidden="true">→</span>
-          </a>
-          <a class="mode-card" href="#/wiki">
-            <img src="assets/veteran.jpg" alt="" />
-            <span class="tag">Быстрый доступ</span>
-            <h2>База знаний</h2>
-            <p>Боссы, броня, материалы, рецепты и биомы без длинных статей — только то, что нужно прямо сейчас.</p>
-            <span class="mode-arrow" aria-hidden="true">→</span>
-          </a>
-        </div>
-
-        <div class="stat-row" aria-label="Содержимое кодекса">
-          <div class="stat"><b>${CODEX.quests.length}</b><span>глав приключения</span></div>
-          <div class="stat"><b>${indexedItems().length.toLocaleString("ru-RU")}</b><span>предметов в индексе</span></div>
-          <div class="stat"><b>${CODEX.bosses.length}</b><span>боссов</span></div>
-          <div class="stat"><b>${CODEX.crafts.length}</b><span>рецепт крафта</span></div>
-        </div>
-
-        <section class="journey-dashboard" aria-labelledby="journey-title">
-          <div class="journey-dashboard-copy">
-            <small>${progress.done.size >= progress.total ? "Путешествие завершено" : `Следующая глава · ${String(current.id).padStart(2, "0")}`}</small>
-            <h2 id="journey-title">${progress.done.size >= progress.total ? "Кодекс покорён" : esc(current.title)}</h2>
-            <p>${progress.done.size >= progress.total ? "Все главы отмечены. Можно вернуться к любому этапу, сменить класс или собрать личный рюкзак избранного." : esc(current.subtitle)}</p>
-            <a class="btn ghost" href="${currentHref}">${progress.done.size >= progress.total ? "Открыть главы" : "Продолжить главу"} <span aria-hidden="true">→</span></a>
-          </div>
-          <div class="journey-dashboard-progress">
-            <div class="journey-score"><strong>${progress.percent}%</strong><span><b>${progress.done.size}</b> из ${progress.total} глав завершено</span></div>
-            <div class="journey-track" role="progressbar" aria-label="Прогресс прохождения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}"><i style="width:${progress.percent}%"></i></div>
-            <div class="journey-nodes" aria-label="Карта завершённых глав">${CODEX.quests.map((quest) => `<a href="#/novice?q=${quest.id}" class="${progress.done.has(quest.id) ? "done" : ""} ${quest.id === current.id ? "current" : ""}" aria-label="Глава ${quest.id}: ${escAttr(quest.title)}" title="Глава ${quest.id}: ${escAttr(quest.title)}"><span>${quest.id}</span></a>`).join("")}</div>
-          </div>
-        </section>
-
-        <div class="home-section-head">
-          <div><small>Архив искателя</small><h2>Быстрый доступ</h2></div>
-          <p>Каждая запись короткая и практичная: где найти, когда использовать и почему это важно.</p>
-        </div>
         <div class="jump-grid">
-          <a class="jump" href="${currentHref}"><span class="jump-icon">⚑</span><span><small>Пошагово</small><b>Путь новичка</b></span><i>→</i></a>
-          <a class="jump" href="#/bosses"><span class="jump-icon">☠</span><span><small>По порядку</small><b>Боссы</b></span><i>→</i></a>
-          <a class="jump" href="#/items"><span class="jump-icon">◆</span><span><small>Где и зачем</small><b>Предметы</b></span><i>→</i></a>
-          <a class="jump" href="#/crafts"><span class="jump-icon">⚒</span><span><small>Столы и ресурсы</small><b>Крафты</b></span><i>→</i></a>
-          <a class="jump" href="#/biomes"><span class="jump-icon">⌖</span><span><small>Куда идти</small><b>Биомы</b></span><i>→</i></a>
-          <a class="jump" href="#/lex"><span class="jump-icon">A</span><span><small>Термины мода</small><b>Словарь</b></span><i>→</i></a>
+          <a class="jump" href="#/novice?q=1"><small>30 шагов</small><b>Путь новичка</b></a>
+          <a class="jump" href="#/bosses"><small>по порядку</small><b>Боссы</b></a>
+          <a class="jump" href="#/items"><small>где и зачем</small><b>Предметы</b></a>
+          <a class="jump" href="#/crafts"><small>стол и ингредиенты</small><b>Крафты</b></a>
+          <a class="jump" href="#/biomes"><small>куда идти</small><b>Биомы</b></a>
+          <a class="jump" href="#/lex"><small>наведи мышь</small><b>Словарь</b></a>
         </div>
-
-        <div class="home-section-head">
-          <div><small>Карта прогрессии</small><h2>Три эпохи мира</h2></div>
-          <p>От первого деревянного меча до финальных испытаний за пределами Лунного лорда.</p>
+        <div class="stat-row">
+          <div class="stat"><b>${CODEX.quests.length}</b><span>квестов</span></div>
+          <div class="stat"><b>${indexedItems().length.toLocaleString("ru-RU")}</b><span>предметов</span></div>
+          <div class="stat"><b>${CODEX.bosses.length}</b><span>боссов</span></div>
+          <div class="stat"><b>${CODEX.crafts.length}</b><span>крафтов</span></div>
         </div>
-        <div class="era-grid">${CODEX.eras.map((e, i) => `<article class="era-card" data-index="0${i + 1}"><h3>${esc(e.title)}</h3><ol>${e.items.map((item) => `<li>${esc(item)}</li>`).join("")}</ol></article>`).join("")}</div>
+        <div class="era-grid">${CODEX.eras.map((e) => `<article class="era-card"><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol></article>`).join("")}</div>
       </section>
     `;
   }
