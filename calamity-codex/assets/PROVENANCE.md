@@ -51,6 +51,7 @@
 - `item-sprites/*.png` — текстуры из `Items/`, а для предметов с общей текстурой — связанные официальные `NPCs/` или `Projectiles/` PNG. Точная политика выбора зафиксирована в `scripts/build-item-catalog.mjs`.
 - `item-sprites/Riftburst.png` — спрайт предмета Riftburst, пересобранный как однокадровый PNG из ранее поставленного GIF-файла; пиксели кадра сохранены без изменений, формат приведён к честному PNG, чтобы файл гарантированно отображался любым браузером.
 - `boss-sprites/*.png` — официальные boss-head PNG из `NPCs/*`.
+- `npc-sprites/*.png` — официальные текстуры обычных NPC и мини-боссов из `NPCs/*`, используемые в строках источников и карточках врагов дерева крафта. Карта `js/npc-art.js` собрана из того же pinned commit; для сегментированного Burrower используется его официальная голова `NPCs/Deconstructors/DeconstructorMK1Head.png`.
 - `lex/calamity/*.png` — Laboratory Icon, штатные UI-текстуры Adrenaline/Rage и четыре оригинальных town-NPC head из того же checkout.
 
 ## Terraria

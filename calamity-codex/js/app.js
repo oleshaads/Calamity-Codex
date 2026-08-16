@@ -295,7 +295,8 @@
     const mini = boss ? null : miniRecordForName(npcName);
     const ru = boss ? boss.name : mini ? ruItemName(mini.name) : npcRuName(npcName);
     const type = boss ? "Босс" : mini ? "Мини-босс" : "Противник";
-    const localArt = routeBossArt(boss)
+    const localArt = npcArtForName(npcName)
+      || routeBossArt(boss)
       || (mini && (mini.name === "Giant Clam" ? BOSS_ART_BY_ID["giant-clam"] : mini.name === "Great Sand Shark" ? BOSS_ART_BY_ID["sand-shark"] : "assets/boss-sprites/cragmaw-mire.png"))
       || (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id]))
       || "";
@@ -1689,6 +1690,8 @@
     return ruItemName(it);
   }
   function npcArtForName(name) {
+    const direct = window.CALAMITY_NPC_ART && window.CALAMITY_NPC_ART[name];
+    if (direct) return direct;
     const boss = bossRecordForName(name);
     if (boss) return routeBossArt(boss);
     const mini = miniRecordForName(name);

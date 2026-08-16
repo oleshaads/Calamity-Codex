@@ -32,8 +32,16 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
 check(indexHtml.includes("js/ru-names.js"), "Russian catalog name layer is not loaded by index.html");
+check(indexHtml.includes("js/npc-art.js"), "NPC art layer is not loaded by index.html");
 check(app.includes("ruItemName"), "Catalog cards are not using the Russian display-name layer");
+check(app.includes("npcSourceArt"), "Craft source rows are not rendering enemy art");
 check(app.includes("item.description || purpose") && app.includes("ruText(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
+const npcArtContext = { window: {} };
+vm.createContext(npcArtContext);
+vm.runInContext(fs.readFileSync(path.join(root, "js/npc-art.js"), "utf8"), npcArtContext);
+const npcArt = npcArtContext.window.CALAMITY_NPC_ART || {};
+check(Object.keys(npcArt).length >= 80, `Expected at least 80 official NPC textures, got ${Object.keys(npcArt).length}`);
+for (const [name, relative] of Object.entries(npcArt)) check(fs.existsSync(path.join(root, relative)), `Missing NPC texture for "${name}": ${relative}`);
 check(!app.includes("KIND_SVG"), "Generated category SVG fallbacks are still present");
 check(app.includes("нет спрайта"), "Honest missing-sprite state is absent for non-catalog references");
 
