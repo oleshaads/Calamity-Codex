@@ -3480,3 +3480,107 @@ body.tree-open { overflow: hidden; }
   text-transform: uppercase;
 }
 .craft-choice-more:hover { border-color: var(--gold); background: #292315; }
+
+/* Полная карточка выбранного узла прямо под картой крафта. Никаких
+   line-clamp/ellipsis: сложный рецепт читается целиком в контексте дерева. */
+.craft-tree-inspector {
+  position: relative;
+  z-index: 1;
+  margin: 16px 18px 0;
+  padding: 0;
+  border: 2px solid rgba(255, 217, 122, .42);
+  border-radius: 5px;
+  background: linear-gradient(180deg, #17232e, #0d141c);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 5px 18px rgba(0,0,0,.3);
+}
+.craft-tree-inspector[hidden] { display: none; }
+.craft-tree-inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #2b3946;
+  background: linear-gradient(180deg, #263442, #17222d);
+}
+.craft-tree-inspector-slot { width: 62px; height: 62px; flex: 0 0 62px; padding: 4px; }
+.craft-tree-inspector-art { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.craft-tree-inspector-art-fallback { color: var(--gold); font-size: 26px; text-shadow: 0 0 14px rgba(255,217,122,.55); }
+.craft-tree-inspector-title { min-width: 0; flex: 1; }
+.craft-tree-inspector-title small {
+  display: block;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.craft-tree-inspector-title h3 {
+  margin-top: 3px;
+  color: #f2eee3;
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1.25;
+  text-transform: uppercase;
+  text-shadow: var(--hsh);
+}
+.craft-tree-inspector-title span { display: block; margin-top: 4px; color: #8b98a5; font-family: var(--mono); font-size: 10px; }
+.craft-tree-inspector-badge {
+  align-self: flex-start;
+  padding: 5px 8px;
+  border: 1px solid #695528;
+  border-radius: 3px;
+  color: var(--gold);
+  background: #211b0c;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.craft-tree-inspector-desc {
+  padding: 14px 16px 4px;
+  color: #d4dbe0;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.craft-tree-inspector-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 10px 16px 14px;
+}
+.craft-tree-inspector-facts .fact { min-width: 0; }
+.craft-tree-inspector-facts .fact p,
+.craft-tree-inspector-where { color: #c1cbd2; font-size: 11.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.craft-tree-inspector-facts .recipe-fact .craft-chips { margin-top: 3px; }
+.craft-tree-inspector-actions { padding: 0 16px 15px; }
+.craft-tree-inspector-actions .craft-catalog-link { display: inline-flex; }
+@media (max-width: 760px) {
+  .craft-tree-inspector { margin: 12px 9px 0; }
+  .craft-tree-inspector-head { align-items: flex-start; flex-wrap: wrap; padding: 12px; }
+  .craft-tree-inspector-slot { width: 50px; height: 50px; flex-basis: 50px; }
+  .craft-tree-inspector-title { flex-basis: calc(100% - 68px); }
+  .craft-tree-inspector-title h3 { font-size: 14px; }
+  .craft-tree-inspector-badge { margin-left: 62px; }
+  .craft-tree-inspector-desc { padding: 12px 12px 3px; font-size: 12px; }
+  .craft-tree-inspector-facts { grid-template-columns: minmax(0, 1fr); padding: 9px 12px 12px; }
+  .craft-tree-inspector-actions { padding: 0 12px 12px; }
+}
+
+/* В модальном дереве корневое описание тоже не обрезается троеточием. */
+.tree-root-desc {
+  max-height: min(12em, 24vh);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tree-root-src {
+  max-height: 5em;
+  overflow: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

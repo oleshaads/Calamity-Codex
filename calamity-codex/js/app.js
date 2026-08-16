@@ -2765,7 +2765,10 @@
             ? treeNodeHTML(activeRoot, 0, new Set())
             : `<div class="craft-tree-empty"><span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p></div>`}</div>
         </div>
-        <p class="craft-tree-help"><b>Подсказка:</b> стрелка на узле раскрывает ингредиенты, клик по самому предмету открывает его описание, получение, назначение, рецепт и связанные бои с боссами.</p>
+        <section class="craft-tree-inspector" id="craft-tree-inspector" hidden aria-live="polite" aria-labelledby="craft-tree-inspector-title">
+          <div id="craft-tree-inspector-content"></div>
+        </section>
+        <p class="craft-tree-help"><b>Подсказка:</b> стрелка на узле раскрывает ингредиенты, клик по предмету показывает полную карточку прямо под картой — без перехода на другую страницу.</p>
       </section>`;
   }
 
@@ -2820,6 +2823,57 @@
     if (status) status.innerHTML = `Выбран предмет: <b>${esc(card.querySelector(".craft-choice-copy b")?.textContent || card.dataset.choiceName || "")}</b>`;
   }
 
+  function craftTreeInspectorHTML(name) {
+    const info = ingredientInfo(name);
+    const cat = info.catName ? catalogByName(info.catName) : catalogByName(name);
+    const sources = cat ? (NPC_SOURCES[cat.id] || null) : null;
+    const sourceHTML = sources ? npcSourceLines(sources) : "";
+    const art = info.art || info.remoteArt || "";
+    const artHTML = art
+      ? `<img class="craft-tree-inspector-art${info.remoteArt && !info.art ? " remote" : ""}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />`
+      : `<span class="craft-tree-inspector-art-fallback" aria-hidden="true">◆</span>`;
+    const where = sourceHTML || info.obtain || "Точный источник указан в соответствующем биоме или событии Terraria / Calamity.";
+    const recipeHTML = info.recipe && info.recipe.ings.length
+      ? `<div class="craft-chips">${info.recipe.ings.map((item) => ingChipHTML(item.name, item.count)).join("")}${stationChipHTML(info.recipe.station)}</div>`
+      : `<p>Не крафтится напрямую: добывается, находится в мире или выпадает из указанного источника.</p>`;
+    const wiki = info.vanilla
+      ? `https://terraria.wiki.gg/wiki/${encodeURIComponent(info.en || name).replace(/%20/g, "_")}`
+      : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(info.en || info.catName || name)}`;
+    return `
+      <div class="craft-tree-inspector-head">
+        <span class="slot craft-tree-inspector-slot">${artHTML}</span>
+        <div class="craft-tree-inspector-title">
+          <small id="craft-tree-inspector-title">${esc(KIND_RU[info.kind] || (info.vanilla ? "Предмет Terraria" : "Предмет"))}</small>
+          <h3>${esc(info.ru)}</h3>
+          ${info.en ? `<span>оригинал: ${esc(info.en)}</span>` : ""}
+        </div>
+        <span class="craft-tree-inspector-badge">выбранный узел</span>
+      </div>
+      <p class="craft-tree-inspector-desc">${esc(ruText(info.desc || "Подробное описание для этого предмета ещё не добавлено."))}</p>
+      <div class="craft-tree-inspector-facts">
+        <div class="fact"><span>Где</span><div class="craft-tree-inspector-where">${sourceHTML ? `<div class="src-list">${sourceHTML}</div>` : `<p>${esc(ruText(where))}</p>`}</div></div>
+        <div class="fact"><span>Зачем</span><p>${esc(ruText(info.used || "Используется как часть прогрессии, экипировки или следующего рецепта."))}</p></div>
+        <div class="fact"><span>Когда</span><p>${esc(ruText(info.when || "По мере открытия соответствующей ветки Terraria / Calamity."))}</p></div>
+        <div class="fact recipe-fact"><span>Полный рецепт</span>${recipeHTML}</div>
+      </div>
+      <div class="craft-tree-inspector-actions"><a class="craft-catalog-link" href="${escAttr(wiki)}" target="_blank" rel="noopener noreferrer">Открыть справочную страницу ↗</a></div>`;
+  }
+
+  function renderCraftTreeInspector(section, name, scroll = false) {
+    const panel = section?.querySelector("#craft-tree-inspector");
+    const content = section?.querySelector("#craft-tree-inspector-content");
+    if (!panel || !content) return;
+    if (!name) {
+      panel.hidden = true;
+      content.innerHTML = "";
+      return;
+    }
+    content.innerHTML = craftTreeInspectorHTML(name);
+    panel.hidden = false;
+    bindSprites(content);
+    if (scroll) requestAnimationFrame(() => panel.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+  }
+
   function refreshInlineCraftTree(section) {
     if (!section) return;
     const body = section.querySelector("#craft-tree-inline-body");
@@ -2835,6 +2889,7 @@
       body.removeAttribute("data-tree-surface");
       body.innerHTML = `<span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p>`;
     }
+    renderCraftTreeInspector(section, info && (info.recipe || info.vanilla) ? craftTreeRoot : "");
     const active = section.querySelector("[data-tree-active]");
     if (active) {
       active.innerHTML = info && (info.recipe || info.vanilla)
@@ -2928,7 +2983,7 @@
       if (toggle) { toggleTreeNode(toggle); return; }
       const card = e.target.closest("[data-tree-surface='inline'] .tnode-card[data-ing]");
       if (card && !e.target.closest("a, button, .npc-tip")) {
-        showTipCard(card.dataset.ing || "", card, true);
+        renderCraftTreeInspector(section, card.dataset.ing || "", true);
         e.preventDefault();
       }
     });
@@ -2937,8 +2992,12 @@
       const card = e.target.closest && e.target.closest("[data-tree-surface='inline'] .tnode-card[data-ing]");
       if (!card || e.target !== card) return;
       e.preventDefault();
-      showTipCard(card.dataset.ing || "", card, true);
+      renderCraftTreeInspector(section, card.dataset.ing || "", true);
     });
+    if (craftTreeRoot) {
+      const rootInfo = ingredientInfo(craftTreeRoot);
+      if (rootInfo && (rootInfo.recipe || rootInfo.vanilla)) renderCraftTreeInspector(section, craftTreeRoot);
+    }
   }
 
   function renderItems(params) {
