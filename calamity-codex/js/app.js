@@ -2651,6 +2651,19 @@
   let craftTreeRoot = store.get().craftTreeRoot || "";
   let craftTreeChoicesCache = null;
   const CRAFT_PICKER_PAGE_SIZE = 120;
+  const CRAFT_RECENT_LIMIT = 8;
+
+  function recentCraftRoots() {
+    const recent = store.get().craftTreeRecent;
+    return Array.isArray(recent) ? recent.filter(Boolean).slice(0, CRAFT_RECENT_LIMIT) : [];
+  }
+
+  function rememberCraftRoot(name) {
+    const key = String(name || "").trim();
+    if (!key) return;
+    const next = [key, ...recentCraftRoots().filter((item) => normalizeArtName(item) !== normalizeArtName(key))].slice(0, CRAFT_RECENT_LIMIT);
+    store.set({ craftTreeRecent: next });
+  }
 
   function treeRecipeForName(name) {
     if (!name) return null;
@@ -2748,6 +2761,10 @@
               <span aria-hidden="true">▶</span>
               <input id="craft-tree-picker-search" type="search" placeholder="Фильтр по русскому или игровому имени…" autocomplete="off" />
             </label>
+            <div class="craft-tree-recent" id="craft-tree-recent" hidden>
+              <div class="craft-tree-recent-head"><b>Последние ветки</b><small>быстрый повторный выбор</small></div>
+              <div class="craft-tree-recent-grid" id="craft-tree-recent-grid"></div>
+            </div>
             <div class="craft-tree-choice-filters" role="group" aria-label="Фильтр индекса предметов">
               <button type="button" class="active" data-choice-filter="all" aria-pressed="true">Все</button>
               <button type="button" data-choice-filter="craftable" aria-pressed="false">С рецептом</button>
@@ -2778,6 +2795,22 @@
       </section>`;
   }
 
+  function renderCraftTreeRecent(section, query = "") {
+    const wrap = section.querySelector("#craft-tree-recent");
+    const grid = section.querySelector("#craft-tree-recent-grid");
+    if (!wrap || !grid) return;
+    const q = String(query || "").trim().toLocaleLowerCase("ru");
+    const choiceMap = new Map(craftTreeChoices().map((item) => [normalizeArtName(item.name), item]));
+    const items = recentCraftRoots().map((name) => choiceMap.get(normalizeArtName(name))).filter(Boolean)
+      .filter((item) => !q || `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru").includes(q));
+    wrap.hidden = !items.length || !!q;
+    if (!items.length || q) {
+      grid.innerHTML = "";
+      return;
+    }
+    grid.innerHTML = items.map(craftChoiceCardHTML).join("");
+  }
+
   function renderCraftChoiceWindow(section, query = "") {
     const grid = section.querySelector("#craft-tree-choice-grid");
     const status = section.querySelector("#craft-tree-choice-status");
@@ -2796,6 +2829,7 @@
       grid.insertAdjacentHTML("beforeend", `<button class="craft-choice-more" type="button" data-choice-more>Показать ещё ${Math.min(CRAFT_PICKER_PAGE_SIZE, matches.length - visible.length)} из ${matches.length}</button>`);
     }
     grid.dataset.ready = "1";
+    renderCraftTreeRecent(section, q);
     if (status && !section.dataset.selectedChoice) status.textContent = q
       ? `Найдено карточек: ${matches.length}`
       : `Показано карточек: ${visible.length} из ${pool.length}`;
@@ -3085,6 +3119,7 @@
         return;
       }
       craftTreeRoot = chosen;
+      rememberCraftRoot(chosen);
       store.set({ craftTreeRoot });
       refreshInlineCraftTree(section);
       setPicker(false);
@@ -3964,6 +3999,7 @@
     if (treeCurrent && normalizeArtName(treeCurrent) !== normalizeArtName(target)) {
       treeStack.push(treeCurrent);
     }
+    rememberCraftRoot(target);
     renderTree(target);
     treeModal.hidden = false;
     document.body.classList.add("tree-open");

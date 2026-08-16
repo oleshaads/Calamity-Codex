@@ -3730,3 +3730,17 @@ body.tree-open { overflow: hidden; }
 @media (max-width: 760px) {
   .craft-tree-zoom-controls { margin-left: 0; }
 }
+
+.craft-tree-recent {
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid #394958;
+  border-radius: 4px;
+  background: rgba(255, 217, 122, .035);
+}
+.craft-tree-recent[hidden] { display: none; }
+.craft-tree-recent-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.craft-tree-recent-head b { color: var(--gold); font-family: var(--mono); font-size: 10px; text-transform: uppercase; }
+.craft-tree-recent-head small { color: #7f8d9a; font-size: 10px; }
+.craft-tree-recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.craft-tree-recent-grid .craft-choice-card { min-height: 48px; }
