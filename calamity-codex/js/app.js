@@ -2695,7 +2695,7 @@
         : vanilla
           ? (vanillaArt || craftStationSprite(recipe?.station))
           : (rootInfo.art || rootInfo.remoteArt || resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe?.station));
-      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "misc", ingredients: recipe ? recipe.ings.length : 0 });
+      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "misc", ingredients: recipe ? recipe.ings.length : 0, source: cat ? "calamity" : vanilla ? "vanilla" : "guide" });
     };
     indexedItems().forEach((item) => add(item.name));
     (CODEX.items || []).forEach((item) => add(item.name));
@@ -2748,6 +2748,12 @@
               <span aria-hidden="true">▶</span>
               <input id="craft-tree-picker-search" type="search" placeholder="Фильтр по русскому или игровому имени…" autocomplete="off" />
             </label>
+            <div class="craft-tree-choice-filters" role="group" aria-label="Фильтр индекса предметов">
+              <button type="button" class="active" data-choice-filter="all" aria-pressed="true">Все</button>
+              <button type="button" data-choice-filter="craftable" aria-pressed="false">С рецептом</button>
+              <button type="button" data-choice-filter="vanilla" aria-pressed="false">Terraria</button>
+              <button type="button" data-choice-filter="calamity" aria-pressed="false">Calamity</button>
+            </div>
             <p class="craft-tree-choice-status" id="craft-tree-choice-status" aria-live="polite">Нажми на карточку предмета</p>
             <div class="craft-tree-choice-grid" id="craft-tree-choice-grid" role="listbox" aria-label="Предмет для дерева крафта">
               <div class="craft-tree-choice-placeholder">Нажми «+», чтобы загрузить карточки рецептов</div>
@@ -2777,8 +2783,10 @@
     const status = section.querySelector("#craft-tree-choice-status");
     if (!grid) return;
     const all = craftTreeChoices();
+    const filter = section.dataset.choiceFilter || "all";
+    const pool = filter === "craftable" ? all.filter((item) => item.ingredients > 0) : filter === "all" ? all : all.filter((item) => item.source === filter);
     const q = String(query || "").trim().toLocaleLowerCase("ru");
-    const matches = q ? all.filter((item) => `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru").includes(q)) : all;
+    const matches = q ? pool.filter((item) => `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru").includes(q)) : pool;
     const limit = Math.max(CRAFT_PICKER_PAGE_SIZE, Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE));
     const visible = matches.slice(0, limit);
     grid.innerHTML = visible.length
@@ -2790,7 +2798,7 @@
     grid.dataset.ready = "1";
     if (status && !section.dataset.selectedChoice) status.textContent = q
       ? `Найдено карточек: ${matches.length}`
-      : `Показано карточек: ${visible.length} из ${all.length}`;
+      : `Показано карточек: ${visible.length} из ${pool.length}`;
     if (section.dataset.selectedChoice) {
       const active = [...grid.querySelectorAll("[data-choice-name]")].find((card) => normalizeArtName(card.dataset.choiceName) === normalizeArtName(section.dataset.selectedChoice));
       if (active) selectCraftChoice(section, active);
@@ -2991,7 +2999,13 @@
       store.set({ craftTreeRoot });
       delete section.dataset.selectedChoice;
       section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+      section.dataset.choiceFilter = "all";
       if (search) search.value = "";
+      section.querySelectorAll("[data-choice-filter]").forEach((button) => {
+        const active = button.dataset.choiceFilter === "all";
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
       grid?.querySelectorAll(".craft-choice-card.selected").forEach((card) => {
         card.classList.remove("selected");
         card.setAttribute("aria-pressed", "false");
@@ -3004,6 +3018,18 @@
       toast("Ветка крафта очищена", "×");
     };
     section.addEventListener("click", (e) => {
+      const filterButton = e.target.closest("[data-choice-filter]");
+      if (filterButton) {
+        section.dataset.choiceFilter = filterButton.dataset.choiceFilter || "all";
+        section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+        section.querySelectorAll("[data-choice-filter]").forEach((button) => {
+          const active = button === filterButton;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+        renderCraftChoiceWindow(section, search?.value || "");
+        return;
+      }
       const copy = e.target.closest("[data-copy-recipe]");
       if (copy) {
         copyCraftRecipe(copy.dataset.copyRecipe || "");

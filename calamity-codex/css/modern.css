@@ -3593,3 +3593,29 @@ body.tree-open { overflow: hidden; }
 }
 .craft-tree-inline-body .tnode-card.is-selected::after { background-position: -30% 0; }
 .inspector-copy { margin: 0 8px 0 0; }
+
+.craft-tree-choice-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+.craft-tree-choice-filters button {
+  cursor: pointer;
+  padding: 5px 9px;
+  border: 1px solid #354554;
+  border-radius: 3px;
+  color: #9eabb6;
+  background: #111a23;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.craft-tree-choice-filters button:hover,
+.craft-tree-choice-filters button.active {
+  border-color: var(--gold-2);
+  color: #171108;
+  background: var(--gold);
+}
