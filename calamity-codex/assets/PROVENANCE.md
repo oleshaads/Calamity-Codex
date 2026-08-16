@@ -56,7 +56,8 @@
 
 ## Terraria
 
-- `js/vanilla-tree.js` — полный индекс ванильных предметов и рецептов Terraria 1.4.4: 5087 предметов и 3502 рецепта. Источник: `natan-dot-com/Terraria-Dataset`, commit `51d0b5f1e83c971d16d76e7cbb1364cb3f07d19e` от 31 января 2022 года; ID ингредиента `-1` в исходной записи рецепта Zenith нормализован в ID Enchanted Sword (989).
+- `js/vanilla-tree.js` — полный индекс ванильных предметов и рецептов Terraria 1.4.4: 5087 предметов, 3502 рецепта и локальные ссылки на 5072 иконки.
+- `assets/vanilla-sprites/*.png` — 5072 настоящих ванильных item-спрайта из `natan-dot-com/Terraria-Dataset`, commit `51d0b5f1e83c971d16d76e7cbb1364cb3f07d19e` от 31 января 2022 года. Для нескольких служебных ID без официального имени оставлена честная заглушка; ID ингредиента `-1` в исходной записи рецепта Zenith нормализован в ID Enchanted Sword (989).
 - `sprites/*.png` — ванильные спрайты инвентаря и предметов для этапов базовой Terraria. `sprites/Deer_Thing.png` — игровой спрайт предмета Deer Thing (Item ID 5120), каноническая страница: <https://terraria.wiki.gg/wiki/Deer_Thing>. Локальная копия сверена с публичным набором `EzraGillooly/terraria-compass` (`public/icons/items/deer-thing.png`).
 - `lex/vanilla/*.png` (обычные предметы и bestiary NPC) — отдельные оригинальные игровые текстуры из публичного набора `Live-yan/terraviewer-images`, commit `d8b7a655e210fe377186a083635733ece85c3594`. Идентификаторы `item_*` и `npc_*` явно закреплены в `scripts/fetch-lexicon-art.sh`; имена не подбираются приблизительно.
 - `lex/vanilla/demon-altar.png` — настоящая tile/station-текстура Demon Altar из публичного Terraria recipe viewer `64mb/terraria-web-book`, commit `a825a5d87d18c63c22a461265b2d9188579b204f`, путь `assets/terraria/tool/demon_altar.png`.

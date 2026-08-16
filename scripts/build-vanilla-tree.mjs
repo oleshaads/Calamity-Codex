@@ -3,7 +3,7 @@
  * Build the offline vanilla Terraria tree index used by the craft graph.
  *
  * Usage:
- *   node scripts/build-vanilla-tree.mjs items.json recipes.json crafting_stations.json output.js
+ *   node scripts/build-vanilla-tree.mjs items.json recipes.json crafting_stations.json output.js [sprite-directory]
  *
  * The checked-in output was built from:
  *   natan-dot-com/Terraria-Dataset
@@ -12,16 +12,21 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const [itemsPath, recipesPath, stationsPath, outputPath] = process.argv.slice(2);
+const [itemsPath, recipesPath, stationsPath, outputPath, spriteDirectory = ""] = process.argv.slice(2);
 if (!itemsPath || !recipesPath || !stationsPath || !outputPath) {
-  console.error("Usage: node scripts/build-vanilla-tree.mjs items.json recipes.json crafting_stations.json output.js");
+  console.error("Usage: node scripts/build-vanilla-tree.mjs items.json recipes.json crafting_stations.json output.js [sprite-directory]");
   process.exit(1);
 }
 const read = (file) => JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
 const items = read(itemsPath);
 const recipes = read(recipesPath);
 const stations = read(stationsPath);
-const itemRows = items.map((item) => [Number(item.ID), item.Name, item.Type || "Item"]);
+const spriteRoot = spriteDirectory ? path.resolve(spriteDirectory) : "";
+const itemRows = items.map((item) => {
+  const id = Number(item.ID);
+  const sprite = spriteRoot && fs.existsSync(path.join(spriteRoot, `${id}.png`)) ? `assets/vanilla-sprites/${id}.png` : "";
+  return [id, item.Name, item.Type || "Item", sprite];
+});
 const itemIds = new Set(itemRows.map(([id]) => String(id)));
 const recipeRows = recipes.map((recipe) => [
   Number(recipe["Result ID"]),
@@ -46,7 +51,7 @@ const output = `/* Vanilla Terraria 1.4.4 item/recipe index. Source and revision
   items: itemRows,
   recipes: recipeRows,
   stations: stationRows,
-  coverage: { items: itemRows.length, recipes: recipeRows.length, normalizedNegativeIngredientIds: 1 }
+  coverage: { items: itemRows.length, recipes: recipeRows.length, sprites: itemRows.filter((item) => item[3]).length, normalizedNegativeIngredientIds: 1 }
 })};\n`;
 fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
 fs.writeFileSync(path.resolve(outputPath), output);

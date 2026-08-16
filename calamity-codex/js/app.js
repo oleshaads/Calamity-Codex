@@ -1583,7 +1583,7 @@
     }
   };
   const VANILLA_TREE_INDEX = window.CALAMITY_VANILLA_TREE_INDEX || { items: [], recipes: [], stations: [] };
-  const VANILLA_BY_ID = new Map((VANILLA_TREE_INDEX.items || []).map(([id, name, type]) => [String(id), { id: Number(id), name, type }]));
+  const VANILLA_BY_ID = new Map((VANILLA_TREE_INDEX.items || []).map(([id, name, type, sprite]) => [String(id), { id: Number(id), name, type, sprite: sprite || "" }]));
   const VANILLA_BY_NAME = new Map();
   VANILLA_BY_ID.forEach((item) => {
     const key = normalizeArtName(item.name);
@@ -1741,7 +1741,7 @@
     if (!en && guide && /[A-Za-z]/.test(String(guide.name)) && String(guide.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = guide.name;
     let art = cat
       ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
-      : (resolveArt(name) || (lex && resolveArt(lex.en)) || (guide ? spriteOfFixed(guide) : ""));
+      : ((vanilla && vanilla.sprite) || (extra && extra.art) || resolveArt(name) || (lex && resolveArt(lex.en)) || (guide ? spriteOfFixed(guide) : ""));
     let remoteArt = "";
     if (!art) {
       const vanilla = vanillaIngredientArt(name);
@@ -2650,6 +2650,7 @@
   /* ---------- отдельный экран дерева крафта ---------- */
   let craftTreeRoot = store.get().craftTreeRoot || "";
   let craftTreeChoicesCache = null;
+  const CRAFT_PICKER_PAGE_SIZE = 120;
 
   function treeRecipeForName(name) {
     if (!name) return null;
@@ -2683,10 +2684,14 @@
       const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
       const ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || ruItemName(canonical, cat) || canonical;
       const en = (lex && lex.en) || (extra && extra.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
-      const rootInfo = ingredientInfo(canonical);
+      const vanillaArtInfo = vanilla && vanillaIngredientArt(canonical);
+      const vanillaArt = vanilla && (vanilla.sprite || vanillaArtInfo?.local || vanillaArtInfo?.remote);
+      const rootInfo = cat || vanilla ? null : ingredientInfo(canonical);
       const art = cat
         ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
-        : (rootInfo.art || rootInfo.remoteArt || resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe.station));
+        : vanilla
+          ? (vanillaArt || craftStationSprite(recipe?.station))
+          : (rootInfo.art || rootInfo.remoteArt || resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe?.station));
       choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "misc", ingredients: recipe ? recipe.ings.length : 0 });
     };
     indexedItems().forEach((item) => add(item.name));
@@ -2761,15 +2766,38 @@
       </section>`;
   }
 
+  function renderCraftChoiceWindow(section, query = "") {
+    const grid = section.querySelector("#craft-tree-choice-grid");
+    const status = section.querySelector("#craft-tree-choice-status");
+    if (!grid) return;
+    const all = craftTreeChoices();
+    const q = String(query || "").trim().toLocaleLowerCase("ru");
+    const matches = q ? all.filter((item) => `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru").includes(q)) : all;
+    const limit = Math.max(CRAFT_PICKER_PAGE_SIZE, Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE));
+    const visible = matches.slice(0, limit);
+    grid.innerHTML = visible.length
+      ? visible.map(craftChoiceCardHTML).join("")
+      : `<div class="craft-tree-choice-placeholder">По запросу ничего не найдено</div>`;
+    if (visible.length < matches.length) {
+      grid.insertAdjacentHTML("beforeend", `<button class="craft-choice-more" type="button" data-choice-more>Показать ещё ${Math.min(CRAFT_PICKER_PAGE_SIZE, matches.length - visible.length)} из ${matches.length}</button>`);
+    }
+    grid.dataset.ready = "1";
+    if (status && !section.dataset.selectedChoice) status.textContent = q
+      ? `Найдено карточек: ${matches.length}`
+      : `Показано карточек: ${visible.length} из ${all.length}`;
+    if (section.dataset.selectedChoice) {
+      const active = [...grid.querySelectorAll("[data-choice-name]")].find((card) => normalizeArtName(card.dataset.choiceName) === normalizeArtName(section.dataset.selectedChoice));
+      if (active) selectCraftChoice(section, active);
+    }
+  }
+
   function populateCraftTreePicker(section) {
     const grid = section.querySelector("#craft-tree-choice-grid");
     if (!grid || grid.dataset.ready) return;
-    const options = craftTreeChoices();
-    grid.innerHTML = options.length
-      ? options.map(craftChoiceCardHTML).join("")
-      : `<div class="craft-tree-choice-placeholder">Рецептов для выбора пока не найдено</div>`;
-    grid.dataset.ready = "1";
-    if (craftTreeRoot) {
+    section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+    if (craftTreeRoot) section.dataset.selectedChoice = craftTreeRoot;
+    renderCraftChoiceWindow(section);
+    if (craftTreeRoot && !section.dataset.selectedChoice) {
       const active = [...grid.querySelectorAll("[data-choice-name]")].find((card) => normalizeArtName(card.dataset.choiceName) === normalizeArtName(craftTreeRoot));
       if (active) selectCraftChoice(section, active);
     }
@@ -2829,21 +2857,22 @@
       add.setAttribute("aria-expanded", String(open));
       if (open) {
         populateCraftTreePicker(section);
+        // После закрытия открываем полный первый экран заново, а не оставляем
+        // старый фильтр и сотни скрытых карточек в DOM.
+        if (search && search.value) {
+          search.value = "";
+          section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+          renderCraftChoiceWindow(section);
+        }
         requestAnimationFrame(() => search?.focus());
       }
     };
+    let choiceSearchTimer = 0;
     if (add) add.onclick = () => setPicker(picker.hidden);
     if (search) search.oninput = () => {
-      const q = search.value.trim().toLocaleLowerCase("ru");
-      const cards = [...(grid?.querySelectorAll(".craft-choice-card") || [])];
-      let visible = 0;
-      cards.forEach((card) => {
-        const match = !q || String(card.dataset.choiceSearch || "").includes(q);
-        card.hidden = !match;
-        if (match) visible += 1;
-      });
-      const status = section.querySelector("#craft-tree-choice-status");
-      if (status && !section.dataset.selectedChoice) status.textContent = `Найдено карточек: ${visible}`;
+      clearTimeout(choiceSearchTimer);
+      section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+      choiceSearchTimer = setTimeout(() => renderCraftChoiceWindow(section, search.value), 100);
     };
     if (build) build.onclick = () => {
       const chosen = section.dataset.selectedChoice || "";
@@ -2863,17 +2892,26 @@
       craftTreeRoot = "";
       store.set({ craftTreeRoot });
       delete section.dataset.selectedChoice;
+      section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+      if (search) search.value = "";
       grid?.querySelectorAll(".craft-choice-card.selected").forEach((card) => {
         card.classList.remove("selected");
         card.setAttribute("aria-pressed", "false");
       });
       const status = section.querySelector("#craft-tree-choice-status");
       if (status) status.textContent = "Нажми на карточку предмета";
+      if (grid?.dataset.ready) renderCraftChoiceWindow(section);
       refreshInlineCraftTree(section);
       setPicker(false);
       toast("Ветка крафта очищена", "×");
     };
     section.addEventListener("click", (e) => {
+      const more = e.target.closest("[data-choice-more]");
+      if (more) {
+        section.dataset.choiceLimit = String(Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE) + CRAFT_PICKER_PAGE_SIZE);
+        renderCraftChoiceWindow(section, search?.value || "");
+        return;
+      }
       const choice = e.target.closest(".craft-choice-card[data-choice-name]");
       if (choice) {
         selectCraftChoice(section, choice);

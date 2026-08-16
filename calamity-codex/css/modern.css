@@ -3462,3 +3462,21 @@ body.tree-open { overflow: hidden; }
   line-height: 1;
   text-shadow: 0 0 12px rgba(255, 217, 122, .55);
 }
+
+/* Виртуальное окно выбора: индекс содержит все предметы, но DOM рисует
+   только текущую страницу, чтобы открытие пикера не подвешивало браузер. */
+.craft-choice-more {
+  grid-column: 1 / -1;
+  min-height: 38px;
+  cursor: pointer;
+  border: 1px dashed #80672c;
+  border-radius: 4px;
+  color: var(--gold);
+  background: #1b180d;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.craft-choice-more:hover { border-color: var(--gold); background: #292315; }

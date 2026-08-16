@@ -42,7 +42,9 @@ vm.runInContext(fs.readFileSync(path.join(root, "js/vanilla-tree.js"), "utf8"), 
 const vanillaIndex = vanillaContext.window.CALAMITY_VANILLA_TREE_INDEX || {};
 check((vanillaIndex.items || []).length >= 5000, `Expected at least 5000 vanilla Terraria items, got ${(vanillaIndex.items || []).length}`);
 check((vanillaIndex.recipes || []).length >= 3000, `Expected at least 3000 vanilla Terraria recipes, got ${(vanillaIndex.recipes || []).length}`);
+check((vanillaIndex.coverage?.sprites || 0) >= 5000, `Expected at least 5000 vanilla item sprites, got ${vanillaIndex.coverage?.sprites || 0}`);
 check(fs.existsSync(path.resolve("scripts/build-vanilla-tree.mjs")), "Vanilla tree rebuild script is missing");
+for (const item of vanillaIndex.items || []) if (item[3]) check(fs.existsSync(path.join(root, item[3])), `Missing vanilla item sprite: ${item[3]}`);
 check(app.includes("npcSourceArt"), "Craft source rows are not rendering enemy art");
 check(app.includes("EXTRA_RECIPE_DEFS") && app.includes("Copper Shortsword") && app.includes("Zenith"), "Vanilla Zenith recipe override is missing");
 check(app.includes("item.description || purpose") && app.includes("ruText(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
