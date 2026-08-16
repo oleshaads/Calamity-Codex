@@ -2831,6 +2831,32 @@
     if (status) status.innerHTML = `Выбран предмет: <b>${esc(card.querySelector(".craft-choice-copy b")?.textContent || card.dataset.choiceName || "")}</b>`;
   }
 
+  function craftTreeMaterialSummary(name) {
+    const totals = new Map();
+    let visited = 0;
+    const walk = (itemName, multiplier, path) => {
+      if (++visited > 5000) return;
+      const info = ingredientInfo(itemName);
+      const key = normalizeArtName(itemName);
+      const recipe = info.recipe && info.recipe.ings.length ? info.recipe : null;
+      if (!recipe || path.has(key)) {
+        const leafKey = normalizeArtName(info.ru || itemName);
+        const current = totals.get(leafKey) || { name: itemName, info, count: 0 };
+        current.count += multiplier;
+        totals.set(leafKey, current);
+        return;
+      }
+      const nextPath = new Set(path);
+      nextPath.add(key);
+      recipe.ings.forEach((ingredient) => {
+        const amount = Number.parseFloat(String(ingredient.count || "1").replace(",", "."));
+        walk(ingredient.name, multiplier * (Number.isFinite(amount) && amount > 0 ? amount : 1), nextPath);
+      });
+    };
+    walk(name, 1, new Set());
+    return [...totals.values()].sort((a, b) => a.info.ru.localeCompare(b.info.ru, "ru"));
+  }
+
   function craftTreeInspectorHTML(name) {
     const info = ingredientInfo(name);
     const cat = info.catName ? catalogByName(info.catName) : catalogByName(name);
@@ -2847,6 +2873,14 @@
     const recipeHTML = info.recipe && info.recipe.ings.length
       ? `<div class="craft-chips">${info.recipe.ings.map((item) => ingChipHTML(item.name, item.count)).join("")}${stationChipHTML(info.recipe.station)}</div>`
       : `<p>Не крафтится напрямую: добывается, находится в мире или выпадает из указанного источника.</p>`;
+    const materials = info.recipe && info.recipe.ings.length ? craftTreeMaterialSummary(name) : [];
+    const materialsText = materials.map((item) => `${item.count} × ${item.info.ru}`).join("\n");
+    const materialsHTML = materials.length
+      ? `<section class="craft-tree-materials"><div class="craft-tree-materials-head"><div><b>Итоговые ресурсы</b><small>Суммарно для этой ветки, без учёта альтернативных рецептов</small></div><button class="tree-btn inspector-copy" type="button" data-copy-materials="${escAttr(materialsText)}">⧉ Список ресурсов</button></div><div class="craft-tree-material-grid">${materials.map((item) => {
+          const art = item.info.art || item.info.remoteArt || "";
+          return `<button class="craft-tree-material" type="button" data-material-node="${escAttr(item.name)}"><span class="slot craft-tree-material-art">${art ? `<img class="${item.info.remoteArt && !item.info.art ? "remote" : ""}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : `<b>◆</b>`}</span><span><b>${esc(item.info.ru)}</b><small>×${esc(item.count)}</small></span></button>`;
+        }).join("")}</div></section>`
+      : "";
     const wiki = info.vanilla
       ? `https://terraria.wiki.gg/wiki/${encodeURIComponent(info.en || name).replace(/%20/g, "_")}`
       : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(info.en || info.catName || name)}`;
@@ -2867,6 +2901,7 @@
         <div class="fact"><span>Когда</span><p>${esc(ruText(info.when || "По мере открытия соответствующей ветки Terraria / Calamity."))}</p></div>
         <div class="fact recipe-fact"><span>Полный рецепт</span>${recipeHTML}</div>
       </div>
+      ${materialsHTML}
       <div class="craft-tree-inspector-actions">
         <button class="tree-btn inspector-copy" type="button" data-copy-recipe="${escAttr(recipeText)}">⧉ Скопировать рецепт</button>
         <a class="craft-catalog-link" href="${escAttr(wiki)}" target="_blank" rel="noopener noreferrer">Открыть справочную страницу ↗</a>
@@ -3030,9 +3065,14 @@
         renderCraftChoiceWindow(section, search?.value || "");
         return;
       }
-      const copy = e.target.closest("[data-copy-recipe]");
+      const material = e.target.closest("[data-material-node]");
+      if (material) {
+        renderCraftTreeInspector(section, material.dataset.materialNode || "", true);
+        return;
+      }
+      const copy = e.target.closest("[data-copy-recipe], [data-copy-materials]");
       if (copy) {
-        copyCraftRecipe(copy.dataset.copyRecipe || "");
+        copyCraftRecipe(copy.dataset.copyRecipe || copy.dataset.copyMaterials || "");
         return;
       }
       const more = e.target.closest("[data-choice-more]");
