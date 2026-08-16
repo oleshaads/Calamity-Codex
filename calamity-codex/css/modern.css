@@ -3409,3 +3409,49 @@ body.tree-open { overflow: hidden; }
   .craft-choice-card { grid-template-columns: 36px minmax(0, 1fr); padding: 6px 20px 6px 6px; }
   .craft-choice-art { width: 36px; height: 36px; }
 }
+
+/* У источников в дереве крафта враги — не просто золотая строка: рядом
+   показывается их настоящий локальный boss/NPC-ориентир. */
+.src-drop.npc-source-drop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 2px 5px 2px 2px;
+  border: 1px solid rgba(255, 217, 122, .18);
+  border-radius: 4px;
+  background: rgba(255, 217, 122, .035);
+}
+.npc-source-art {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #5b4b27;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #32322b, #171b18);
+  box-shadow: inset 0 0 0 2px rgba(8, 11, 16, .72);
+}
+.npc-source-art img {
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .75));
+}
+.npc-source-art-empty {
+  color: var(--gold);
+  font-size: 15px;
+  text-shadow: 0 0 7px rgba(255, 217, 122, .45);
+}
+.tnode-src .src-drop.npc-source-drop { display: flex; width: 100%; }
+.tnode-src .npc-source-art { width: 30px; height: 30px; flex-basis: 30px; }
+.tnode-src .npc-source-drop .npc-tip { flex: 0 1 auto; }
+@media (max-width: 760px) {
+  .src-drop.npc-source-drop { max-width: 100%; }
+  .npc-source-art { width: 25px; height: 25px; flex-basis: 25px; }
+  .tnode-src .npc-source-art { width: 25px; height: 25px; flex-basis: 25px; }
+}

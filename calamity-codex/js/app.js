@@ -1688,13 +1688,31 @@
     if (!it) return ruItemName(id);
     return ruItemName(it);
   }
+  function npcArtForName(name) {
+    const boss = bossRecordForName(name);
+    if (boss) return routeBossArt(boss);
+    const mini = miniRecordForName(name);
+    if (mini) {
+      if (mini.name === "Giant Clam") return BOSS_ART_BY_ID["giant-clam"];
+      if (mini.name === "Great Sand Shark") return BOSS_ART_BY_ID["sand-shark"];
+      return "assets/boss-sprites/cragmaw-mire.png";
+    }
+    const lex = exactLexLookup(name);
+    return (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id])) || resolveArt(name) || "";
+  }
+  function npcSourceArt(name) {
+    const art = npcArtForName(name);
+    return art
+      ? `<span class="npc-source-art"><img src="${escAttr(art)}" alt="" loading="lazy" decoding="async" /></span>`
+      : `<span class="npc-source-art npc-source-art-empty" aria-hidden="true">☠</span>`;
+  }
   function npcSourceLines(sources, short) {
     if (!sources) return "";
     const parts = [];
     (sources.npcs || []).forEach((d) => {
       const chance = d.chance ? ` — <em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
       const cond = d.cond ? ` <i>· ${esc(d.cond)}</i>` : "";
-      parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${chance}${cond}</span>`);
+      parts.push(`<span class="src-drop npc-source-drop">${npcSourceArt(d.npc)}<i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${chance}${cond}</span>`);
     });
     if (!short) {
       if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i><span>Выбивается из: ${esc(ruText(sources.tiles.join(", ")))}</span></span>`);
@@ -2053,7 +2071,6 @@
         <div class="card-links">
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Рецепт и шансы на wiki ↗</a>
           ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть практическую рекомендацию ${escAttr(detailName)}">Рекомендация кодекса →</a>` : ""}
-          ${/^Скрафтить/i.test(item.obtain || "") ? `<button class="tree-btn" type="button" data-tree="${escAttr(item.name)}">⤓ Дерево крафта</button>` : ""}
         </div>
       </div>
     </article>`;
@@ -2096,7 +2113,6 @@
           ${rec ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(rec)}</p>`}</div>` : ""}
           ${showWhy ? `<div class="fact"><span>Зачем</span><p>${esc(why)}</p></div>` : ""}
         </div>
-        ${rec ? `<button class="tree-btn" type="button" data-tree="${escAttr(it.name)}">⤓ Дерево крафта</button>` : ""}
       </div>
     </article>`;
   }
