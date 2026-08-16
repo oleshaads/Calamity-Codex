@@ -2667,18 +2667,21 @@
     if (craftTreeChoicesCache) return craftTreeChoicesCache;
     buildNameIndexes();
     const choices = new Map();
-    const add = (name) => {
+    const add = (name, vanillaRecord = null) => {
       const raw = String(name || "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
       if (!raw) return;
       // Сначала приводим всё к имени записи каталога. Рекомендация маршрута,
       // английское имя и запись из CODEX.crafts тогда занимают один и тот же
       // слот, а не рисуются несколькими копиями одного предмета.
-      const cat = catalogByName(raw);
+      const cat = vanillaRecord ? null : catalogByName(raw);
       const canonical = cat ? cat.name : raw;
       const extra = EXTRA_ITEM_INFO[canonical] || EXTRA_ITEM_INFO[raw] || null;
-      const vanilla = vanillaItemForName(canonical) || vanillaItemForName(raw);
+      const vanilla = vanillaRecord || vanillaItemForName(canonical) || vanillaItemForName(raw);
+      const vanillaRecipe = vanillaRecord && VANILLA_RECIPE_BY_ID.get(String(vanillaRecord.id))
+        ? { ...VANILLA_RECIPE_BY_ID.get(String(vanillaRecord.id)), station: vanillaStationName(VANILLA_RECIPE_BY_ID.get(String(vanillaRecord.id)).station) }
+        : null;
       const key = cat ? `catalog:${cat.id}` : vanilla ? `vanilla:${vanilla.id}` : `name:${normalizeArtName(canonical)}`;
-      const recipe = treeRecipeForName(canonical) || treeRecipeForName(raw);
+      const recipe = vanillaRecipe || treeRecipeForName(canonical) || treeRecipeForName(raw);
       if (!key || choices.has(key) || ((!recipe || !recipe.ings.length) && !vanilla)) return;
       const lex = exactLexLookup(canonical) || exactLexLookup(raw);
       const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
@@ -2698,7 +2701,7 @@
     (CODEX.items || []).forEach((item) => add(item.name));
     (CODEX.crafts || []).forEach((item) => add(item.name || item.t));
     Object.keys(EXTRA_RECIPE_DEFS).forEach((name) => add(name));
-    VANILLA_BY_ID.forEach((item) => add(item.name));
+    VANILLA_BY_ID.forEach((item) => add(item.name, item));
     craftTreeChoicesCache = [...choices.values()].sort((a, b) => a.ru.localeCompare(b.ru, "ru") || a.name.localeCompare(b.name, "en"));
     return craftTreeChoicesCache;
   }
