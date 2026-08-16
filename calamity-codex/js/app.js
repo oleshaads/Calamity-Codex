@@ -107,7 +107,7 @@
       return [[saved.item.size + saved.boss.size + saved.craft.size, "в рюкзаке"], [3, "коллекции"]];
     }
     if (view === "lex") return [[Object.keys(CODEX.lex || {}).length, "терминов"], ["RU / EN", "названия"]];
-    if (view === "crafts") return [[CODEX.crafts.length, "рецептов"], [new Set(CODEX.crafts.map((craft) => craft.stage || "Прочее")).size, "этапов"]];
+    if (view === "crafts") return [[getRecipeIndex().size, "рецептов в дереве"], [VANILLA_TREE_INDEX.items.length, "ванильных предметов"]];
     if (view === "biomes") return [[CODEX.biomes.length, "биомов"], [4, "уровня риска"]];
     return [];
   }
@@ -1513,6 +1513,11 @@
       const enText = detail && detail.rec ? detail.rec : (c.r || c.ings || "");
       add(t, enText, c.station || "");
     }));
+    VANILLA_RECIPE_BY_ID.forEach((recipe, resultId) => {
+      const item = VANILLA_BY_ID.get(String(resultId));
+      const key = item && normalizeArtName(item.name);
+      if (key && !recipeIndex.has(key)) recipeIndex.set(key, { ings: recipe.ings, station: vanillaStationName(recipe.station) });
+    });
     Object.entries(EXTRA_RECIPE_DEFS).forEach(([name, recipe]) => {
       const key = normalizeArtName(name);
       if (key && !recipeIndex.has(key)) recipeIndex.set(key, recipe);
@@ -1558,6 +1563,8 @@
         { name: "Bee Keeper", count: "1" },
         { name: "Seedler", count: "1" },
         { name: "Terra Blade", count: "1" },
+        { name: "The Horseman's Blade", count: "1" },
+        { name: "Influx Waver", count: "1" },
         { name: "Meowmere", count: "1" },
         { name: "Star Wrath", count: "1" }
       ],
@@ -1570,11 +1577,84 @@
       en: "Zenith",
       kind: "weapon",
       desc: "Финальный меч ванильной Terraria. Выпускает клинки из собранного оружия и закрывает главную ванильную ветку крафта.",
-      obtain: "Скрафтить из: Copper Shortsword + Enchanted Sword + Starfury + Bee Keeper + Seedler + Terra Blade + Meowmere + Star Wrath · у мифриловой или орихалковой наковальни.",
+      obtain: "Скрафтить из: Copper Shortsword + Enchanted Sword + Starfury + Bee Keeper + Seedler + Terra Blade + The Horseman's Blade + Influx Waver + Meowmere + Star Wrath · у мифриловой или орихалковой наковальни.",
       used: "Главное оружие финала ванильной Terraria; особенно полезен после победы над Лунным лордом.",
       when: "После Лунного лорда, когда собраны все восемь мечей."
     }
   };
+  const VANILLA_TREE_INDEX = window.CALAMITY_VANILLA_TREE_INDEX || { items: [], recipes: [], stations: [] };
+  const VANILLA_BY_ID = new Map((VANILLA_TREE_INDEX.items || []).map(([id, name, type]) => [String(id), { id: Number(id), name, type }]));
+  const VANILLA_BY_NAME = new Map();
+  VANILLA_BY_ID.forEach((item) => {
+    const key = normalizeArtName(item.name);
+    if (key && !VANILLA_BY_NAME.has(key)) VANILLA_BY_NAME.set(key, item);
+    const noSuffix = normalizeArtName(String(item.name).replace(/\s*\(item\)$/i, ""));
+    if (noSuffix && !VANILLA_BY_NAME.has(noSuffix)) VANILLA_BY_NAME.set(noSuffix, item);
+  });
+  const VANILLA_RECIPE_BY_ID = new Map();
+  (VANILLA_TREE_INDEX.recipes || []).forEach(([resultId, resultQuantity, tableId, ings]) => {
+    if (!VANILLA_RECIPE_BY_ID.has(String(resultId))) VANILLA_RECIPE_BY_ID.set(String(resultId), { ings: (ings || []).map(([id, count]) => ({ name: VANILLA_BY_ID.get(String(id))?.name || `Предмет Terraria #${id}`, count: String(count) })), station: String(tableId) });
+  });
+  const VANILLA_STATIONS = new Map((VANILLA_TREE_INDEX.stations || []).map(([id, name]) => [String(id), name]));
+  const VANILLA_STATION_RU = {
+    "by hand": "в инвентаре",
+    "work bench": "у верстака",
+    furnace: "у печи",
+    hellforge: "у адской печи",
+    "iron anvil": "у железной наковальни",
+    "lead anvil": "у свинцовой наковальни",
+    "placed bottle": "у поставленной бутылки",
+    "alchemy table": "на алхимическом столе",
+    sink: "у раковины / источника воды",
+    sawmill: "у лесопилки",
+    loom: "у ткацкого станка",
+    "table and chair": "у стола и стула",
+    "work bench and chair": "у верстака и стула",
+    "cooking pot": "у котла",
+    cauldron: "у котла",
+    "tinkerer's workshop": "у мастерской инженера",
+    "imbuing station": "у станции наполнения",
+    "dye vat": "у красильного чана",
+    "heavy work bench": "у тяжёлого верстака",
+    "demon/crimson altar": "у алтаря зла",
+    "mythril anvil": "у мифриловой наковальни",
+    "orichalcum anvil": "у орихалковой наковальни",
+    "mythril/orichalcum anvil": "у мифриловой или орихалковой наковальни",
+    "adamantite forge": "у адамантитовой кузни",
+    "titanium forge": "у титановой кузни",
+    "adamantite/titanium forge": "у адамантитовой или титановой кузни",
+    bookcase: "у книжного шкафа",
+    "crystal ball": "у хрустального шара",
+    autohammer: "в автокузнице",
+    "ancient manipulator": "у древнего манипулятора",
+    honey: "в мёде",
+    "draedon's forge": "в кузнице Дрейдона",
+    "sky mill": "у небесной мельницы",
+    "ice machine": "у ледяной машины",
+    keg: "у бочонка",
+    "lihzahrd furnace": "у печи ящеров"
+  };
+  function vanillaItemForName(name) {
+    return VANILLA_BY_NAME.get(normalizeArtName(name)) || null;
+  }
+  function vanillaRecipeForName(name) {
+    const item = vanillaItemForName(name);
+    return item ? (VANILLA_RECIPE_BY_ID.get(String(item.id)) || null) : null;
+  }
+  function vanillaStationName(id) {
+    const name = VANILLA_STATIONS.get(String(id)) || String(id || "");
+    return VANILLA_STATION_RU[name.toLocaleLowerCase("ru")] || ruText(name);
+  }
+  function vanillaKind(type) {
+    const low = String(type || "").toLocaleLowerCase("en");
+    if (low.includes("weapon")) return "weapon";
+    if (low.includes("armor") || low.includes("vanity")) return "armor";
+    if (low.includes("accessory") || low.includes("shield") || low.includes("hook")) return "acc";
+    if (low.includes("potion") || low.includes("consumable") || low.includes("food")) return "potion";
+    if (low.includes("tool") || low.includes("fishing") || low.includes("bait")) return "tool";
+    if (low.includes("material") || low.includes("ore") || low.includes("gem") || low.includes("ammunition")) return "mat";
+    return "misc";
+  }
   const VANILLA_LOCAL_ART = {
     "fallen star": "assets/lex/vanilla/fallen-star.png",
     acorn: "assets/lex/vanilla/acorn.png",
@@ -1652,9 +1732,11 @@
     const extra = EXTRA_ITEM_INFO[name]
       || (lex && EXTRA_ITEM_INFO[lex.en])
       || null;
-    let ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || (cat ? ruItemName(name, cat) : ruItemName(name)) || name;
+    const vanilla = vanillaItemForName(name) || (lex && vanillaItemForName(lex.en)) || null;
+    let ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || (cat ? ruItemName(name, cat) : ruItemName(name)) || (vanilla && ruItemName(vanilla.name)) || name;
     let en = (lex && lex.en && String(lex.en).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) ? lex.en : "";
     if (!en && extra && extra.en) en = extra.en;
+    if (!en && vanilla && String(vanilla.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = vanilla.name;
     if (!en && cat && cat.name.toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = cat.name;
     if (!en && guide && /[A-Za-z]/.test(String(guide.name)) && String(guide.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = guide.name;
     let art = cat
@@ -1666,13 +1748,18 @@
       if (vanilla && vanilla.local) art = vanilla.local;
       else if (vanilla && vanilla.remote) remoteArt = vanilla.remote;
     }
-    const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || (extra && extra.desc) || "";
-    const obtainRaw = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || (extra && extra.obtain) || "";
+    const vanillaRecipe = vanilla && getRecipeIndex().get(normalizeArtName(vanilla.name));
+    const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || (extra && extra.desc)
+      || (vanilla && `Предмет обычной Terraria: ${ruText(vanilla.type || "игровой предмет")}.`)
+      || "";
+    const obtainRaw = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || (extra && extra.obtain)
+      || (vanillaRecipe ? `Скрафтить у ${vanillaRecipe.station}.` : vanilla ? "Ванильный предмет Terraria; источник зависит от предмета и мира." : "");
     const obtain = ruText(obtainRaw);
     const recipe = getRecipeIndex().get(key)
       || (cat && getRecipeIndex().get(normalizeArtName(cat.name)))
       || (lex && getRecipeIndex().get(normalizeArtName(lex.en)))
       || (guide && getRecipeIndex().get(normalizeArtName(guide.name)))
+      || vanillaRecipe
       || null;
     // Карточка дерева должна быть полезной даже для записи из полного
     // каталога, у которой нет отдельной строки в словаре: назначение и этап
@@ -1682,7 +1769,8 @@
       || (guide && guide.when)
       || (extra && extra.when)
       || "";
-    return { name, ru, en, art, desc, obtain, recipe, used, when, kind: cat ? cat.kind : (extra && extra.kind) || "mat", catName: cat ? cat.name : "", remoteArt };
+    const vanillaUsed = vanilla && `Используется как предмет Terraria типа «${ruText(vanilla.type || "игровой предмет")}».`;
+    return { name, ru, en, art, desc, obtain, recipe, used: used || (extra && extra.used) || vanillaUsed || "", when, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "mat", catName: cat ? cat.name : "", remoteArt, vanilla };
   }
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
@@ -2587,9 +2675,10 @@
       const cat = catalogByName(raw);
       const canonical = cat ? cat.name : raw;
       const extra = EXTRA_ITEM_INFO[canonical] || EXTRA_ITEM_INFO[raw] || null;
-      const key = cat ? `catalog:${cat.id}` : `name:${normalizeArtName(canonical)}`;
+      const vanilla = vanillaItemForName(canonical) || vanillaItemForName(raw);
+      const key = cat ? `catalog:${cat.id}` : vanilla ? `vanilla:${vanilla.id}` : `name:${normalizeArtName(canonical)}`;
       const recipe = treeRecipeForName(canonical) || treeRecipeForName(raw);
-      if (!key || choices.has(key) || !recipe || !recipe.ings.length) return;
+      if (!key || choices.has(key) || ((!recipe || !recipe.ings.length) && !vanilla)) return;
       const lex = exactLexLookup(canonical) || exactLexLookup(raw);
       const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
       const ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || ruItemName(canonical, cat) || canonical;
@@ -2598,12 +2687,13 @@
       const art = cat
         ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
         : (rootInfo.art || rootInfo.remoteArt || resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe.station));
-      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || "misc", ingredients: recipe.ings.length });
+      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "misc", ingredients: recipe ? recipe.ings.length : 0 });
     };
     indexedItems().forEach((item) => add(item.name));
     (CODEX.items || []).forEach((item) => add(item.name));
     (CODEX.crafts || []).forEach((item) => add(item.name || item.t));
     Object.keys(EXTRA_RECIPE_DEFS).forEach((name) => add(name));
+    VANILLA_BY_ID.forEach((item) => add(item.name));
     craftTreeChoicesCache = [...choices.values()].sort((a, b) => a.ru.localeCompare(b.ru, "ru") || a.name.localeCompare(b.name, "en"));
     return craftTreeChoicesCache;
   }
@@ -2615,14 +2705,14 @@
     const search = `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru");
     return `<button class="craft-choice-card" type="button" data-choice-name="${escAttr(item.name)}" data-choice-search="${escAttr(search)}" aria-pressed="false">
       <span class="slot craft-choice-art">${art}</span>
-      <span class="craft-choice-copy"><b>${esc(item.ru)}</b>${item.en && item.en !== item.ru ? `<small>${esc(item.en)}</small>` : ""}<em>${item.ingredients} ингредиент${item.ingredients === 1 ? "" : item.ingredients < 5 ? "а" : "ов"}</em></span>
+      <span class="craft-choice-copy"><b>${esc(item.ru)}</b>${item.en && item.en !== item.ru ? `<small>${esc(item.en)}</small>` : ""}<em>${item.ingredients ? `${item.ingredients} ингредиент${item.ingredients === 1 ? "" : item.ingredients < 5 ? "а" : "ов"}` : "ресурс / добывается"}</em></span>
       <span class="craft-choice-mark" aria-hidden="true">◆</span>
     </button>`;
   }
 
   function craftTreeBranchHTML(root) {
     const info = root ? ingredientInfo(root) : null;
-    const activeRoot = info && info.recipe ? root : "";
+    const activeRoot = info && (info.recipe || info.vanilla) ? root : "";
     const activeInfo = activeRoot ? info : null;
     return `
       <section class="craft-tree-branch panel" id="craft-tree-branch" aria-labelledby="craft-tree-title">
@@ -2643,7 +2733,7 @@
         <div class="craft-tree-picker" id="craft-tree-picker" hidden>
           <div class="craft-tree-picker-copy">
             <b>Какой предмет разобрать?</b>
-            <span>Выбирай любой предмет с локальным рецептом — не только рекомендации маршрута.</span>
+            <span>Выбирай любой предмет Calamity или ванильной Terraria — в индексе есть 5087 ванильных предметов и их рецепты.</span>
           </div>
           <div class="craft-tree-picker-controls">
             <label class="craft-tree-search">
@@ -2704,7 +2794,7 @@
     const body = section.querySelector("#craft-tree-inline-body");
     const info = craftTreeRoot ? ingredientInfo(craftTreeRoot) : null;
     if (!body) return;
-    if (info && info.recipe) {
+    if (info && (info.recipe || info.vanilla)) {
       body.className = "tree-body craft-tree-inline-body";
       body.dataset.treeSurface = "inline";
       body.innerHTML = treeNodeHTML(craftTreeRoot, 0, new Set());
@@ -2716,12 +2806,12 @@
     }
     const active = section.querySelector("[data-tree-active]");
     if (active) {
-      active.innerHTML = info && info.recipe
+      active.innerHTML = info && (info.recipe || info.vanilla)
         ? `<span>корень ветки</span><b>${esc(info.ru)}</b><i>${info.en ? `в игре: ${esc(info.en)}` : ""}</i>`
         : `<span>корень ветки</span><b>Предмет ещё не выбран</b><i>Нажми на плюсик справа</i>`;
     }
     const add = section.querySelector("#craft-tree-add span:last-child");
-    if (add) add.textContent = info && info.recipe ? "Сменить предмет" : "Выбрать предмет";
+    if (add) add.textContent = info && (info.recipe || info.vanilla) ? "Сменить предмет" : "Выбрать предмет";
   }
 
   function bindCraftTreeBranch(section) {
@@ -2758,8 +2848,8 @@
     if (build) build.onclick = () => {
       const chosen = section.dataset.selectedChoice || "";
       const info = chosen ? ingredientInfo(chosen) : null;
-      if (!chosen || !info || !info.recipe) {
-        toast("Сначала выбери предмет с рецептом", "+");
+      if (!chosen || !info || (!info.recipe && !info.vanilla)) {
+        toast("Сначала выбери предмет из индекса Terraria или с рецептом", "+");
         return;
       }
       craftTreeRoot = chosen;
@@ -3146,15 +3236,14 @@
       map[stage].push(c);
     });
     const recipeCount = getRecipeIndex().size;
-    const stageCount = new Set(CODEX.crafts.map((craft) => craft.stage || "Прочее")).size;
     fillRail("");
     app.innerHTML = `
       <div class="page craft-graph-page">
         ${mast("Дерево крафта", "Выбери результат и исследуй карту его зависимостей: от финального предмета через станции и ингредиенты до начальных ресурсов.")}
         <div class="craft-graph-stats" aria-label="Статистика дерева рецептов">
-          <span><b>${recipeCount.toLocaleString("ru-RU")}</b><small>локальных рецептов</small></span>
+          <span><b>${recipeCount.toLocaleString("ru-RU")}</b><small>рецептов в дереве</small></span>
+          <span><b>${VANILLA_TREE_INDEX.items.length.toLocaleString("ru-RU")}</b><small>предметов Terraria</small></span>
           <span><b>${CODEX.crafts.length}</b><small>рекомендаций маршрута</small></span>
-          <span><b>${stageCount}</b><small>этапов прогрессии</small></span>
           <span><b>↗</b><small>слева направо · как карта</small></span>
         </div>
         ${craftTreeBranchHTML(craftTreeRoot)}
@@ -3471,6 +3560,9 @@
         ? `<img class="remote" src="${escAttr(info.remoteArt)}" alt="" loading="lazy" decoding="async" />`
         : unavailableArt("mat"));
     const linkName = info.catName || info.en || name;
+    const linkHref = info.vanilla
+      ? `https://terraria.wiki.gg/wiki/${encodeURIComponent(info.en || name).replace(/%20/g, "_")}`
+      : `#/items?s=${encodeURIComponent(linkName)}`;
     const catItem = catalogByName(name);
     const nodeSources = catItem ? (NPC_SOURCES[catItem.id] || null) : null;
     const nodeDrops = npcSourceLines(nodeSources);
@@ -3499,7 +3591,7 @@
           ${count ? `<em class="tcount">×${esc(count)}</em>` : ""}
           ${stationIcon}
           <span class="tsrc" title="${escAttr(srcLine)}">${srcLine}</span>
-          <a class="tlink" href="#/items?s=${encodeURIComponent(linkName)}" title="Открыть в полном каталоге" aria-label="Открыть ${escAttr(info.ru)} в каталоге">↗</a>
+          <a class="tlink" href="${escAttr(linkHref)}"${info.vanilla ? " target=\"_blank\" rel=\"noopener noreferrer\"" : ""} title="${info.vanilla ? "Открыть страницу Terraria wiki" : "Открыть в полном каталоге"}" aria-label="Открыть ${escAttr(info.ru)}">↗</a>
         </span>
         ${nodeDrops ? `<span class="tnode-divider src-div" aria-hidden="true"><i></i><em>◆</em><i></i></span><span class="tnode-src">${nodeDrops}</span>` : ""}
         <button class="ttoggle" type="button" ${showKids ? 'data-toggle aria-expanded="false" aria-label="Развернуть рецепт"' : (cyclic ? 'disabled aria-hidden="true"' : 'disabled aria-hidden="true"')}>${showKids ? "▸" : (cyclic ? "↺" : "")}</button>
