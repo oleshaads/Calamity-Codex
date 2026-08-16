@@ -94,7 +94,7 @@
 
         <label class="search" aria-label="Глобальный поиск">
           <span class="search-prompt" aria-hidden="true">▶</span>
-          <input id="global-search" type="search" placeholder="Найти предмет, босса, крафт…" autocomplete="off" spellcheck="false" />
+          <input id="global-search" type="search" placeholder="Найти предмет, босса, крафт…" autocomplete="off" spellcheck="false" aria-controls="search-panel" aria-autocomplete="list" aria-expanded="false" />
           <kbd>Ctrl K</kbd>
         </label>
 
@@ -136,7 +136,7 @@
     <div class="tree-panel panel" role="dialog" aria-modal="true" aria-label="Дерево крафта">
       <div class="tree-head">
         <div class="tree-root">
-          <span class="slot tree-root-slot"><img id="tree-root-img" alt="" /></span>
+          <span class="slot tree-root-slot"><img id="tree-root-img" alt="" /><span id="tree-root-art-fallback" class="tree-root-art-fallback" hidden aria-hidden="true">◆</span></span>
           <span class="tree-root-copy">
             <small>дерево крафта</small>
             <b id="tree-root-name"></b>

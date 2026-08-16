@@ -3455,3 +3455,10 @@ body.tree-open { overflow: hidden; }
   .npc-source-art { width: 25px; height: 25px; flex-basis: 25px; }
   .tnode-src .npc-source-art { width: 25px; height: 25px; flex-basis: 25px; }
 }
+
+.tree-root-art-fallback {
+  color: var(--gold);
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(255, 217, 122, .55);
+}

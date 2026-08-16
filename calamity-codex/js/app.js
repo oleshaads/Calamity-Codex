@@ -7,6 +7,12 @@
   const routeTitle = $("body") && $("#route-title");
   const liveRegion = $("body") && $("#live-region");
   const menuButton = $("body") && $("#menu-btn");
+  if (searchPanel && searchInput && typeof MutationObserver !== "undefined") {
+    const searchA11y = new MutationObserver(() => {
+      searchInput.setAttribute("aria-expanded", String(!searchPanel.classList.contains("hidden")));
+    });
+    searchA11y.observe(searchPanel, { attributes: true, attributeFilter: ["class"] });
+  }
   const ROUTE_RU = {
     home: "Главная",
     novice: "Путь новичка",
@@ -28,6 +34,7 @@
     if (view === "bosses") return `bosses:${params.era || "all"}`;
     if (view === "items") return `items:${params.mode || "catalog"}:${params.cls || "all"}:${params.kind || "all"}:${params.q || "all"}:${params.fav || ""}`;
     if (view === "lex") return `lex:${params.type || "all"}`;
+    if (view === "crafts") return `crafts:${params.q || "all"}`;
     return view;
   }
   const SECTION_THEMES = {
@@ -68,7 +75,7 @@
     if (detailedNameCache) return detailedNameCache;
     detailedNameCache = new Map();
     (CODEX.items || []).forEach((item) => {
-      const lex = CODEX.lookup ? CODEX.lookup(item.name) : null;
+      const lex = exactLexLookup(item.name);
       [item.name, item.nameRu, lex && lex.en, lex && lex.ru].filter(Boolean).forEach((name) => {
         const key = String(name).trim().toLocaleLowerCase("ru");
         if (key && !detailedNameCache.has(key)) detailedNameCache.set(key, item);
@@ -137,9 +144,11 @@
   const fillIngTT = (info) => {
     if (!tt || !info) return;
     const ingIcons = (info.recipe ? info.recipe.ings : []).map((ing) => {
-      const hit = resolveArt(ing.name);
+      const child = ingredientInfo(ing.name);
+      const hit = child.art || child.remoteArt || resolveArt(ing.name);
+      const remote = child.remoteArt && !child.art ? " remote" : "";
       return hit
-        ? `<img src="${escAttr(hit)}" alt="" loading="lazy" decoding="async" />`
+        ? `<img class="${remote.trim()}" src="${escAttr(hit)}" alt="" loading="lazy" decoding="async" />`
         : `<i aria-hidden="true">${esc(ing.count || "?")}</i>`;
     }).join("");
     const craftLine = info.recipe
@@ -221,7 +230,7 @@
   function renderTipCard(name) {
     if (!tipCard) return;
     const info = ingredientInfo(name);
-    const lex = exactLexLookup(name) || (CODEX.lookup ? CODEX.lookup(name) : null);
+    const lex = exactLexLookup(name);
     const lexKey = lex ? (lex.en || lex.ru) : "";
     const art = BOSS_ART_BY_ID[(lex && lex.id) || ""] || LEX_ART[lexKey] || info.art;
     const artNote = LEX_ART_NOTE[lexKey] || "";
@@ -254,7 +263,7 @@
       <div class="tip-card-body">
         ${desc ? `<p class="tip-card-desc">${esc(desc)}</p>` : ""}
         <div class="tip-card-facts">
-          ${obtain ? `<div class="fact"><span>Где взять</span>${npcSourceLines(tipSources, true) ? `<div class="src-list">${npcSourceLines(tipSources, true)}</div>` : `<p>${esc(obtain)}</p>`}</div>` : ""}
+          ${(obtain || tipSources) ? `<div class="fact"><span>Где взять</span>${npcSourceLines(tipSources) ? `<div class="src-list">${npcSourceLines(tipSources)}</div>` : `<p>${esc(obtain || "Точный источник указан на официальной wiki.")}</p>`}</div>` : ""}
           ${used ? `<div class="fact"><span>Зачем</span><p>${esc(used)}</p></div>` : ""}
           ${when ? `<div class="fact"><span>Когда</span><p>${esc(when)}</p></div>` : ""}
           ${recipe
@@ -1256,12 +1265,13 @@
   };
   function craftStationSprite(station) {
     const s = String(station || "").toLocaleLowerCase("ru");
-    if (s.includes("алхим")) return "assets/sprites/Alchemy_Table.png";
-    if (s.includes("печ")) return "assets/sprites/Furnace.png";
-    if (s.includes("верстак")) return "assets/sprites/Work_Bench.png";
-    if (s.includes("космическ")) return "assets/sprites/CosmicAnvilItem.png";
-    if (s.includes("манипулятор")) return "assets/lex/vanilla/ancient-manipulator.png";
-    if (s.includes("алтарь")) return "assets/lex/vanilla/demon-altar.png";
+    if (s.includes("алхим") || s.includes("alchemy")) return "assets/sprites/Alchemy_Table.png";
+    if (s.includes("печ") || s.includes("furnace") || s.includes("hellforge")) return "assets/sprites/Furnace.png";
+    if (s.includes("верстак") || s.includes("workbench") || s.includes("work bench")) return "assets/sprites/Work_Bench.png";
+    if (s.includes("космическ") || s.includes("cosmic")) return "assets/sprites/CosmicAnvilItem.png";
+    if (s.includes("манипулятор") || s.includes("manipulator")) return "assets/lex/vanilla/ancient-manipulator.png";
+    if (s.includes("алтарь") || s.includes("altar")) return "assets/lex/vanilla/demon-altar.png";
+    if (s.includes("мифрил") || s.includes("mythril") || s.includes("орихалк") || s.includes("orichalcum") || s.includes("anvil")) return "assets/sprites/Iron_Anvil.png";
     return "assets/sprites/Iron_Anvil.png";
   }
   function craftCard(c) {
@@ -1513,7 +1523,9 @@
       String(e.ru || "").toLocaleLowerCase("ru") === low
       || String(e.en || "").toLocaleLowerCase("ru") === low
       || (e.aliases || []).some((a) => String(a).toLocaleLowerCase("ru") === low));
-    return exact || (CODEX.lookup ? CODEX.lookup(name) : null);
+    // Не используем нечёткий lookup: «Guide Voodoo Doll» не должен
+    // превращаться в карточку обычного «Guide».
+    return exact || null;
   }
   function catalogByName(name) {
     buildNameIndexes();
@@ -2083,7 +2095,7 @@
     const mine = cls === "all" || it.cls === "all" || it.cls === cls;
     const hide = filter === "mine" && !mine;
     const dim = filter === "all" && !mine;
-    const lex = CODEX.lookup ? CODEX.lookup(it.name) : null;
+    const lex = exactLexLookup(it.name);
     const title = it.nameRu || ruItemName(it);
     const enRaw = lex ? lex.en : (/[A-Za-z]/.test(it.name) ? it.name : "");
     const en = enRaw && enRaw.toLowerCase() !== String(title).toLowerCase() ? enRaw : "";
@@ -3113,13 +3125,15 @@
         hits.push({ href: `#/items?mode=guide&s=${encodeURIComponent(x.name)}`, title, sub: ruText(x.get), type: "Рекомендация", mark: "◆", art: spriteOfFixed(x) || resolveArt(x.name) || "" });
         itemHitNames.add(String(x.name).toLocaleLowerCase("ru"));
         itemHitNames.add(String(title).toLocaleLowerCase("ru"));
+        itemHitNames.add(ruItemName(x).toLocaleLowerCase("ru"));
       }
     });
     buildNameIndexes();
     indexedItems().forEach((item) => {
       const blob = `${item.name} ${ruItemName(item)} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${ruText(item.obtain)} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`.toLocaleLowerCase("ru");
       const key = String(item.name).toLocaleLowerCase("ru");
-      if (matchesSearch(blob, q) && !itemHitNames.has(key)) {
+      const localizedKey = ruItemName(item).toLocaleLowerCase("ru");
+      if (matchesSearch(blob, q) && !itemHitNames.has(key) && !itemHitNames.has(localizedKey)) {
         hits.push({
           href: `#/items?s=${encodeURIComponent(item.name)}`,
           title: ruItemName(item),
@@ -3314,6 +3328,7 @@
   const treeBody = document.getElementById("tree-body");
   let treeStack = [];
   let treeCurrent = "";
+  let treePreviousFocus = null;
   const TREE_MAX_DEPTH = 32;
 
   function toggleTreeNode(toggle) {
@@ -3400,14 +3415,26 @@
     treeCurrent = name;
     const info = ingredientInfo(name);
     const rootImg = document.getElementById("tree-root-img");
+    const rootFallback = document.getElementById("tree-root-art-fallback");
     const rootName = document.getElementById("tree-root-name");
     const rootSub = document.getElementById("tree-root-sub");
     const rootDesc = document.getElementById("tree-root-desc");
     const rootSrc = document.getElementById("tree-root-src");
     if (rootImg) {
+      rootImg.alt = info.ru || "Предмет";
+      rootImg.hidden = false;
+      rootImg.onerror = () => {
+        rootImg.hidden = true;
+        if (rootFallback) rootFallback.hidden = false;
+      };
       if (info.art) rootImg.src = info.art;
       else if (info.remoteArt) rootImg.src = info.remoteArt;
-      else rootImg.removeAttribute("src");
+      else {
+        rootImg.removeAttribute("src");
+        rootImg.hidden = true;
+        if (rootFallback) rootFallback.hidden = false;
+      }
+      if (rootFallback && (info.art || info.remoteArt)) rootFallback.hidden = true;
     }
     if (rootName) rootName.textContent = info.ru;
     if (rootSub) rootSub.textContent = info.en ? `в игре: ${info.en}` : "";
@@ -3436,17 +3463,19 @@
   }
 
   function openCraftTree(name) {
-    if (!treeModal) return;
+    const target = String(name || "").trim();
+    if (!treeModal || !target) return;
     // Новый запуск из карточки — новая ветка, а не продолжение истории
     // закрытого дерева. История сохраняется только внутри текущей модалки.
     if (treeModal.hidden) {
+      treePreviousFocus = document.activeElement && typeof document.activeElement.focus === "function" ? document.activeElement : null;
       treeStack = [];
       treeCurrent = "";
     }
-    if (treeCurrent && normalizeArtName(treeCurrent) !== normalizeArtName(name)) {
+    if (treeCurrent && normalizeArtName(treeCurrent) !== normalizeArtName(target)) {
       treeStack.push(treeCurrent);
     }
-    renderTree(name);
+    renderTree(target);
     treeModal.hidden = false;
     document.body.classList.add("tree-open");
     SND.play("open");
@@ -3459,6 +3488,9 @@
     treeModal.hidden = true;
     document.body.classList.remove("tree-open");
     SND.play("close");
+    const restore = treePreviousFocus;
+    treePreviousFocus = null;
+    if (restore) requestAnimationFrame(() => restore.focus({ preventScroll: true }));
   }
 
   if (treeModal) {
@@ -3515,7 +3547,7 @@
         toggle.setAttribute("aria-expanded", String(open));
         toggle.setAttribute("aria-label", open ? "Свернуть рецепт" : "Развернуть рецепт");
       });
-      SND.play("open");
+      SND.play(open ? "open" : "close");
     };
     const expandAll = document.getElementById("tree-expand");
     const collapseAll = document.getElementById("tree-collapse");
