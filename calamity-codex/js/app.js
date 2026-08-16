@@ -237,6 +237,8 @@
       ? `<div class="tip-card-tree">${treeNodeHTML(name, 0, new Set())}</div>`
       : "";
     const desc = info.desc || (lex && lex.desc) || "";
+    const catItem = catalogByName(name);
+    const tipSources = npcSourceForItem({ id: catItem ? catItem.id : "" });
     tipCard.innerHTML = `
       <div class="tip-card-head">
         <span class="slot tip-card-slot">${art ? `<img class="item-art" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(info.kind || "mat")}">` : unavailableArt(info.kind)}</span>
@@ -251,7 +253,7 @@
       <div class="tip-card-body">
         ${desc ? `<p class="tip-card-desc">${esc(desc)}</p>` : ""}
         <div class="tip-card-facts">
-          ${obtain ? `<div class="fact"><span>Где взять</span><p>${esc(obtain)}</p></div>` : ""}
+          ${obtain ? `<div class="fact"><span>Где взять</span>${npcSourceLines(tipSources, true) ? `<div class="src-list">${npcSourceLines(tipSources, true)}</div>` : `<p>${esc(obtain)}</p>`}</div>` : ""}
           ${used ? `<div class="fact"><span>Зачем</span><p>${esc(used)}</p></div>` : ""}
           ${recipe
             ? `<div class="fact recipe-fact"><span>Рецепт</span><div class="craft-chips">${recipe.ings.map((i) => ingChipHTML(i.name, i.count)).join("")}${stationChipHTML(recipe.station)}</div></div>`
@@ -271,6 +273,49 @@
       if (toggle) { toggle.textContent = "▾"; toggle.setAttribute("aria-expanded", "true"); }
     });
     bindSprites(tipCard);
+  }
+  function renderNpcCard(npcName) {
+    if (!tipCard) return;
+    const info = NPC_DATA[npcName] || {};
+    const lex = exactLexLookup(npcName);
+    const ru = (lex && lex.ru) || npcName;
+    const type = npcIsBoss(npcName) ? "Босс" : "Противник";
+    const art = (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id]))
+      || `https://calamitymod.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(npcName)}.png`;
+    const facts = [];
+    if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(info.biome)}</p></div>`);
+    if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(info.time)}</p></div>`);
+    if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(info.req)}</p></div>`);
+    if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(info.source)}</p></div>`);
+    if (!facts.length) facts.push(`<div class="fact"><span>Где</span><p>Точные условия спавна — на официальной wiki.</p></div>`);
+    tipCard.innerHTML = `
+      <div class="tip-card-head">
+        <span class="slot tip-card-slot"><img class="remote" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" /></span>
+        <span class="tip-card-title">
+          <small>${esc(type)} · Calamity</small>
+          <b>${esc(ru)}</b>
+          <i>в игре: ${esc(npcName)}</i>
+        </span>
+        <button class="tip-card-close" type="button" data-tip-close aria-label="Закрыть карточку">✕</button>
+      </div>
+      <div class="tip-card-body">
+        ${info.desc ? `<p class="tip-card-desc">${esc(info.desc)}</p><p class="tip-card-note">бестиарий игры (оригинал)</p>` : ""}
+        <div class="tip-card-facts">${facts.join("")}</div>
+        <div class="tip-card-actions">
+          <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(npcName)}" target="_blank" rel="noopener noreferrer">На wiki ↗</a>
+        </div>
+      </div>`;
+    bindSprites(tipCard);
+  }
+  function showNpcCard(npcName, anchorEl, pin = false) {
+    if (!tipCard) return;
+    clearTimeout(tipCardHideTimer);
+    tipCardPinned = !!pin;
+    renderNpcCard(npcName);
+    tipCardAnchor = anchorEl;
+    tipCard.hidden = false;
+    requestAnimationFrame(() => placeTipCard(anchorEl));
+    SND.play("blip");
   }
   function showTipCard(name, anchorEl, pin = false) {
     if (!tipCard) return;
@@ -330,6 +375,14 @@
   }
 
   document.addEventListener("mouseover", (e) => {
+    const npc = e.target.closest && e.target.closest(".npc-tip");
+    if (npc) {
+      if (!tipCard) return;
+      if (tt) tt.hidden = true;
+      if (!tipCard.hidden && tipCardAnchor === npc) return;
+      showNpcCard(npc.dataset.npc || "", npc);
+      return;
+    }
     const el = e.target.closest && e.target.closest(".tip");
     if (!el || !tipCard) return;
     const info = CODEX.lex && CODEX.lex[el.dataset.id];
@@ -339,12 +392,12 @@
     showTipCard(info.en || info.ru, el);
   });
   document.addEventListener("mouseout", (e) => {
-    const el = e.target.closest && e.target.closest(".tip");
+    const el = e.target.closest && e.target.closest(".tip, .npc-tip");
     if (!el || !tipCard) return;
     if (e.relatedTarget && el.contains(e.relatedTarget)) return;
     if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
     // переход на другое слово/ингредиент не должен мигать карточкой
-    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .ing")) return;
+    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .npc-tip, .ing")) return;
     hideTipCardSoon();
   });
   /* Remote-спрайты (wiki): при недоступности сети картинка заменяется
@@ -363,6 +416,18 @@
   }, true);
 
   document.addEventListener("click", (e) => {
+    const npc = e.target.closest && e.target.closest(".npc-tip");
+    if (npc) {
+      if (!tipCard) return;
+      if (!tipCard.hidden && tipCardAnchor === npc) {
+        if (tipCardPinned) hideTipCard();
+        else tipCardPinned = true;
+        return;
+      }
+      showNpcCard(npc.dataset.npc || "", npc, true);
+      e.preventDefault();
+      return;
+    }
     const el = e.target.closest && e.target.closest(".tip");
     if (!el || !tipCard) return;
     const info = CODEX.lex && CODEX.lex[el.dataset.id];
@@ -389,7 +454,7 @@
     if (!el || !tipCard) return;
     if (e.relatedTarget && el.contains(e.relatedTarget)) return;
     if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
-    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .ing")) return;
+    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .npc-tip, .ing")) return;
     hideTipCardSoon();
   });
   document.addEventListener("click", (e) => {
@@ -402,7 +467,7 @@
   document.addEventListener("click", (e) => {
     if (!tipCard || tipCard.hidden) return;
     if (tipCard.contains(e.target)) return;
-    if (e.target.closest && (e.target.closest(".tip") || e.target.closest(".ing"))) return;
+    if (e.target.closest && (e.target.closest(".tip") || e.target.closest(".npc-tip") || e.target.closest(".ing"))) return;
     hideTipCard();
   });
 
@@ -1489,6 +1554,46 @@
     return { name, ru, en, art, desc, obtain, recipe, kind: cat ? cat.kind : "mat", catName: cat ? cat.name : "", remoteArt };
   }
 
+  /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
+  const NPC_SOURCES = window.CALAMITY_NPC_SOURCES || {};
+  const NPC_DATA = window.CALAMITY_NPCS || {};
+  const NPC_RU = new Map();
+  function buildNpcRu() {
+    if (NPC_RU.size) return;
+    Object.keys(NPC_DATA).forEach((name) => {
+      const lex = exactLexLookup(name);
+      if (lex && lex.ru) NPC_RU.set(name, lex.ru);
+    });
+  }
+  function npcRuName(name) {
+    buildNpcRu();
+    return NPC_RU.get(name) || name;
+  }
+  function npcSourceForItem(it) {
+    if (!it) return null;
+    const id = it.id || (catalogByName(it.name) ? catalogByName(it.name).id : "");
+    return id ? (NPC_SOURCES[id] || null) : null;
+  }
+  function npcIsBoss(name) {
+    const low = String(name).toLowerCase();
+    return (CODEX.bosses || []).some((b) => String(b.en || b.name || "").toLowerCase() === low)
+      || (CODEX.minis || []).some((m) => String(m.en || m.name || "").toLowerCase() === low);
+  }
+  function npcSourceLines(sources, short) {
+    if (!sources) return "";
+    const parts = [];
+    (sources.npcs || []).forEach((d) => {
+      const chance = d.chance ? `<em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
+      const cond = d.cond ? ` <i>(${esc(d.cond)})</i>` : "";
+      parts.push(`<span class="src-drop">${chance}<b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${cond}</span>`);
+    });
+    if (!short) {
+      if ((sources.tiles || []).length) parts.push(`<span class="src-drop">выбивается: ${esc(sources.tiles.join(", "))}</span>`);
+      if ((sources.chests || []).length) parts.push(`<span class="src-drop">в: ${esc(sources.chests.join(", "))}</span>`);
+    }
+    return parts.join("");
+  }
+
   /* Чипы-«полочки» ингредиентов: спрайт, количество, имя; ховер — карточка, клик — дерево */
   function ingChipHTML(name, count) {
     const info = ingredientInfo(name);
@@ -1819,6 +1924,7 @@
       ? `<span class="shot-window"><img class="item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async" data-kind="${escAttr(item.kind || "mat")}"></span>`
       : unavailableArt(item.kind);
     const craftChips = isCraft ? craftChipsHTML(item.name) : "";
+    const itemSources = npcSourceForItem(item);
     return `<article class="card has-art catalog-item-card">
       <div class="card-shot slot" data-kind="${escAttr(item.kind)}">
         ${art}
@@ -1830,7 +1936,7 @@
         <div class="card-title">${esc(item.name)}<span class="en-sub">${esc(item.group)}</span></div>
         <p class="desc">${esc(item.description || purpose)}</p>
         <div class="facts">
-          ${isCraft ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(item.obtain)}</p>`}</div>` : `<div class="fact"><span>Где</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>`}
+          ${isCraft ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(item.obtain)}</p>`}</div>` : `<div class="fact"><span>Где</span>${npcSourceLines(itemSources) ? `<div class="src-list">${npcSourceLines(itemSources)}</div>` : `<p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p>`}</div>`}
           <div class="fact"><span>Зачем</span><p>${esc(purpose)}</p></div>
           <div class="fact"><span>Когда</span><p>${esc(useWhen)}</p></div>
         </div>
@@ -1862,6 +1968,7 @@
     const showGet = getPlain && !/^крафт\.?$/i.test(getPlain);
     const local = spriteOfFixed(it) || (CODEX.sprites && (CODEX.sprites[it.name] || CODEX.sprites[it.nameRu])) || "";
     const craftChips = rec ? craftChipsHTML(it.name) : "";
+    const itemSources = npcSourceForItem(it);
     return `<article class="card has-art ${hide ? "hidden" : ""} ${dim ? "dim" : ""} ${mine && filter !== "all" ? "mine" : ""}">
       <div class="card-shot slot ${escAttr(it.cls)} ${escAttr(it.kind || "")}" data-kind="${escAttr(it.kind || "mat")}">
         ${local ? `<span class="shot-window"><img class="item-art" alt="" src="${local}" loading="lazy" decoding="async" data-file="${escAttr(spriteKey(it))}" data-kind="${escAttr(it.kind || "mat")}" /></span>` : unavailableArt(it.kind)}
@@ -1875,6 +1982,7 @@
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
         <div class="facts">
           ${showGet ? `<div class="fact"><span>Где</span><p>${esc(getPlain)}</p></div>` : ""}
+          ${npcSourceLines(itemSources) ? `<div class="fact"><span>Дроп</span><div class="src-list">${npcSourceLines(itemSources)}</div></div>` : ""}
           ${rec ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(rec)}</p>`}</div>` : ""}
           ${showWhy ? `<div class="fact"><span>Зачем</span><p>${esc(why)}</p></div>` : ""}
         </div>
@@ -2238,9 +2346,15 @@
       if (!searchActive) return true;
       const blob = mode === "guide"
         ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
-        : `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""}`;
+        : `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`;
       return matchesSearch(blob, search);
     });
+    // Точное совпадение имени всегда первым: «dubious plating» не должен
+    // прятаться за 80 предметами, которые его упоминают в рецепте.
+    if (searchActive) {
+      const exact = new Set(list.filter((x) => String(x.name).toLocaleLowerCase("ru") === search).map((x) => x));
+      if (exact.size) list.sort((a, b) => (exact.has(b) ? 1 : 0) - (exact.has(a) ? 1 : 0));
+    }
     const requestedLimit = Number.parseInt(params.limit, 10);
     const limit = mode === "catalog" && Number.isFinite(requestedLimit)
       ? Math.max(CATALOG_PAGE_SIZE, requestedLimit)
@@ -2604,7 +2718,7 @@
     });
     buildNameIndexes();
     indexedItems().forEach((item) => {
-      const blob = `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""}`.toLocaleLowerCase("ru");
+      const blob = `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`.toLocaleLowerCase("ru");
       const key = String(item.name).toLocaleLowerCase("ru");
       if (matchesSearch(blob, q) && !itemHitNames.has(key)) {
         hits.push({

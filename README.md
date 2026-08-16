@@ -32,6 +32,12 @@
 - `Items/**/*.png` и связанные `NPCs/` / `Projectiles/` PNG — локальные спрайты;
 - `NPCs/**/*.cs` — подтверждённые источники выпадения.
 
+Пересборка индекса, каталога спрайтов и источников предметов (NPC-дроп, тайлы, сундуки):
+
+```bash
+node scripts/build-npc-sources.mjs /path/to/CalamityModPublic calamity-codex/js/npc-sources.js
+```
+
 Пересборка индекса и каталога спрайтов:
 
 ```bash
