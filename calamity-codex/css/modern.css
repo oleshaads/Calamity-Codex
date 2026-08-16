@@ -3207,3 +3207,115 @@ body.tree-open { overflow: hidden; }
   .craft-tree-inline-tools > span { flex-basis: 100%; }
   .craft-tree-inline-body { max-height: 64vh; }
 }
+
+/* ============ отдельный экран «Крафты» ============ */
+.craft-graph-page .craft-graph-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.craft-graph-stats > span {
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 13px;
+  border: 2px solid var(--line);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #1b2632, #121a23);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 0 0 3px rgba(8, 11, 16, .3);
+}
+.craft-graph-stats b {
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1;
+  text-shadow: var(--hsh);
+}
+.craft-graph-stats small {
+  color: #8996a3;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.craft-graph-page .craft-tree-branch {
+  margin-top: 18px;
+  border-color: rgba(255, 217, 122, .5);
+}
+.craft-graph-page .craft-tree-inline-wrap { padding: 18px 18px 0; }
+.craft-graph-page .craft-tree-inline-body {
+  min-height: clamp(430px, 60vh, 760px);
+  max-height: 72vh;
+  border-color: #3c4a58;
+  background:
+    linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0%, rgba(255, 217, 122, .07), transparent 58%),
+    #0b1117;
+  background-size: 32px 32px, 32px 32px, auto, auto;
+  box-shadow: inset 0 0 45px rgba(0, 0, 0, .42);
+}
+.craft-graph-page .craft-tree-empty { min-height: clamp(380px, 54vh, 680px); border-color: #465565; }
+.craft-graph-page .craft-tree-empty-mark { width: 52px; height: 52px; font-size: 28px; }
+.craft-graph-page .tnode-card {
+  width: 258px;
+  background: linear-gradient(180deg, #202c38, #121a22);
+}
+.craft-graph-page .tree-body > .tnode > .tnode-card {
+  background: linear-gradient(180deg, #302817, #171b16);
+}
+.craft-graph-page .tkids { gap: 16px; padding-left: 58px; }
+.craft-graph-page .tkids::before { left: 19px; border-color: rgba(255, 217, 122, .38); }
+.craft-graph-page .tkids .tnode-card::before { left: -41px; width: 41px; border-color: rgba(255, 217, 122, .38); }
+.craft-index-panel {
+  margin-top: 28px;
+  overflow: hidden;
+}
+.craft-index-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 430px);
+  align-items: end;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #263441;
+  background: linear-gradient(180deg, #1c2834, #131c25);
+}
+.craft-index-head small {
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.craft-index-head h2 {
+  margin-top: 3px;
+  color: #f1ede3;
+  font-family: var(--mono);
+  font-size: 18px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+.craft-index-head p { margin-top: 5px; color: #8d9aa7; font-size: 11px; }
+.craft-index-search { width: 100%; margin: 0; }
+.craft-index-results { padding: 16px; }
+.craft-index-results .shelf:first-child { margin-top: 0; }
+@media (max-width: 880px) {
+  .craft-graph-page .craft-graph-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .craft-index-head { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+}
+@media (max-width: 760px) {
+  .craft-graph-page .craft-graph-stats { grid-template-columns: minmax(0, 1fr); }
+  .craft-graph-page .craft-tree-inline-wrap { padding: 12px 9px 0; }
+  .craft-graph-page .craft-tree-inline-body { min-height: 420px; max-height: 64vh; }
+  .craft-graph-page .tnode-card { width: 190px; }
+  .craft-graph-page .tkids { padding-left: 30px; gap: 9px; }
+  .craft-graph-page .tkids::before { left: 10px; }
+  .craft-graph-page .tkids .tnode-card::before { left: -20px; width: 20px; }
+  .craft-index-head { padding: 15px; }
+  .craft-index-results { padding: 10px; }
+}

@@ -15,7 +15,7 @@
     items: "Предметы",
     favorites: "Избранное",
     lex: "Словарь",
-    crafts: "Крафты",
+    crafts: "Дерево крафта",
     biomes: "Биомы"
   };
   let lastView = "";
@@ -1088,7 +1088,7 @@
       ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
       ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${CODEX.bosses.length} по порядку`],
       ["#/items", "assets/sprites/StarterBag.png", "Предметы", `${itemCount} карточек`],
-      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Крафты", "дерево рецептов"],
+      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Дерево крафта", "карта рецептов"],
       ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`],
       ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`],
       ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`]
@@ -2412,7 +2412,7 @@
     bindSprites(app);
   }
 
-  /* ---------- отдельная ветка дерева под каталогом предметов ---------- */
+  /* ---------- отдельный экран дерева крафта ---------- */
   let craftTreeRoot = store.get().craftTreeRoot || "";
   let craftTreeChoicesCache = null;
 
@@ -2458,9 +2458,9 @@
           <div class="craft-tree-branch-copy">
             <span class="craft-tree-branch-mark" aria-hidden="true">◆</span>
             <div>
-              <small>отдельная ветка под предметами</small>
+              <small>ПКД-9000 · граф рецептов</small>
               <h2 id="craft-tree-title">Дерево крафта</h2>
-              <p>Выбери предмет — кодекс разложит рецепт справа налево до базовых ресурсов. Нажми на карточку узла, чтобы узнать всё о предмете.</p>
+              <p>Выбери предмет — кодекс разложит его рецепт по веткам до базовых ресурсов. Экран построен как карта зависимостей: узлы, линии, группы и игровые спрайты.</p>
             </div>
           </div>
           <button class="craft-tree-add" id="craft-tree-add" type="button" aria-expanded="false">
@@ -2722,11 +2722,8 @@
               ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(CATALOG_PAGE_SIZE, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
             : `<div class="item-grid">${visible.map((item) => itemCard(item, cls, "all")).join("")}</div>`
           : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй официальное английское название.</p><a class="btn ghost" href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a></div>`}
-        ${craftTreeBranchHTML(craftTreeRoot)}
       </div>
     `;
-    const craftTreeBranch = app.querySelector("#craft-tree-branch");
-    if (craftTreeBranch) bindCraftTreeBranch(craftTreeBranch);
 
     const build = (over = {}, replace = false) => {
       const next = { mode, cls, kind, q: qid, s: searchRaw, fav: favoriteOnly ? "1" : "all", limit, ...over };
@@ -2923,10 +2920,10 @@
   }
 
   function renderCrafts(filter) {
-    const q = (filter || "").toLowerCase();
+    const q = (filter || "").trim().toLocaleLowerCase("ru");
     const seen = new Set();
     const list = CODEX.crafts.filter((c) => {
-      const key = String(c.name || "").toLowerCase();
+      const key = String(c.name || "").toLocaleLowerCase("ru");
       if (seen.has(key)) return false;
       seen.add(key);
       const blob = `${c.name} ${c.ings} ${c.why} ${c.stage} ${c.station || ""}`;
@@ -2940,22 +2937,44 @@
       if (!map[stage]) { map[stage] = []; groups.push(stage); }
       map[stage].push(c);
     });
+    const recipeCount = getRecipeIndex().size;
+    const stageCount = new Set(CODEX.crafts.map((craft) => craft.stage || "Прочее")).size;
     fillRail("");
     app.innerHTML = `
-      <div class="page">
-        ${mast("Крафты", "Полка по этапу. На карточке — стол, ингредиенты и зачем это нужно.")}
-        <label class="search-wrap">
-          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
-          <input id="craft-filter" type="search" aria-label="Поиск рецептов" placeholder="Название, материал, этап…" value="${escAttr(filter || "")}" />
-        </label>
-        ${groups.length
-          ? groups.map((stage, i) => shelf(esc(stage), map[stage].length, `<div class="craft-grid">${map[stage].map((c) => craftCard(c)).join("")}</div>`, i === 0 || !!q)).join("")
-          : `<div class="empty-state"><span>⚒</span><b>Рецепт не найден</b><p>Проверь название или попробуй поискать ингредиент.</p><a class="btn ghost" href="#/crafts">Показать все рецепты</a></div>`}
+      <div class="page craft-graph-page">
+        ${mast("Дерево крафта", "Выбери результат и исследуй карту его зависимостей: от финального предмета через станции и ингредиенты до начальных ресурсов.")}
+        <div class="craft-graph-stats" aria-label="Статистика дерева рецептов">
+          <span><b>${recipeCount.toLocaleString("ru-RU")}</b><small>локальных рецептов</small></span>
+          <span><b>${CODEX.crafts.length}</b><small>рекомендаций маршрута</small></span>
+          <span><b>${stageCount}</b><small>этапов прогрессии</small></span>
+          <span><b>↗</b><small>слева направо · как карта</small></span>
+        </div>
+        ${craftTreeBranchHTML(craftTreeRoot)}
+        <section class="craft-index-panel panel" aria-labelledby="craft-index-title">
+          <div class="craft-index-head">
+            <div>
+              <small>справочник результатов</small>
+              <h2 id="craft-index-title">Все рекомендации по этапам</h2>
+              <p>Кнопка «Дерево крафта» на карточке открывает тот же граф с выбранным результатом.</p>
+            </div>
+            <label class="search-wrap craft-index-search">
+              <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
+              <input id="craft-filter" type="search" aria-label="Поиск рецептов" placeholder="Название, материал, этап…" value="${escAttr(filter || "")}" />
+            </label>
+          </div>
+          <div class="craft-index-results">
+            ${groups.length
+              ? groups.map((stage, i) => shelf(esc(stage), map[stage].length, `<div class="craft-grid">${map[stage].map((c) => craftCard(c)).join("")}</div>`, i === 0 || !!q)).join("")
+              : `<div class="empty-state"><span>⚒</span><b>Рецепт не найден</b><p>Проверь название или попробуй поискать ингредиент.</p><a class="btn ghost" href="#/crafts">Показать все рецепты</a></div>`}
+          </div>
+        </section>
       </div>
     `;
+    const branch = app.querySelector("#craft-tree-branch");
+    if (branch) bindCraftTreeBranch(branch);
     const inp = $("#craft-filter");
     let t;
-    inp.oninput = () => {
+    if (inp) inp.oninput = () => {
       clearTimeout(t);
       t = setTimeout(() => {
         history.replaceState(null, "", `#/crafts?q=${encodeURIComponent(inp.value)}`);
