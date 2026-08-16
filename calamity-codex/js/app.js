@@ -228,7 +228,8 @@
     const recipe = info.recipe;
     const obtainRaw = (info.obtain || (lex && lex.where) || "").replace(/\s*[·•].*$/, "").trim();
     const obtain = recipe && /^Скрафтить/i.test(obtainRaw) ? "" : obtainRaw;
-    const used = (lex && lex.used) || "";
+    const used = info.used || (lex && lex.used) || "";
+    const when = info.when || "";
     const type = (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
     const craftLine = recipe
       ? recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(i.name)}` : esc(i.name))).join(" + ") + (recipe.station ? ` · у ${esc(recipe.station)}` : "")
@@ -255,6 +256,7 @@
         <div class="tip-card-facts">
           ${obtain ? `<div class="fact"><span>Где взять</span>${npcSourceLines(tipSources, true) ? `<div class="src-list">${npcSourceLines(tipSources, true)}</div>` : `<p>${esc(obtain)}</p>`}</div>` : ""}
           ${used ? `<div class="fact"><span>Зачем</span><p>${esc(used)}</p></div>` : ""}
+          ${when ? `<div class="fact"><span>Когда</span><p>${esc(when)}</p></div>` : ""}
           ${recipe
             ? `<div class="fact recipe-fact"><span>Рецепт</span><div class="craft-chips">${recipe.ings.map((i) => ingChipHTML(i.name, i.count)).join("")}${stationChipHTML(recipe.station)}</div></div>`
             : (craftLine ? `<div class="fact"><span>Крафт</span><p>${craftLine}</p></div>` : "")}
@@ -274,22 +276,49 @@
     });
     bindSprites(tipCard);
   }
+  function routeBossArt(boss) {
+    if (!boss) return "";
+    const raw = String(boss.en || boss.name || "").toLocaleLowerCase("en");
+    const key = raw.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return BOSS_ART_BY_ID[key]
+      || BOSS_ART_BY_ID[key.replace(/^the-/, "")]
+      || BOSS_ART[boss.n]
+      || resolveArt(boss.en || boss.name)
+      || resolveArt(boss.name || boss.en)
+      || "";
+  }
   function renderNpcCard(npcName) {
     if (!tipCard) return;
     const info = NPC_DATA[npcName] || {};
     const lex = exactLexLookup(npcName);
-    const ru = npcRuName(npcName);
-    const type = npcIsBossByName(npcName) ? "Босс" : "Противник";
-    const localArt = (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id])) || "";
+    const boss = bossRecordForName(npcName);
+    const mini = boss ? null : miniRecordForName(npcName);
+    const ru = boss ? boss.name : mini ? mini.name : npcRuName(npcName);
+    const type = boss ? "Босс" : mini ? "Мини-босс" : "Противник";
+    const localArt = routeBossArt(boss)
+      || (mini && (mini.name === "Giant Clam" ? BOSS_ART_BY_ID["giant-clam"] : mini.name === "Great Sand Shark" ? BOSS_ART_BY_ID["sand-shark"] : "assets/boss-sprites/cragmaw-mire.png"))
+      || (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id]))
+      || "";
     const artHTML = localArt
-      ? `<img class="item-art" src="${escAttr(localArt)}" alt="" loading="lazy" decoding="async" data-kind="misc" />`
+      ? `<img class="item-art" src="${escAttr(localArt)}" alt="" loading="lazy" decoding="async" data-kind="boss" />`
       : `<b class="npc-mono" aria-hidden="true">${escAttr(String(ru || npcName).trim().charAt(0).toUpperCase())}</b>`;
-    const desc = NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || "");
+    const desc = (boss && boss.tip) || NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || "");
     const facts = [];
-    if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(info.biome)}</p></div>`);
-    if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(info.time)}</p></div>`);
-    if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(info.req)}</p></div>`);
-    if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(info.source)}</p></div>`);
+    if (boss) {
+      if (boss.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(boss.where)}</p></div>`);
+      if (boss.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(boss.when)}</p></div>`);
+      if (boss.summon) facts.push(`<div class="fact"><span>Как призвать</span><p>${esc(boss.summon)}</p></div>`);
+      if (boss.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(boss.drops)}</p></div>`);
+    } else if (mini) {
+      if (mini.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(mini.where)}</p></div>`);
+      if (mini.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(mini.when)}</p></div>`);
+      if (mini.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(mini.drops)}</p></div>`);
+    } else {
+      if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(info.biome)}</p></div>`);
+      if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(info.time)}</p></div>`);
+      if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(info.req)}</p></div>`);
+      if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(info.source)}</p></div>`);
+    }
     if (!facts.length) facts.push(`<div class="fact"><span>Где</span><p>Точные условия спавна — на официальной wiki.</p></div>`);
     const drops = [];
     Object.keys(NPC_SOURCES).forEach((itemKey) => {
@@ -317,6 +346,7 @@
         ${desc ? `<blockquote class="npc-lore">${esc(desc)}<footer>бестиарий игры · перевод кодекса</footer></blockquote>` : ""}
         <div class="tip-card-facts">${facts.join("")}${dropsHTML}</div>
         <div class="tip-card-actions">
+          ${boss && boss.q ? `<a class="craft-catalog-link" href="#/novice?q=${boss.q}">Открыть главу ${boss.q} →</a>` : ""}
           <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(npcName)}" target="_blank" rel="noopener noreferrer">На wiki ↗</a>
         </div>
       </div>`;
@@ -1418,6 +1448,15 @@
     // «Станция: ингредиенты» — формат квестовых рецептов
     const stm = raw.match(STATION_RX);
     if (stm) return { ings: parseIngredientList(stm[2]), station: stm[1].trim() };
+    // В локальном списке рекомендаций часть рецептов хранится без слова
+    // «Скрафтить». Если есть явное «+», это всё равно надёжный рецепт;
+    // расплывчатые строки «по рецепту в игре» намеренно не превращаем в
+    // выдуманные ингредиенты.
+    const loose = raw.replace(/\s*@\s*(.+)$/, "").trim();
+    if (/[+×x]/.test(loose) && !/по рецепту|зависит от|материалы .* игре/i.test(loose)) {
+      const ings = parseIngredientList(loose);
+      if (ings.length > 1) return { ings, station: station || "" };
+    }
     return null;
   }
 
@@ -1567,7 +1606,14 @@
       || (lex && getRecipeIndex().get(normalizeArtName(lex.en)))
       || (guide && getRecipeIndex().get(normalizeArtName(guide.name)))
       || null;
-    return { name, ru, en, art, desc, obtain, recipe, kind: cat ? cat.kind : "mat", catName: cat ? cat.name : "", remoteArt };
+    // Карточка дерева должна быть полезной даже для записи из полного
+    // каталога, у которой нет отдельной строки в словаре: назначение и этап
+    // берём из тех же русских правил, что используются в каталоге.
+    const used = (cat && catalogPurpose(cat)) || (guide && (guide.why || guide.use || "")) || (lex && lex.used) || "";
+    const when = (cat && CATALOG_STAGE[Math.min(Math.max(cat.stage, 0), CATALOG_STAGE.length - 1)])
+      || (guide && guide.when)
+      || "";
+    return { name, ru, en, art, desc, obtain, recipe, used, when, kind: cat ? cat.kind : "mat", catName: cat ? cat.name : "", remoteArt };
   }
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
@@ -1588,10 +1634,19 @@
     buildNpcRu();
     return NPC_RU.get(name) || name;
   }
+  function matchRouteName(left, right) {
+    const a = normalizeArtName(left);
+    const b = normalizeArtName(right);
+    return !!a && !!b && (a === b || a.includes(b) || b.includes(a));
+  }
+  function bossRecordForName(name) {
+    return (CODEX.bosses || []).find((boss) => matchRouteName(name, boss.en) || matchRouteName(name, boss.name)) || null;
+  }
+  function miniRecordForName(name) {
+    return (CODEX.minis || []).find((mini) => matchRouteName(name, mini.en) || matchRouteName(name, mini.name)) || null;
+  }
   function npcIsBossByName(name) {
-    const low = String(name).toLowerCase();
-    return (CODEX.bosses || []).some((b) => String(b.en || b.name || "").toLowerCase() === low)
-      || (CODEX.minis || []).some((m) => String(m.en || m.name || "").toLowerCase() === low);
+    return !!bossRecordForName(name) || !!miniRecordForName(name);
   }
   function npcSourceForItem(it) {
     if (!it) return null;
@@ -2357,6 +2412,196 @@
     bindSprites(app);
   }
 
+  /* ---------- отдельная ветка дерева под каталогом предметов ---------- */
+  let craftTreeRoot = store.get().craftTreeRoot || "";
+  let craftTreeChoicesCache = null;
+
+  function treeRecipeForName(name) {
+    if (!name) return null;
+    const index = getRecipeIndex();
+    const direct = index.get(normalizeArtName(name));
+    if (direct) return direct;
+    const lex = exactLexLookup(name);
+    return lex
+      ? (index.get(normalizeArtName(lex.en)) || index.get(normalizeArtName(lex.ru)) || null)
+      : null;
+  }
+
+  function craftTreeChoices() {
+    if (craftTreeChoicesCache) return craftTreeChoicesCache;
+    buildNameIndexes();
+    const choices = new Map();
+    const add = (name) => {
+      const raw = String(name || "").replace(/\s*\([^)]*\)\s*$/, "").trim();
+      const key = normalizeArtName(raw);
+      if (!key || choices.has(key) || !treeRecipeForName(raw)) return;
+      const cat = catalogByName(raw);
+      const lex = exactLexLookup(raw);
+      const ru = (lex && lex.ru) || (cat && (cat.description ? (CODEX.lookup(cat.name)?.ru || cat.name) : cat.name)) || raw;
+      const en = (lex && lex.en) || (cat && cat.name) || (/[A-Za-z]/.test(raw) ? raw : "");
+      choices.set(key, { name: cat ? cat.name : raw, ru, en });
+    };
+    indexedItems().forEach((item) => add(item.name));
+    (CODEX.items || []).forEach((item) => add(item.name));
+    (CODEX.crafts || []).forEach((item) => add(item.name || item.t));
+    craftTreeChoicesCache = [...choices.values()].sort((a, b) => a.ru.localeCompare(b.ru, "ru"));
+    return craftTreeChoicesCache;
+  }
+
+  function craftTreeBranchHTML(root) {
+    const info = root ? ingredientInfo(root) : null;
+    const activeRoot = info && info.recipe ? root : "";
+    const activeInfo = activeRoot ? info : null;
+    return `
+      <section class="craft-tree-branch panel" id="craft-tree-branch" aria-labelledby="craft-tree-title">
+        <div class="craft-tree-branch-head">
+          <div class="craft-tree-branch-copy">
+            <span class="craft-tree-branch-mark" aria-hidden="true">◆</span>
+            <div>
+              <small>отдельная ветка под предметами</small>
+              <h2 id="craft-tree-title">Дерево крафта</h2>
+              <p>Выбери предмет — кодекс разложит рецепт справа налево до базовых ресурсов. Нажми на карточку узла, чтобы узнать всё о предмете.</p>
+            </div>
+          </div>
+          <button class="craft-tree-add" id="craft-tree-add" type="button" aria-expanded="false">
+            <span class="craft-tree-plus" aria-hidden="true">+</span>
+            <span>${activeInfo ? "Сменить предмет" : "Выбрать предмет"}</span>
+          </button>
+        </div>
+        <div class="craft-tree-picker" id="craft-tree-picker" hidden>
+          <div class="craft-tree-picker-copy">
+            <b>Какой предмет разобрать?</b>
+            <span>Выбирай любой предмет с локальным рецептом — не только рекомендации маршрута.</span>
+          </div>
+          <div class="craft-tree-picker-controls">
+            <label class="craft-tree-search">
+              <span aria-hidden="true">▶</span>
+              <input id="craft-tree-picker-search" type="search" placeholder="Фильтр по русскому или игровому имени…" autocomplete="off" />
+            </label>
+            <select id="craft-tree-select" size="6" aria-label="Предмет для дерева крафта">
+              <option value="">Нажми «+», чтобы загрузить список рецептов</option>
+            </select>
+            <div class="craft-tree-picker-actions">
+              <button class="btn" id="craft-tree-build" type="button">Построить ветку</button>
+              <button class="btn ghost" id="craft-tree-clear" type="button">Очистить</button>
+            </div>
+          </div>
+        </div>
+        <div class="craft-tree-active" data-tree-active>${activeInfo ? `<span>корень ветки</span><b>${esc(activeInfo.ru)}</b><i>${activeInfo.en ? `в игре: ${esc(activeInfo.en)}` : ""}</i>` : `<span>корень ветки</span><b>Предмет ещё не выбран</b><i>Нажми на плюсик справа</i>`}</div>
+        <div class="craft-tree-inline-wrap">
+          <div class="craft-tree-inline-tools"><span>▸ ингредиенты и их ингредиенты</span><button type="button" data-inline-tree-expand>⊞ Развернуть всё</button><button type="button" data-inline-tree-collapse>⊟ Свернуть всё</button></div>
+          <div class="tree-body craft-tree-inline-body" id="craft-tree-inline-body" data-tree-surface="inline">${activeInfo
+            ? treeNodeHTML(activeRoot, 0, new Set())
+            : `<div class="craft-tree-empty"><span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p></div>`}</div>
+        </div>
+        <p class="craft-tree-help"><b>Подсказка:</b> стрелка на узле раскрывает ингредиенты, клик по самому предмету открывает его описание, получение, назначение, рецепт и связанные бои с боссами.</p>
+      </section>`;
+  }
+
+  function populateCraftTreePicker(section) {
+    const select = section.querySelector("#craft-tree-select");
+    if (!select || select.dataset.ready) return;
+    const options = craftTreeChoices();
+    select.innerHTML = `<option value="">Выбери предмет с рецептом…</option>${options.map((item) => `<option value="${escAttr(item.name)}">${esc(item.ru)}${item.en && item.en !== item.ru ? ` · ${esc(item.en)}` : ""}</option>`).join("")}`;
+    if (craftTreeRoot) select.value = craftTreeRoot;
+    select.dataset.ready = "1";
+  }
+
+  function refreshInlineCraftTree(section) {
+    if (!section) return;
+    const body = section.querySelector("#craft-tree-inline-body");
+    const info = craftTreeRoot ? ingredientInfo(craftTreeRoot) : null;
+    if (!body) return;
+    if (info && info.recipe) {
+      body.className = "tree-body craft-tree-inline-body";
+      body.dataset.treeSurface = "inline";
+      body.innerHTML = treeNodeHTML(craftTreeRoot, 0, new Set());
+      bindSprites(body);
+    } else {
+      body.className = "craft-tree-empty";
+      body.removeAttribute("data-tree-surface");
+      body.innerHTML = `<span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p>`;
+    }
+    const active = section.querySelector("[data-tree-active]");
+    if (active) {
+      active.innerHTML = info && info.recipe
+        ? `<span>корень ветки</span><b>${esc(info.ru)}</b><i>${info.en ? `в игре: ${esc(info.en)}` : ""}</i>`
+        : `<span>корень ветки</span><b>Предмет ещё не выбран</b><i>Нажми на плюсик справа</i>`;
+    }
+    const add = section.querySelector("#craft-tree-add span:last-child");
+    if (add) add.textContent = info && info.recipe ? "Сменить предмет" : "Выбрать предмет";
+  }
+
+  function bindCraftTreeBranch(section) {
+    if (!section || section.dataset.bound) return;
+    section.dataset.bound = "1";
+    const picker = section.querySelector("#craft-tree-picker");
+    const add = section.querySelector("#craft-tree-add");
+    const search = section.querySelector("#craft-tree-picker-search");
+    const select = section.querySelector("#craft-tree-select");
+    const build = section.querySelector("#craft-tree-build");
+    const clear = section.querySelector("#craft-tree-clear");
+    const setPicker = (open) => {
+      if (!picker || !add) return;
+      picker.hidden = !open;
+      add.setAttribute("aria-expanded", String(open));
+      if (open) {
+        populateCraftTreePicker(section);
+        requestAnimationFrame(() => (search || select)?.focus());
+      }
+    };
+    if (add) add.onclick = () => setPicker(picker.hidden);
+    if (search) search.oninput = () => {
+      const q = search.value.trim().toLocaleLowerCase("ru");
+      [...(select?.options || [])].forEach((option, index) => {
+        if (!index) { option.hidden = false; return; }
+        option.hidden = !!q && !option.textContent.toLocaleLowerCase("ru").includes(q);
+      });
+    };
+    if (build) build.onclick = () => {
+      const chosen = select && select.value;
+      const info = chosen ? ingredientInfo(chosen) : null;
+      if (!chosen || !info || !info.recipe) {
+        toast("Сначала выбери предмет с рецептом", "+");
+        return;
+      }
+      craftTreeRoot = chosen;
+      store.set({ craftTreeRoot });
+      refreshInlineCraftTree(section);
+      setPicker(false);
+      toast(`Ветка построена: ${info.ru}`, "◆");
+      SND.play("open");
+    };
+    if (clear) clear.onclick = () => {
+      craftTreeRoot = "";
+      store.set({ craftTreeRoot });
+      if (select) select.value = "";
+      refreshInlineCraftTree(section);
+      setPicker(false);
+      toast("Ветка крафта очищена", "×");
+    };
+    section.addEventListener("click", (e) => {
+      const expand = e.target.closest("[data-inline-tree-expand]");
+      if (expand) { setTreeNodes(section.querySelector("[data-tree-surface='inline']"), true); return; }
+      const collapse = e.target.closest("[data-inline-tree-collapse]");
+      if (collapse) { setTreeNodes(section.querySelector("[data-tree-surface='inline']"), false); return; }
+      const toggle = e.target.closest("[data-tree-surface='inline'] .ttoggle");
+      if (toggle) { toggleTreeNode(toggle); return; }
+      const card = e.target.closest("[data-tree-surface='inline'] .tnode-card[data-ing]");
+      if (card && !e.target.closest("a, button, .npc-tip")) {
+        showTipCard(card.dataset.ing || "", card, true);
+        e.preventDefault();
+      }
+    });
+    section.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const card = e.target.closest && e.target.closest("[data-tree-surface='inline'] .tnode-card[data-ing]");
+      if (!card || e.target !== card) return;
+      e.preventDefault();
+      showTipCard(card.dataset.ing || "", card, true);
+    });
+  }
+
   function renderItems(params) {
     fillRail("");
     buildNameIndexes();
@@ -2477,8 +2722,11 @@
               ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(CATALOG_PAGE_SIZE, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
             : `<div class="item-grid">${visible.map((item) => itemCard(item, cls, "all")).join("")}</div>`
           : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй официальное английское название.</p><a class="btn ghost" href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a></div>`}
+        ${craftTreeBranchHTML(craftTreeRoot)}
       </div>
     `;
+    const craftTreeBranch = app.querySelector("#craft-tree-branch");
+    if (craftTreeBranch) bindCraftTreeBranch(craftTreeBranch);
 
     const build = (over = {}, replace = false) => {
       const next = { mode, cls, kind, q: qid, s: searchRaw, fav: favoriteOnly ? "1" : "all", limit, ...over };
@@ -2948,15 +3196,43 @@
   const treeBody = document.getElementById("tree-body");
   let treeStack = [];
   let treeCurrent = "";
+  const TREE_MAX_DEPTH = 32;
+
+  function toggleTreeNode(toggle) {
+    const kids = toggle?.closest(".tnode")?.querySelector(":scope > .tkids");
+    if (!kids) return;
+    const open = kids.hidden;
+    kids.hidden = !open;
+    toggle.textContent = open ? "▾" : "▸";
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? "Свернуть рецепт" : "Развернуть рецепт");
+    SND.play(open ? "open" : "close");
+  }
+
+  function setTreeNodes(surface, open) {
+    if (!surface) return;
+    surface.querySelectorAll(".tnode").forEach((node) => {
+      const kids = node.querySelector(":scope > .tkids");
+      const toggle = node.querySelector(":scope > .tnode-card > .ttoggle[data-toggle]");
+      if (!kids || !toggle) return;
+      kids.hidden = !open;
+      toggle.textContent = open ? "▾" : "▸";
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "Свернуть рецепт" : "Развернуть рецепт");
+    });
+    SND.play(open ? "open" : "close");
+  }
 
   function treeNodeHTML(name, depth, seen, count, idx = 0) {
     const info = ingredientInfo(name);
     const key = normalizeArtName(name);
     const recipe = info.recipe;
     const kids = recipe && recipe.ings.length ? recipe.ings : [];
-    const cyclic = seen.has(key);
-    if (!cyclic) seen.add(key);
-    const tooDeep = depth >= 5;
+    const path = seen || new Set();
+    const cyclic = path.has(key);
+    const nextPath = new Set(path);
+    if (!cyclic) nextPath.add(key);
+    const tooDeep = depth >= TREE_MAX_DEPTH;
     const showKids = !cyclic && kids.length > 0 && !tooDeep;
     const art = info.art
       ? `<img src="${escAttr(info.art)}" alt="" loading="lazy" decoding="async" />`
@@ -2974,14 +3250,14 @@
       ? `<img class="tstation" src="${escAttr(craftStationSprite(recipe.station))}" alt="" loading="lazy" decoding="async" />`
       : "";
     const kidsHTML = showKids
-      ? `<div class="tkids" hidden>${kids.map((k, i) => treeNodeHTML(k.name, depth + 1, seen, k.count, i)).join("")}</div>`
+      ? `<div class="tkids" hidden>${kids.map((k, i) => treeNodeHTML(k.name, depth + 1, nextPath, k.count, i)).join("")}</div>`
       : "";
     const moreHTML = kids.length > 0 && tooDeep
       ? `<div class="tmore">рецепт уходит глубже — открой предмет в полном каталоге</div>`
       : "";
     return `
     <div class="tnode${cyclic ? " cyclic" : ""}${showKids ? " has-kids" : ""}">
-      <div class="tnode-card" data-ing="${escAttr(name)}" role="button" tabindex="0" aria-label="Открыть дерево: ${escAttr(info.ru)}" style="--d:${idx}">
+      <div class="tnode-card" data-ing="${escAttr(name)}" role="button" tabindex="0" aria-label="Открыть сведения и дерево: ${escAttr(info.ru)}" style="--d:${idx}">
         <span class="slot tslot">${art}</span>
         <span class="tinfo">
           <b>${esc(info.ru)}</b>
@@ -3017,7 +3293,13 @@
     }
     if (rootName) rootName.textContent = info.ru;
     if (rootSub) rootSub.textContent = info.en ? `в игре: ${info.en}` : "";
-    if (rootDesc) rootDesc.textContent = info.desc || "";
+    if (rootDesc) {
+      rootDesc.textContent = [
+        info.desc,
+        info.used ? `Зачем: ${info.used}` : "",
+        info.when ? `Когда: ${info.when}` : ""
+      ].filter(Boolean).join(" · ");
+    }
     if (rootSrc) {
       let line = "";
       if (info.recipe && info.recipe.ings.length) {
@@ -3037,6 +3319,12 @@
 
   function openCraftTree(name) {
     if (!treeModal) return;
+    // Новый запуск из карточки — новая ветка, а не продолжение истории
+    // закрытого дерева. История сохраняется только внутри текущей модалки.
+    if (treeModal.hidden) {
+      treeStack = [];
+      treeCurrent = "";
+    }
     if (treeCurrent && normalizeArtName(treeCurrent) !== normalizeArtName(name)) {
       treeStack.push(treeCurrent);
     }

@@ -2940,3 +2940,270 @@ body.tree-open { overflow: hidden; }
   .hero-bg, .ph-screen .art { animation: none !important; }
 }
 /* утилита: скрыть от экранных читалок ничего не нужно — всё уже aria-размечено */
+
+/* ============ отдельная ветка дерева под предметами ============ */
+.craft-tree-branch {
+  margin-top: 34px;
+  overflow: hidden;
+  border-color: rgba(255, 217, 122, .34);
+  background:
+    radial-gradient(520px circle at 0% 0%, rgba(255, 217, 122, .08), transparent 70%),
+    linear-gradient(180deg, #151e28, #0e151d);
+}
+.craft-tree-branch-head,
+.craft-tree-picker,
+.craft-tree-active,
+.craft-tree-inline-wrap,
+.craft-tree-help { position: relative; z-index: 1; }
+.craft-tree-branch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #25313d;
+  background: linear-gradient(180deg, rgba(37, 49, 61, .72), rgba(18, 27, 37, .72));
+}
+.craft-tree-branch-copy {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  min-width: 0;
+}
+.craft-tree-branch-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #6c5624;
+  border-radius: 4px;
+  color: var(--gold);
+  background: #1b180d;
+  box-shadow: inset 0 0 0 3px #0a0e14, 0 0 18px rgba(255, 217, 122, .15);
+  font-size: 18px;
+}
+.craft-tree-branch-copy small,
+.craft-tree-active span {
+  display: block;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.craft-tree-branch-copy h2 {
+  margin-top: 2px;
+  color: #f4eee0;
+  font-family: var(--mono);
+  font-size: clamp(18px, 2vw, 25px);
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-shadow: var(--hsh);
+}
+.craft-tree-branch-copy p {
+  max-width: 720px;
+  margin-top: 6px;
+  color: #aab5bf;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.craft-tree-add {
+  min-width: 176px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  padding: 9px 13px;
+  border: 2px solid #6c5624;
+  border-radius: 4px;
+  color: #18130a;
+  background: linear-gradient(180deg, #ffe89c, #c99a3f);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 3px 0 rgba(0, 0, 0, .42);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  transition: filter .15s ease, transform .15s ease;
+}
+.craft-tree-add:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.craft-tree-add:active { transform: translateY(2px); }
+.craft-tree-plus {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(24, 19, 10, .6);
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+}
+.craft-tree-picker {
+  display: grid;
+  grid-template-columns: minmax(190px, .7fr) minmax(0, 1.4fr);
+  gap: 16px;
+  padding: 15px 20px;
+  border-bottom: 1px solid #25313d;
+  background: #0c131a;
+}
+.craft-tree-picker-copy b {
+  display: block;
+  color: #ebe6dc;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.craft-tree-picker-copy span {
+  display: block;
+  margin-top: 5px;
+  color: #7f8b97;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.craft-tree-picker-controls { min-width: 0; }
+.craft-tree-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 2px solid #263544;
+  border-radius: 3px;
+  background: #111a23;
+}
+.craft-tree-search > span { color: var(--gold); font-size: 10px; }
+.craft-tree-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.craft-tree-picker select {
+  width: 100%;
+  min-height: 124px;
+  margin-top: 8px;
+  padding: 5px;
+  border: 2px solid #263544;
+  border-radius: 3px;
+  color: #d9e0e6;
+  background: #111a23;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.craft-tree-picker option { padding: 5px 7px; background: #111a23; }
+.craft-tree-picker option:checked { color: #171108; background: var(--gold); }
+.craft-tree-picker-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+.craft-tree-picker-actions .btn { margin: 0; }
+.craft-tree-active {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #1d2a35;
+  background: rgba(9, 14, 20, .68);
+}
+.craft-tree-active b {
+  color: #f2eee3;
+  font-family: var(--mono);
+  font-size: 13px;
+  text-transform: uppercase;
+}
+.craft-tree-active i {
+  color: #7e8b98;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-style: normal;
+}
+.craft-tree-inline-wrap { padding: 14px 16px 0; }
+.craft-tree-inline-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 3px 10px;
+  color: #8996a3;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.craft-tree-inline-tools > span { flex: 1 1 220px; }
+.craft-tree-inline-tools button {
+  cursor: pointer;
+  padding: 5px 8px;
+  border: 1px solid #354554;
+  border-radius: 3px;
+  color: #b9c6d0;
+  background: #17222d;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+.craft-tree-inline-tools button:hover { color: var(--gold); border-color: #75602c; }
+.craft-tree-inline-body {
+  min-height: 154px;
+  max-height: min(70vh, 760px);
+  flex: none;
+  overflow: auto;
+  border: 1px solid #273542;
+  border-radius: 4px;
+  background:
+    linear-gradient(rgba(255, 217, 122, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 217, 122, .025) 1px, transparent 1px),
+    #0a1016;
+  background-size: 22px 22px;
+}
+.craft-tree-inline-body > .tnode > .tnode-card { border-color: rgba(255, 217, 122, .52); }
+.craft-tree-empty {
+  min-height: 170px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  padding: 28px 18px;
+  border: 1px dashed #3a4755;
+  border-radius: 4px;
+  color: #758391;
+  text-align: center;
+  background: rgba(7, 12, 17, .58);
+}
+.craft-tree-empty-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+  border: 2px solid #536271;
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 22px;
+}
+.craft-tree-empty b { color: #c4ccd3; font-family: var(--mono); font-size: 12px; }
+.craft-tree-empty p { max-width: 540px; font-size: 11px; }
+.craft-tree-help {
+  padding: 12px 20px 16px;
+  color: #778490;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.55;
+}
+.craft-tree-help b { color: var(--gold); }
+
+@media (max-width: 760px) {
+  .craft-tree-branch-head { align-items: stretch; flex-direction: column; padding: 15px; }
+  .craft-tree-add { width: 100%; }
+  .craft-tree-picker { grid-template-columns: minmax(0, 1fr); padding: 13px 15px; }
+  .craft-tree-active { padding: 10px 15px; }
+  .craft-tree-inline-wrap { padding: 12px 9px 0; }
+  .craft-tree-help { padding: 10px 15px 14px; }
+  .craft-tree-inline-tools > span { flex-basis: 100%; }
+  .craft-tree-inline-body { max-height: 64vh; }
+}
