@@ -3697,3 +3697,9 @@ body.tree-open { overflow: hidden; }
 }
 .craft-material-check:hover,
 .craft-tree-material.collected .craft-material-check { border-color: #5fac79; color: #a9f0b7; background: #1c4030; }
+
+.craft-tree-materials-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.craft-tree-materials-actions .tree-btn { margin: 0; }
+@media (max-width: 760px) {
+  .craft-tree-materials-actions { justify-content: flex-start; }
+}

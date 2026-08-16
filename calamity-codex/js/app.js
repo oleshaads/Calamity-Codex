@@ -2871,6 +2871,12 @@
     store.set({ craftMaterials: { ...all, [rootKey]: [...collected] } });
   }
 
+  function clearCraftMaterials(rootName) {
+    const all = { ...(store.get().craftMaterials || {}) };
+    delete all[normalizeArtName(rootName)];
+    store.set({ craftMaterials: all });
+  }
+
   function craftTreeInspectorHTML(name) {
     const info = ingredientInfo(name);
     const cat = info.catName ? catalogByName(info.catName) : catalogByName(name);
@@ -2893,7 +2899,7 @@
     const collectedCount = materials.filter((item) => collectedMaterials.has(normalizeArtName(item.info.ru))).length;
     const collectedPercent = materials.length ? Math.round((collectedCount / materials.length) * 100) : 0;
     const materialsHTML = materials.length
-      ? `<section class="craft-tree-materials"><div class="craft-tree-materials-head"><div><b>Итоговые ресурсы</b><small>Собрано: ${collectedCount} из ${materials.length} типов · суммарно для этой ветки</small></div><button class="tree-btn inspector-copy" type="button" data-copy-materials="${escAttr(materialsText)}">⧉ Список ресурсов</button></div><div class="craft-material-progress"><i style="width:${collectedPercent}%"></i></div><div class="craft-tree-material-grid">${materials.map((item) => {
+      ? `<section class="craft-tree-materials"><div class="craft-tree-materials-head"><div><b>Итоговые ресурсы</b><small>Собрано: ${collectedCount} из ${materials.length} типов · суммарно для этой ветки</small></div><div class="craft-tree-materials-actions"><button class="tree-btn inspector-copy" type="button" data-copy-materials="${escAttr(materialsText)}">⧉ Список ресурсов</button><button class="tree-btn ghost" type="button" data-clear-materials>Сбросить отметки</button></div></div><div class="craft-material-progress"><i style="width:${collectedPercent}%"></i></div><div class="craft-tree-material-grid">${materials.map((item) => {
           const materialKey = normalizeArtName(item.info.ru);
           const collected = collectedMaterials.has(materialKey);
           const art = item.info.art || item.info.remoteArt || "";
@@ -2956,7 +2962,24 @@
     surface.querySelectorAll(".tnode-card.is-selected").forEach((card) => card.classList.remove("is-selected"));
     const selected = [...surface.querySelectorAll(".tnode-card[data-ing]")]
       .find((card) => normalizeArtName(card.dataset.ing || "") === normalizeArtName(name || ""));
-    if (selected) selected.classList.add("is-selected");
+    if (!selected) return;
+    selected.classList.add("is-selected");
+    // Если материал был выбран из итогового списка, автоматически раскрываем
+    // все его родительские ветки, чтобы подсветка не указывала в скрытое место.
+    let node = selected.closest(".tnode");
+    let parentKids = node?.parentElement?.classList.contains("tkids") ? node.parentElement : null;
+    while (parentKids) {
+      parentKids.hidden = false;
+      const owner = parentKids.parentElement;
+      const toggle = owner?.querySelector(":scope > .tnode-card > .ttoggle[data-toggle]");
+      if (toggle) {
+        toggle.textContent = "▾";
+        toggle.setAttribute("aria-expanded", "true");
+        toggle.setAttribute("aria-label", "Свернуть рецепт");
+      }
+      node = owner;
+      parentKids = node?.parentElement?.classList.contains("tkids") ? node.parentElement : null;
+    }
   }
 
   function renderCraftTreeInspector(section, name, scroll = false) {
@@ -3084,6 +3107,13 @@
           button.setAttribute("aria-pressed", String(active));
         });
         renderCraftChoiceWindow(section, search?.value || "");
+        return;
+      }
+      const clearMaterials = e.target.closest("[data-clear-materials]");
+      if (clearMaterials) {
+        const root = section.dataset.inspectedNode || craftTreeRoot;
+        clearCraftMaterials(root);
+        renderCraftTreeInspector(section, root);
         return;
       }
       const materialToggle = e.target.closest("[data-material-toggle]");
