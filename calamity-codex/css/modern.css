@@ -3703,3 +3703,30 @@ body.tree-open { overflow: hidden; }
 @media (max-width: 760px) {
   .craft-tree-materials-actions { justify-content: flex-start; }
 }
+
+.craft-tree-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+.craft-tree-zoom-controls button,
+.craft-tree-zoom-controls output {
+  min-width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #354554;
+  border-radius: 3px;
+  color: #b9c6d0;
+  background: #17222d;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+.craft-tree-zoom-controls button { cursor: pointer; }
+.craft-tree-zoom-controls button:hover { border-color: var(--gold-2); color: var(--gold); }
+.craft-tree-zoom-controls output { min-width: 40px; color: var(--gold); font-size: 9px; }
+@media (max-width: 760px) {
+  .craft-tree-zoom-controls { margin-left: 0; }
+}

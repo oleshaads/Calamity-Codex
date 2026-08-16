@@ -2766,7 +2766,7 @@
         </div>
         <div class="craft-tree-active" data-tree-active>${activeInfo ? `<span>корень ветки</span><b>${esc(activeInfo.ru)}</b><i>${activeInfo.en ? `в игре: ${esc(activeInfo.en)}` : ""}</i>` : `<span>корень ветки</span><b>Предмет ещё не выбран</b><i>Нажми на плюсик справа</i>`}</div>
         <div class="craft-tree-inline-wrap">
-          <div class="craft-tree-inline-tools"><span>▸ ингредиенты и их ингредиенты</span><button type="button" data-inline-tree-expand>⊞ Развернуть всё</button><button type="button" data-inline-tree-collapse>⊟ Свернуть всё</button></div>
+          <div class="craft-tree-inline-tools"><span>▸ ингредиенты и их ингредиенты</span><div class="craft-tree-zoom-controls" role="group" aria-label="Масштаб дерева"><button type="button" data-tree-zoom="out" aria-label="Уменьшить дерево">−</button><output data-tree-zoom-label>100%</output><button type="button" data-tree-zoom="in" aria-label="Увеличить дерево">+</button><button type="button" data-tree-zoom="reset" aria-label="Сбросить масштаб">↺</button></div><button type="button" data-inline-tree-expand>⊞ Развернуть всё</button><button type="button" data-inline-tree-collapse>⊟ Свернуть всё</button></div>
           <div class="tree-body craft-tree-inline-body" id="craft-tree-inline-body" data-tree-surface="inline">${activeInfo
             ? treeNodeHTML(activeRoot, 0, new Set())
             : `<div class="craft-tree-empty"><span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p></div>`}</div>
@@ -3001,6 +3001,22 @@
     if (scroll) requestAnimationFrame(() => panel.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
+  function applyCraftTreeZoom(section) {
+    const body = section?.querySelector("#craft-tree-inline-body");
+    if (!body) return;
+    const scale = Number(section.dataset.treeZoom || "1");
+    body.style.zoom = String(scale);
+    const label = section.querySelector("[data-tree-zoom-label]");
+    if (label) label.textContent = `${Math.round(scale * 100)}%`;
+  }
+
+  function adjustCraftTreeZoom(section, action) {
+    const current = Number(section.dataset.treeZoom || "1");
+    const next = action === "reset" ? 1 : Math.min(1.35, Math.max(.65, current + (action === "in" ? .1 : -.1)));
+    section.dataset.treeZoom = String(Number(next.toFixed(2)));
+    applyCraftTreeZoom(section);
+  }
+
   function refreshInlineCraftTree(section) {
     if (!section) return;
     const body = section.querySelector("#craft-tree-inline-body");
@@ -3016,6 +3032,7 @@
       body.removeAttribute("data-tree-surface");
       body.innerHTML = `<span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p>`;
     }
+    applyCraftTreeZoom(section);
     renderCraftTreeInspector(section, info && (info.recipe || info.vanilla) ? craftTreeRoot : "");
     const active = section.querySelector("[data-tree-active]");
     if (active) {
@@ -3030,6 +3047,7 @@
   function bindCraftTreeBranch(section) {
     if (!section || section.dataset.bound) return;
     section.dataset.bound = "1";
+    section.dataset.treeZoom = section.dataset.treeZoom || "1";
     const picker = section.querySelector("#craft-tree-picker");
     const add = section.querySelector("#craft-tree-add");
     const search = section.querySelector("#craft-tree-picker-search");
@@ -3097,6 +3115,11 @@
       toast("Ветка крафта очищена", "×");
     };
     section.addEventListener("click", (e) => {
+      const zoom = e.target.closest("[data-tree-zoom]");
+      if (zoom) {
+        adjustCraftTreeZoom(section, zoom.dataset.treeZoom || "reset");
+        return;
+      }
       const filterButton = e.target.closest("[data-choice-filter]");
       if (filterButton) {
         section.dataset.choiceFilter = filterButton.dataset.choiceFilter || "all";
@@ -3169,6 +3192,7 @@
       e.preventDefault();
       renderCraftTreeInspector(section, card.dataset.ing || "", true);
     });
+    applyCraftTreeZoom(section);
     if (craftTreeRoot) {
       const rootInfo = ingredientInfo(craftTreeRoot);
       if (rootInfo && (rootInfo.recipe || rootInfo.vanilla)) renderCraftTreeInspector(section, craftTreeRoot);
