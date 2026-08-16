@@ -1592,15 +1592,6 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
   font-weight: 700;
 }
 .npc-tip:hover, .npc-tip:focus-visible { border-bottom-style: solid; outline: 0; }
-.tip-card-note {
-  margin-top: 6px;
-  color: #5f6b78;
-  font-family: var(--mono);
-  font-size: 8px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
 /* кнопка дерева крафта */
 .tree-btn {
   display: inline-flex;
@@ -2178,19 +2169,22 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 .tip-card-tree .tkids::before { left: 10px; }
 .tip-card-tree .tkids .tnode-card::before { left: -18px; width: 18px; }
 .tip-card-tree .tnode-card .ttoggle { right: -19px; width: 20px; height: 20px; font-size: 9px; }
-/* источники предмета прямо в узле дерева */
+/* источники предмета прямо в узле дерева — единый блок в стиле .fact */
 .tnode-src {
   grid-column: 1 / -1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 6px 8px;
-  border-top: 1px dashed rgba(255, 217, 122, .22);
-  background: rgba(8, 11, 16, .35);
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
   border-radius: 3px;
+  background: #0d131b;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 .tnode-src .src-drop {
+  display: flex;
+  align-items: baseline;
   font-size: 9.5px;
   line-height: 1.45;
   color: #a9b4bf;
@@ -2199,74 +2193,52 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 }
 .tnode-src .src-drop em { font-size: 9px; }
 .tnode-src .src-drop i { font-size: 9.5px; }
+.tnode-src .src-ico { flex: 0 0 auto; margin-right: 5px; }
 
-/* карточка NPC: строки-факты */
-.npc-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.npc-row {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 9px;
-  align-items: center;
-  padding: 7px 9px;
+/* карточка NPC: монограмма-спрайт и цитата бестиария */
+.npc-slot { cursor: default; }
+.npc-slot .npc-mono {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 0 14px rgba(255, 217, 122, .4), 2px 2px 0 rgba(0, 0, 0, .7);
+}
+.npc-slot .item-art { padding: 6px; }
+.npc-lore {
+  position: relative;
+  margin: 0 0 12px;
+  padding: 11px 13px 9px;
   border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
   border-radius: 3px;
   background: #0d131b;
+  color: #c6ced6;
+  font-size: 12.5px;
+  line-height: 1.65;
+  font-style: italic;
 }
-.npc-row-ico {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--line);
-  border-radius: 3px;
-  color: var(--gold);
-  background: linear-gradient(180deg, #2b3948, #1a2430);
-  font-family: var(--mono);
-  font-size: 11px;
-}
-.npc-row em {
-  display: block;
-  color: var(--gold);
+.npc-lore footer {
+  margin-top: 7px;
+  color: #5f6b78;
   font-family: var(--mono);
   font-size: 8px;
   font-style: normal;
   font-weight: 700;
-  letter-spacing: .14em;
+  letter-spacing: .1em;
   text-transform: uppercase;
 }
-.npc-row b { display: block; margin-top: 3px; color: #cfd6dd; font-size: 12px; font-weight: 600; }
-.npc-desc { font-style: italic; color: #c9d2da; }
-.npc-slot img { padding: 6px; }
-.npc-drops { margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--line); }
-.npc-drops > em {
-  display: block;
-  margin-bottom: 7px;
+.npc-drops-fact { grid-column: 1 / -1; }
+.npc-drops-fact .craft-chips { margin-top: 4px; }
+.npc-drop-chip { cursor: pointer; }
+.npc-drop-chip em {
   color: var(--gold);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 8.5px;
   font-style: normal;
   font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
 }
-.npc-drop-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.npc-drop-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 9px 4px 5px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: #101720;
-  cursor: pointer;
-  transition: border-color .13s ease, transform .13s ease, box-shadow .13s ease;
-}
-.npc-drop-chip:hover {
-  border-color: #6a5a2e;
-  transform: translateY(-1px);
-  box-shadow: 0 0 10px rgba(255, 217, 122, .14);
-}
-.npc-drop-chip b { color: var(--gold); font-family: var(--mono); font-size: 9px; font-weight: 700; }
+.npc-drop-chip b { font-size: 10.5px; font-weight: 600; }
 
 .tmore { width: 188px; }
 .tip-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

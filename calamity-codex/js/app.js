@@ -281,29 +281,31 @@
     const ru = npcRuName(npcName);
     const type = npcIsBossByName(npcName) ? "Босс" : "Противник";
     const localArt = (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id])) || "";
-    const art = localArt || `https://calamitymod.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(npcName)}.png`;
+    const artHTML = localArt
+      ? `<img class="item-art" src="${escAttr(localArt)}" alt="" loading="lazy" decoding="async" data-kind="misc" />`
+      : `<b class="npc-mono" aria-hidden="true">${escAttr(String(ru || npcName).trim().charAt(0).toUpperCase())}</b>`;
     const desc = NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || "");
-    const rows = [];
-    if (info.biome) rows.push(`<div class="npc-row"><span class="npc-row-ico">⌖</span><span><em>Где обитает</em><b>${esc(info.biome)}</b></span></div>`);
-    if (info.time) rows.push(`<div class="npc-row"><span class="npc-row-ico">◷</span><span><em>Когда</em><b>${esc(info.time)}</b></span></div>`);
-    if (info.req) rows.push(`<div class="npc-row"><span class="npc-row-ico">⚑</span><span><em>Требования</em><b>${esc(info.req)}</b></span></div>`);
-    if (info.source) rows.push(`<div class="npc-row"><span class="npc-row-ico">♪</span><span><em>Как встретить</em><b>${esc(info.source)}</b></span></div>`);
-    if (!rows.length) rows.push(`<div class="npc-row"><span class="npc-row-ico">⌖</span><span><em>Где</em><b>Точные условия спавна — на официальной wiki.</b></span></div>`);
+    const facts = [];
+    if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(info.biome)}</p></div>`);
+    if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(info.time)}</p></div>`);
+    if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(info.req)}</p></div>`);
+    if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(info.source)}</p></div>`);
+    if (!facts.length) facts.push(`<div class="fact"><span>Где</span><p>Точные условия спавна — на официальной wiki.</p></div>`);
     const drops = [];
     Object.keys(NPC_SOURCES).forEach((itemKey) => {
       const src = NPC_SOURCES[itemKey];
       (src.npcs || []).forEach((d) => {
         if (d.npc === npcName && !drops.some((x) => x.id === itemKey)) {
-          drops.push({ id: itemKey, chance: d.chance, qty: d.qty });
+          drops.push({ id: itemKey, name: itemById(itemKey) ? itemById(itemKey).name : itemKey, chance: d.chance, qty: d.qty });
         }
       });
     });
     const dropsHTML = drops.length
-      ? `<div class="npc-drops"><em>Что дропает</em><div class="npc-drop-chips">${drops.map((d) => `<span class="npc-drop-chip" data-ing="${escAttr(d.id)}" role="button" tabindex="0"><img class="ings-icon" src="assets/item-sprites/${encodeURIComponent(d.id)}.png" alt="" loading="lazy" decoding="async" onerror="this.remove()" /><b>${esc(d.chance || "")}${d.qty ? ` ${esc(d.qty)}` : ""}</b></span>`).join("")}</div></div>`
+      ? `<div class="fact npc-drops-fact"><span>Что дропает</span><div class="craft-chips">${drops.map((d) => `<span class="craft-chip npc-drop-chip" data-ing="${escAttr(d.name)}" role="button" tabindex="0" aria-label="Открыть предмет: ${escAttr(itemRuById(d.id))}" title="Открыть предмет"><img class="ings-icon" src="assets/item-sprites/${encodeURIComponent(d.id)}.png" alt="" loading="lazy" decoding="async" /><em>${esc(d.chance || "")}${d.qty ? ` · ${esc(d.qty)}` : ""}</em><b>${esc(itemRuById(d.id))}</b></span>`).join("")}</div></div>`
       : "";
     tipCard.innerHTML = `
       <div class="tip-card-head">
-        <span class="slot tip-card-slot npc-slot">${art ? `<img class="${localArt ? "item-art" : "remote"}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" data-kind="misc" />` : unavailableArt("misc")}</span>
+        <span class="slot tip-card-slot npc-slot"${localArt ? "" : ` title="Спрайт — на официальной wiki"`}>${artHTML}</span>
         <span class="tip-card-title">
           <small>${esc(type)} · Calamity</small>
           <b>${esc(ru)}</b>
@@ -312,9 +314,8 @@
         <button class="tip-card-close" type="button" data-tip-close aria-label="Закрыть карточку">✕</button>
       </div>
       <div class="tip-card-body">
-        ${desc ? `<p class="tip-card-desc npc-desc">${esc(desc)}</p><p class="tip-card-note">бестиарий игры · перевод кодекса</p>` : ""}
-        <div class="npc-rows">${rows.join("")}</div>
-        ${dropsHTML}
+        ${desc ? `<blockquote class="npc-lore">${esc(desc)}<footer>бестиарий игры · перевод кодекса</footer></blockquote>` : ""}
+        <div class="tip-card-facts">${facts.join("")}${dropsHTML}</div>
         <div class="tip-card-actions">
           <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(npcName)}" target="_blank" rel="noopener noreferrer">На wiki ↗</a>
         </div>
@@ -1598,6 +1599,20 @@
     return id ? (NPC_SOURCES[id] || null) : null;
   }
   function npcIsBoss(name) { return npcIsBossByName(name); }
+  let itemByIdCache = null;
+  function itemById(id) {
+    if (!itemByIdCache) {
+      itemByIdCache = new Map();
+      indexedItems().forEach((it) => itemByIdCache.set(it.id, it));
+    }
+    return itemByIdCache.get(id) || null;
+  }
+  function itemRuById(id) {
+    const it = itemById(id);
+    if (!it) return id;
+    const lex = exactLexLookup(it.name);
+    return (lex && lex.ru) || it.name;
+  }
   function npcSourceLines(sources, short) {
     if (!sources) return "";
     const parts = [];
