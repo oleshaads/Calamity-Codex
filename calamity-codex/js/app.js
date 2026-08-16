@@ -2857,6 +2857,20 @@
     return [...totals.values()].sort((a, b) => a.info.ru.localeCompare(b.info.ru, "ru"));
   }
 
+  function craftMaterialState(rootName) {
+    const all = store.get().craftMaterials || {};
+    return new Set(Array.isArray(all[normalizeArtName(rootName)]) ? all[normalizeArtName(rootName)] : []);
+  }
+
+  function toggleCraftMaterial(rootName, materialKey) {
+    const all = store.get().craftMaterials || {};
+    const rootKey = normalizeArtName(rootName);
+    const collected = new Set(Array.isArray(all[rootKey]) ? all[rootKey] : []);
+    if (collected.has(materialKey)) collected.delete(materialKey);
+    else collected.add(materialKey);
+    store.set({ craftMaterials: { ...all, [rootKey]: [...collected] } });
+  }
+
   function craftTreeInspectorHTML(name) {
     const info = ingredientInfo(name);
     const cat = info.catName ? catalogByName(info.catName) : catalogByName(name);
@@ -2875,10 +2889,15 @@
       : `<p>Не крафтится напрямую: добывается, находится в мире или выпадает из указанного источника.</p>`;
     const materials = info.recipe && info.recipe.ings.length ? craftTreeMaterialSummary(name) : [];
     const materialsText = materials.map((item) => `${item.count} × ${item.info.ru}`).join("\n");
+    const collectedMaterials = craftMaterialState(name);
+    const collectedCount = materials.filter((item) => collectedMaterials.has(normalizeArtName(item.info.ru))).length;
+    const collectedPercent = materials.length ? Math.round((collectedCount / materials.length) * 100) : 0;
     const materialsHTML = materials.length
-      ? `<section class="craft-tree-materials"><div class="craft-tree-materials-head"><div><b>Итоговые ресурсы</b><small>Суммарно для этой ветки, без учёта альтернативных рецептов</small></div><button class="tree-btn inspector-copy" type="button" data-copy-materials="${escAttr(materialsText)}">⧉ Список ресурсов</button></div><div class="craft-tree-material-grid">${materials.map((item) => {
+      ? `<section class="craft-tree-materials"><div class="craft-tree-materials-head"><div><b>Итоговые ресурсы</b><small>Собрано: ${collectedCount} из ${materials.length} типов · суммарно для этой ветки</small></div><button class="tree-btn inspector-copy" type="button" data-copy-materials="${escAttr(materialsText)}">⧉ Список ресурсов</button></div><div class="craft-material-progress"><i style="width:${collectedPercent}%"></i></div><div class="craft-tree-material-grid">${materials.map((item) => {
+          const materialKey = normalizeArtName(item.info.ru);
+          const collected = collectedMaterials.has(materialKey);
           const art = item.info.art || item.info.remoteArt || "";
-          return `<button class="craft-tree-material" type="button" data-material-node="${escAttr(item.name)}"><span class="slot craft-tree-material-art">${art ? `<img class="${item.info.remoteArt && !item.info.art ? "remote" : ""}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : `<b>◆</b>`}</span><span><b>${esc(item.info.ru)}</b><small>×${esc(item.count)}</small></span></button>`;
+          return `<div class="craft-tree-material${collected ? " collected" : ""}" data-material-node="${escAttr(item.name)}" role="button" tabindex="0"><span class="slot craft-tree-material-art">${art ? `<img class="${item.info.remoteArt && !item.info.art ? "remote" : ""}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : `<b>◆</b>`}</span><span><b>${esc(item.info.ru)}</b><small>×${esc(item.count)}</small></span><button class="craft-material-check" type="button" data-material-toggle data-material-key="${escAttr(materialKey)}" aria-pressed="${collected}" aria-label="${collected ? "Убрать отметку" : "Отметить собранным"}">${collected ? "✓" : "○"}</button></div>`;
         }).join("")}</div></section>`
       : "";
     const wiki = info.vanilla
@@ -2947,9 +2966,11 @@
     if (!name) {
       panel.hidden = true;
       content.innerHTML = "";
+      delete section.dataset.inspectedNode;
       markCraftTreeNode(section, "");
       return;
     }
+    section.dataset.inspectedNode = name;
     content.innerHTML = craftTreeInspectorHTML(name);
     panel.hidden = false;
     markCraftTreeNode(section, name);
@@ -3065,6 +3086,13 @@
         renderCraftChoiceWindow(section, search?.value || "");
         return;
       }
+      const materialToggle = e.target.closest("[data-material-toggle]");
+      if (materialToggle) {
+        const root = section.dataset.inspectedNode || craftTreeRoot;
+        toggleCraftMaterial(root, materialToggle.dataset.materialKey || "");
+        renderCraftTreeInspector(section, root);
+        return;
+      }
       const material = e.target.closest("[data-material-node]");
       if (material) {
         renderCraftTreeInspector(section, material.dataset.materialNode || "", true);
@@ -3100,6 +3128,12 @@
     });
     section.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;
+      const material = e.target.closest && e.target.closest("[data-material-node]");
+      if (material && e.target === material) {
+        e.preventDefault();
+        renderCraftTreeInspector(section, material.dataset.materialNode || "", true);
+        return;
+      }
       const card = e.target.closest && e.target.closest("[data-tree-surface='inline'] .tnode-card[data-ing]");
       if (!card || e.target !== card) return;
       e.preventDefault();

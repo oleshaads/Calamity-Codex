@@ -3663,3 +3663,37 @@ body.tree-open { overflow: hidden; }
   .craft-tree-materials-head { align-items: flex-start; flex-direction: column; }
   .craft-tree-material-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.craft-material-progress {
+  height: 7px;
+  margin: 8px 0 10px;
+  overflow: hidden;
+  border: 2px solid var(--line);
+  border-radius: 3px;
+  background: #0a0f14;
+}
+.craft-material-progress i { display: block; height: 100%; background: linear-gradient(90deg, #3fae78, #9be66c); transition: width .25s ease; }
+.craft-tree-material { position: relative; padding-right: 34px; }
+.craft-tree-material.collected { border-color: #4b8f68; background: linear-gradient(180deg, #1b3329, #12221c); }
+.craft-tree-material.collected > span:not(.craft-tree-material-art) b { color: #b8e7c0; }
+.craft-tree-material.collected > span:not(.craft-tree-material-art) small { color: #7fdb99; }
+.craft-material-check {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 1px solid #536271;
+  border-radius: 50%;
+  color: #8d9aa5;
+  background: #111922;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+  transform: translateY(-50%);
+}
+.craft-material-check:hover,
+.craft-tree-material.collected .craft-material-check { border-color: #5fac79; color: #a9f0b7; background: #1c4030; }
