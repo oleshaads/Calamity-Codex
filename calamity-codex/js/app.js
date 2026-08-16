@@ -2953,6 +2953,7 @@
         </div>
         <span class="craft-tree-inspector-badge">выбранный узел</span>
       </div>
+      <nav class="craft-tree-breadcrumb" data-tree-breadcrumb aria-label="Путь ингредиента"></nav>
       <p class="craft-tree-inspector-desc">${esc(ruText(info.desc || "Подробное описание для этого предмета ещё не добавлено."))}</p>
       <div class="craft-tree-inspector-facts">
         <div class="fact"><span>Где</span><div class="craft-tree-inspector-where">${sourceHTML ? `<div class="src-list">${sourceHTML}</div>` : `<p>${esc(ruText(where))}</p>`}</div></div>
@@ -3016,6 +3017,22 @@
     }
   }
 
+  function craftTreeNodePath(section, name) {
+    const surface = section?.querySelector("[data-tree-surface='inline']");
+    const selected = surface && [...surface.querySelectorAll(".tnode-card[data-ing]")]
+      .find((card) => normalizeArtName(card.dataset.ing || "") === normalizeArtName(name || ""));
+    if (!selected) return [];
+    const path = [];
+    let node = selected.closest(".tnode");
+    while (node) {
+      const card = node.querySelector(":scope > .tnode-card[data-ing]");
+      if (card) path.unshift(card.dataset.ing || "");
+      const parentKids = node.parentElement?.classList.contains("tkids") ? node.parentElement : null;
+      node = parentKids?.parentElement?.classList.contains("tnode") ? parentKids.parentElement : null;
+    }
+    return path;
+  }
+
   function renderCraftTreeInspector(section, name, scroll = false) {
     const panel = section?.querySelector("#craft-tree-inspector");
     const content = section?.querySelector("#craft-tree-inspector-content");
@@ -3031,6 +3048,9 @@
     content.innerHTML = craftTreeInspectorHTML(name);
     panel.hidden = false;
     markCraftTreeNode(section, name);
+    const breadcrumb = content.querySelector("[data-tree-breadcrumb]");
+    const path = craftTreeNodePath(section, name);
+    if (breadcrumb) breadcrumb.innerHTML = (path.length ? path : [name]).map((item, index) => `${index ? `<i aria-hidden="true">›</i>` : ""}<b>${esc(ingredientInfo(item).ru)}</b>`).join("");
     bindSprites(content);
     if (scroll) requestAnimationFrame(() => panel.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
