@@ -3,66 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#090d14" />
+  <meta name="theme-color" content="#0a0e14" />
   <meta name="color-scheme" content="dark" />
   <title>Каламити Кодекс — путеводитель по Terraria Calamity</title>
   <meta name="description" content="Русский спутник по Terraria + Calamity: 30 квестов, 2500+ предметов, боссы, крафты и биомы." />
   <link rel="icon" href="assets/favicon.png" type="image/png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/modern.css" />
 </head>
 <body>
   <a class="skip-link" href="#app">Перейти к содержимому</a>
   <canvas id="embers" aria-hidden="true"></canvas>
+  <div id="flash" aria-hidden="true"></div>
+  <div class="scroll-hp" id="scroll-hp" aria-hidden="true"></div>
 
   <div class="shell">
     <aside class="rail" id="rail" aria-label="Основная навигация">
       <a class="rail-brand" href="#/" aria-label="Каламити Кодекс — на главную">
-        <span class="brand-art"><img src="assets/favicon.png" alt="" width="128" height="128" /></span>
+        <span class="brand-art slot"><img src="assets/favicon.png" alt="" width="128" height="128" /></span>
         <span class="brand-copy">
-          <b>Каламити</b>
-          <small>кодекс · 2.2.2</small>
+          <b>КАЛАМИТИ КОДЕКС</b>
+          <small>терминал прохождения · 2.2.2</small>
         </span>
       </a>
 
-      <div class="nav-caption">Навигация</div>
+      <div class="nav-caption">Разделы</div>
       <nav class="rail-nav" id="main-nav">
         <a href="#/" data-nav="home">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9h-5v-6H9v6H4z"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span>
           <span>Главная</span>
         </a>
         <a href="#/novice?q=1" data-nav="novice">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4m0 1h11l-2.5 4L16 13H5"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span>
           <span>Путь новичка</span><em>30</em>
         </a>
         <a href="#/wiki" data-nav="wiki">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22zm16 0A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22z"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" /></span>
           <span>Справочник</span>
         </a>
         <a href="#/bosses" data-nav="bosses">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20v-3a7 7 0 1 1 10 0v3m-10-1h10M9 11h.01M15 11h.01M10 15h4M6 6 3 3m15 3 3-3"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span>
           <span>Боссы</span><em>36</em>
         </a>
         <a href="#/items" data-nav="items">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v12H4zM7 8V5h10v3m-5 0v12m-2-7h4"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span>
           <span>Предметы</span><em>2.5K</em>
         </a>
         <a href="#/favorites" data-nav="favorites">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" /></span>
           <span>Избранное</span><em data-favorites-count>0</em>
         </a>
         <a href="#/lex" data-nav="lex">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm0 0v18m3-13h6m-6 4h6"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" /></span>
           <span>Словарь</span>
         </a>
         <a href="#/crafts" data-nav="crafts">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5 5 5M7 21l-4-4L15 5l4 4zM4 4l4 4m-2-6 4 4"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span>
           <span>Крафты</span>
         </a>
         <a href="#/biomes" data-nav="biomes">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zm6-3v15m6-12v15"/></svg>
+          <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" /></span>
           <span>Биомы</span>
         </a>
       </nav>
@@ -72,9 +71,13 @@
       <div class="rail-footer">
         <div class="rail-progress">
           <span><b>Путь героя</b><i id="rail-progress-label">0 / 30</i></span>
-          <div class="rail-progress-track"><i id="rail-progress-fill"></i></div>
+          <div class="hpbar mini"><i id="rail-progress-fill"></i></div>
         </div>
-        <p><span class="status-dot"></span> Каталог доступен офлайн</p>
+        <div class="rail-rev" id="rail-rev" hidden>
+          <span><b>Месть</b><i>revengeance</i></span>
+          <div class="ragebar mini"><i></i></div>
+        </div>
+        <p class="rail-status"><span class="status-dot"></span> каталог доступен офлайн</p>
       </div>
     </aside>
 
@@ -85,42 +88,76 @@
         </button>
 
         <div class="page-context" aria-live="polite">
-          <small>Calamity Codex</small>
+          <small>ПКД-9000 // раздел</small>
           <b id="route-title">Главная</b>
         </div>
 
         <label class="search" aria-label="Глобальный поиск">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <span class="search-prompt" aria-hidden="true">▶</span>
           <input id="global-search" type="search" placeholder="Найти предмет, босса, крафт…" autocomplete="off" spellcheck="false" />
           <kbd>Ctrl K</kbd>
         </label>
 
-        <a class="favorite-mini" href="#/favorites" data-nav="favorites" aria-label="Открыть избранное" title="Рюкзак героя">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg>
+        <button class="sound-toggle slot" id="sound-toggle" type="button" aria-pressed="true" aria-label="Звук интерфейса: включён" title="Звук интерфейса">
+          <svg class="snd-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M18.7 6.3a8.4 8.4 0 0 1 0 11.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="snd-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="m16.5 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </button>
+
+        <a class="favorite-mini slot" href="#/favorites" data-nav="favorites" aria-label="Открыть избранное" title="Рюкзак героя">
+          <img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" />
           <span class="favorite-count" data-favorites-count>0</span>
         </a>
 
         <a class="journey-mini" href="#/novice?q=1" title="Продолжить путь новичка">
-          <span class="journey-gem" aria-hidden="true"></span>
-          <span><small>Прогресс</small><b id="journey-count">0%</b></span>
+          <span class="jm-copy"><small>Квест</small><b id="journey-count">0%</b></span>
+          <span class="jm-bar"><i id="journey-fill"></i></span>
         </a>
       </header>
 
       <div id="search-panel" class="search-drop hidden" role="dialog" aria-label="Результаты поиска"></div>
       <main id="app" tabindex="-1"></main>
     </div>
+    <div id="rail-scrim" class="rail-scrim" hidden></div>
   </div>
 
   <nav class="mobile-tabs" aria-label="Быстрая навигация">
-    <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9h-5v-6H9v6H4z"/></svg><span>Главная</span></a>
-    <a href="#/novice?q=1" data-nav="novice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4m0 1h11l-2.5 4L16 13H5"/></svg><span>Путь</span></a>
-    <a href="#/bosses" data-nav="bosses"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20v-3a7 7 0 1 1 10 0v3m-10-1h10M9 11h.01M15 11h.01"/></svg><span>Боссы</span></a>
-    <a href="#/items" data-nav="items"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v12H4zM7 8V5h10v3m-5 3v6"/></svg><span>Предметы</span></a>
+    <a href="#/" data-nav="home"><span class="slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span><span>Главная</span></a>
+    <a href="#/novice?q=1" data-nav="novice"><span class="slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span><span>Путь</span></a>
+    <a href="#/bosses" data-nav="bosses"><span class="slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span><span>Боссы</span></a>
+    <a href="#/items" data-nav="items"><span class="slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span><span>Предметы</span></a>
   </nav>
 
-  <button class="to-top" id="to-top" type="button" aria-label="Наверх">↑</button>
-  <div id="rail-scrim" class="rail-scrim" hidden></div>
+  <button class="to-top" id="to-top" type="button" aria-label="Наверх">▲</button>
   <div id="tt" class="tt" hidden></div>
+  <div id="tip-card" class="tip-card panel" hidden></div>
+
+  <div class="tree-modal" id="tree-modal" hidden>
+    <div class="tree-backdrop" data-tree-close></div>
+    <div class="tree-panel panel" role="dialog" aria-modal="true" aria-label="Дерево крафта">
+      <div class="tree-head">
+        <div class="tree-root">
+          <span class="slot tree-root-slot"><img id="tree-root-img" alt="" /></span>
+          <span class="tree-root-copy">
+            <small>дерево крафта</small>
+            <b id="tree-root-name"></b>
+            <i id="tree-root-sub"></i>
+            <p id="tree-root-desc" class="tree-root-desc"></p>
+            <span id="tree-root-src" class="tree-root-src"></span>
+          </span>
+        </div>
+        <div class="tree-tools">
+          <button class="tree-nav-btn" id="tree-expand" type="button" title="Развернуть всё" aria-label="Развернуть все рецепты">⊞</button>
+          <button class="tree-nav-btn" id="tree-collapse" type="button" title="Свернуть всё" aria-label="Свернуть все рецепты">⊟</button>
+          <button class="tree-nav-btn" id="tree-back" type="button" aria-label="Назад">←</button>
+          <button class="tree-nav-btn" id="tree-close" type="button" data-tree-close aria-label="Закрыть дерево">✕</button>
+        </div>
+      </div>
+      <div class="tree-legend"><b>▸ круг</b> на карточке — развернуть ингредиенты · клик по карточке — её дерево · <b>↗</b> — карточка в каталоге · лист — «где взять»</div>
+      <div class="tree-body" id="tree-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
   <script src="js/data.js"></script>

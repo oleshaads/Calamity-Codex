@@ -1,12 +1,12 @@
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
-  const app = $("#app");
-  const searchInput = $("#global-search");
-  const searchPanel = $("#search-panel");
-  const nav = $("#main-nav");
-  const routeTitle = $("#route-title");
-  const liveRegion = $("#live-region");
-  const menuButton = $("#menu-btn");
+  const app = $("body") && $("#app");
+  const searchInput = $("body") && $("#global-search");
+  const searchPanel = $("body") && $("#search-panel");
+  const nav = $("body") && $("#main-nav");
+  const routeTitle = $("body") && $("#route-title");
+  const liveRegion = $("body") && $("#live-region");
+  const menuButton = $("body") && $("#menu-btn");
   const ROUTE_RU = {
     home: "Главная",
     novice: "Путь новичка",
@@ -19,6 +19,17 @@
     biomes: "Биомы"
   };
   let lastView = "";
+  let lastScrollKey = "";
+  // Ключ «содержания» страницы: если он изменился, возвращаемся наверх.
+  // Параметры поиска и limit не трогают позицию прокрутки.
+  function scrollKey(view, params) {
+    if (view === "novice") return `novice:${params.q || 1}`;
+    if (view === "wiki") return `wiki:${params.tab || "progress"}`;
+    if (view === "bosses") return `bosses:${params.era || "all"}`;
+    if (view === "items") return `items:${params.mode || "catalog"}:${params.cls || "all"}:${params.kind || "all"}:${params.q || "all"}:${params.fav || ""}`;
+    if (view === "lex") return `lex:${params.type || "all"}`;
+    return view;
+  }
   const SECTION_THEMES = {
     wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/mushroom.jpg",  accent: "#8ebbe0", fx: "dust" },
     bosses:    { eyebrow: "Бестиарий Каламити", mark: "☠", no: "II",  cover: "assets/headers/bosses.webp",    bg: "assets/themes/brimstone.jpg", accent: "#f06c73", fx: "fire" },
@@ -99,22 +110,23 @@
     const cover = new URL(theme.cover, document.baseURI).href;
     const facts = sectionFacts(view);
     return `
-      <header class="page-head" style="--page-cover:url('${cover}');--page-accent:${theme.accent}">
-        <div class="page-head-art" aria-hidden="true"></div>
-        <div class="page-head-copy">
-          <small>${theme.eyebrow}</small>
+      <header class="page-head panel" style="--page-cover:url('${cover}');--page-accent:${theme.accent}">
+        <div class="ph-screen" aria-hidden="true"><div class="art"></div></div>
+        <div class="ph-copy">
+          <span class="ph-eyebrow">${theme.eyebrow}</span>
           <h1>${esc(title)}</h1>
           <p>${esc(lead)}</p>
           <div class="page-head-facts" aria-label="Краткая сводка">
             ${facts.map(([value, label]) => `<span><b>${esc(value)}</b><em>${esc(label)}</em></span>`).join("")}
           </div>
         </div>
+        <div class="page-head-sigil" aria-hidden="true"><span>${theme.mark}</span><i>${theme.no}</i></div>
       </header>`;
   };
   const shelf = (title, count, inner, open = false) => `
     <details class="shelf"${open ? " open" : ""}>
       <summary>
-        <i class="shelf-plus" aria-hidden="true"></i>
+        <span class="shelf-plus" aria-hidden="true"></span>
         <span class="shelf-t">${title}</span>
         ${count != null && count !== "" ? `<span class="shelf-n">${count}</span>` : ""}
       </summary>
@@ -122,6 +134,30 @@
     </details>`;
 
   const tt = document.getElementById("tt");
+  const fillIngTT = (info) => {
+    if (!tt || !info) return;
+    const ingIcons = (info.recipe ? info.recipe.ings : []).map((ing) => {
+      const hit = resolveArt(ing.name);
+      return hit
+        ? `<img src="${escAttr(hit)}" alt="" loading="lazy" decoding="async" />`
+        : `<i aria-hidden="true">${esc(ing.count || "?")}</i>`;
+    }).join("");
+    const craftLine = info.recipe
+      ? `${info.recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(i.name)}` : esc(i.name))).join(" + ")}${info.recipe.station ? ` · у ${esc(info.recipe.station)}` : ""}`
+      : "";
+    const obtainLine = (!info.recipe || !/^Скрафтить/i.test(info.obtain || "")) ? info.obtain : "";
+    tt.innerHTML = `
+      <div class="tt-type">Ингредиент · ${esc(KIND_RU[info.kind] || "Предмет")}</div>
+      <div class="tt-ru">${esc(info.ru)}</div>
+      ${info.en ? `<div class="tt-en">в игре: ${esc(info.en)}</div>` : ""}
+      ${info.desc ? `<p>${esc(info.desc)}</p>` : ""}
+      ${obtainLine ? `<p><b>Где взять</b> — ${esc(obtainLine)}</p>` : ""}
+      ${craftLine
+        ? `<p><b>Рецепт</b> — ${craftLine}</p><div class="tt-ings">${ingIcons}</div>`
+        : `<p><b>Рецепт</b> — предмет не крафтится: добывается или находится в мире.</p>`}
+      <p class="tt-hint">Клик по ингредиенту — дерево крафта</p>
+    `;
+  };
   const fillTT = (info) => {
     if (!tt || !info) return;
     tt.innerHTML = `
@@ -147,32 +183,227 @@
     tt.style.left = x + "px";
     tt.style.top = y + "px";
   };
+  /* ---------- богатая карточка-подсказка поверх страницы ---------- */
+  const tipCard = document.getElementById("tip-card");
+  let tipCardAnchor = null;
+  let tipCardHideTimer = 0;
+  let tipCardPinned = false;
+
+  function hideTipCard() {
+    if (!tipCard) return;
+    tipCard.hidden = true;
+    tipCardAnchor = null;
+    tipCardPinned = false;
+  }
+  function hideTipCardSoon() {
+    if (!tipCard || tipCardPinned) return;
+    clearTimeout(tipCardHideTimer);
+    tipCardHideTimer = setTimeout(hideTipCard, 420);
+  }
+  function placeTipCard(el) {
+    if (!tipCard || !el) return;
+    const r = el.getBoundingClientRect();
+    const w = Math.min(560, innerWidth - 16);
+    tipCard.style.width = w + "px";
+    const maxH = Math.min(640, innerHeight - 16);
+    tipCard.style.maxHeight = maxH + "px";
+    const h = Math.min(tipCard.offsetHeight || 480, maxH);
+    let x = Math.min(r.left, innerWidth - w - 8);
+    if (x < 8) x = 8;
+    let y = r.bottom + 10;
+    if (y + h > innerHeight - 8) {
+      y = r.top - h - 10;
+      if (y < 8) y = 8;
+    }
+    tipCard.style.left = x + "px";
+    tipCard.style.top = y + "px";
+  }
+  function renderTipCard(name) {
+    if (!tipCard) return;
+    const info = ingredientInfo(name);
+    const lex = exactLexLookup(name) || (CODEX.lookup ? CODEX.lookup(name) : null);
+    const lexKey = lex ? (lex.en || lex.ru) : "";
+    const art = BOSS_ART_BY_ID[(lex && lex.id) || ""] || LEX_ART[lexKey] || info.art;
+    const artNote = LEX_ART_NOTE[lexKey] || "";
+    const recipe = info.recipe;
+    const obtainRaw = (info.obtain || (lex && lex.where) || "").replace(/\s*[·•].*$/, "").trim();
+    const obtain = recipe && /^Скрафтить/i.test(obtainRaw) ? "" : obtainRaw;
+    const used = (lex && lex.used) || "";
+    const type = (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
+    const craftLine = recipe
+      ? recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(i.name)}` : esc(i.name))).join(" + ") + (recipe.station ? ` · у ${esc(recipe.station)}` : "")
+      : ((lex && lex.craft) || "");
+    const treeHTML = recipe
+      ? `<div class="tip-card-tree">${treeNodeHTML(name, 0, new Set())}</div>`
+      : "";
+    const desc = info.desc || (lex && lex.desc) || "";
+    tipCard.innerHTML = `
+      <div class="tip-card-head">
+        <span class="slot tip-card-slot">${art ? `<img class="item-art" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(info.kind || "mat")}">` : unavailableArt(info.kind)}</span>
+        <span class="tip-card-title">
+          <small>${esc(type)}</small>
+          <b>${esc(info.ru)}</b>
+          ${info.en ? `<i>в игре: ${esc(info.en)}</i>` : ""}
+          ${artNote ? `<em>показано: ${esc(artNote)}</em>` : ""}
+        </span>
+        <button class="tip-card-close" type="button" data-tip-close aria-label="Закрыть карточку">✕</button>
+      </div>
+      <div class="tip-card-body">
+        ${desc ? `<p class="tip-card-desc">${esc(desc)}</p>` : ""}
+        <div class="tip-card-facts">
+          ${obtain ? `<div class="fact"><span>Где взять</span><p>${esc(obtain)}</p></div>` : ""}
+          ${used ? `<div class="fact"><span>Зачем</span><p>${esc(used)}</p></div>` : ""}
+          ${recipe
+            ? `<div class="fact recipe-fact"><span>Рецепт</span><div class="craft-chips">${recipe.ings.map((i) => ingChipHTML(i.name, i.count)).join("")}${stationChipHTML(recipe.station)}</div></div>`
+            : (craftLine ? `<div class="fact"><span>Крафт</span><p>${craftLine}</p></div>` : "")}
+        </div>
+        ${treeHTML}
+        <div class="tip-card-actions">
+          ${recipe ? `<button class="tree-btn" type="button" data-tree-modal="${escAttr(name)}">⤓ Открыть полное дерево</button>` : ""}
+          ${info.catName ? `<a class="craft-catalog-link" href="#/items?s=${encodeURIComponent(info.catName)}">В каталоге ↗</a>` : ""}
+          ${lex ? `<a class="craft-catalog-link" href="#/lex?q=${encodeURIComponent(lex.ru)}">В словаре ↗</a>` : ""}
+        </div>
+      </div>`;
+    // раскрыть первый уровень дерева сразу
+    tipCard.querySelectorAll(".tip-card-tree > .tnode > .tkids").forEach((kids) => {
+      kids.hidden = false;
+      const toggle = kids.closest(".tnode").querySelector(":scope > .tnode-card > .ttoggle[data-toggle]");
+      if (toggle) { toggle.textContent = "▾"; toggle.setAttribute("aria-expanded", "true"); }
+    });
+    bindSprites(tipCard);
+  }
+  function showTipCard(name, anchorEl, pin = false) {
+    if (!tipCard) return;
+    clearTimeout(tipCardHideTimer);
+    tipCardPinned = !!pin;
+    renderTipCard(name);
+    tipCardAnchor = anchorEl;
+    tipCard.hidden = false;
+    requestAnimationFrame(() => placeTipCard(anchorEl));
+    SND.play("blip");
+  }
+  if (tipCard) {
+    tipCard.addEventListener("mouseenter", () => clearTimeout(tipCardHideTimer));
+    tipCard.addEventListener("mouseleave", hideTipCardSoon);
+    tipCard.addEventListener("click", (e) => {
+      if (e.target.closest("[data-tip-close]")) { hideTipCard(); return; }
+      const t = e.target.closest("[data-toggle]");
+      if (t) {
+        const kids = t.closest(".tnode")?.querySelector(":scope > .tkids");
+        if (!kids) return;
+        const open = kids.hidden;
+        kids.hidden = !open;
+        t.textContent = open ? "▾" : "▸";
+        t.setAttribute("aria-expanded", String(open));
+        SND.play(open ? "open" : "close");
+        return;
+      }
+      const ing = e.target.closest("[data-ing]");
+      if (ing) {
+        if (e.target.closest("a")) return;
+        const rootCard = tipCard.querySelector(".tip-card-tree > .tnode > .tnode-card");
+        const rootName = rootCard ? rootCard.dataset.ing : "";
+        if (rootName && normalizeArtName(ing.dataset.ing || "") === normalizeArtName(rootName)) {
+          const rootNode = tipCard.querySelector(".tip-card-tree > .tnode");
+          const kids = rootNode ? rootNode.querySelector(":scope > .tkids") : null;
+          const toggle = rootNode ? rootNode.querySelector(":scope > .tnode-card > .ttoggle[data-toggle]") : null;
+          if (kids && toggle) {
+            const open = kids.hidden;
+            kids.hidden = !open;
+            toggle.textContent = open ? "▾" : "▸";
+            toggle.setAttribute("aria-expanded", String(open));
+            SND.play(open ? "open" : "close");
+          }
+          return;
+        }
+        renderTipCard(ing.dataset.ing || "");
+        if (tipCardAnchor) placeTipCard(tipCardAnchor);
+        SND.play("select");
+        return;
+      }
+      const tm = e.target.closest("[data-tree-modal]");
+      if (tm) {
+        hideTipCard();
+        openCraftTree(tm.dataset.treeModal || "");
+      }
+    });
+  }
+
   document.addEventListener("mouseover", (e) => {
     const el = e.target.closest && e.target.closest(".tip");
-    if (!el || !tt) return;
+    if (!el || !tipCard) return;
     const info = CODEX.lex && CODEX.lex[el.dataset.id];
     if (!info) return;
-    fillTT(info);
-    tt.hidden = false;
-    placeTT(el);
+    if (tt) tt.hidden = true;
+    if (!tipCard.hidden && tipCardAnchor === el) return;
+    showTipCard(info.en || info.ru, el);
   });
   document.addEventListener("mouseout", (e) => {
     const el = e.target.closest && e.target.closest(".tip");
-    if (!el || !tt) return;
+    if (!el || !tipCard) return;
     if (e.relatedTarget && el.contains(e.relatedTarget)) return;
-    tt.hidden = true;
+    if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
+    // переход на другое слово/ингредиент не должен мигать карточкой
+    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .ing")) return;
+    hideTipCardSoon();
   });
+  /* Remote-спрайты (wiki): при недоступности сети картинка заменяется
+     аккуратной заглушкой, а не исчезает бесследно. */
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG" || !img.classList.contains("remote")) return;
+    const holder = img.parentElement;
+    const fallback = document.createElement("i");
+    fallback.className = "art-fallback";
+    fallback.textContent = "◆";
+    fallback.title = "Спрайт недоступен офлайн";
+    fallback.setAttribute("aria-label", "Спрайт недоступен офлайн");
+    img.remove();
+    if (holder) holder.appendChild(fallback);
+  }, true);
+
   document.addEventListener("click", (e) => {
     const el = e.target.closest && e.target.closest(".tip");
-    if (!el || !tt) return;
+    if (!el || !tipCard) return;
     const info = CODEX.lex && CODEX.lex[el.dataset.id];
     if (!info) return;
-    if (!tt.hidden && tt.dataset.id === el.dataset.id) { tt.hidden = true; return; }
-    fillTT(info);
-    tt.dataset.id = el.dataset.id;
-    tt.hidden = false;
-    placeTT(el);
+    if (!tipCard.hidden && tipCardAnchor === el) {
+      if (tipCardPinned) hideTipCard();
+      else tipCardPinned = true;
+      return;
+    }
+    showTipCard(info.en || info.ru, el, true);
     e.preventDefault();
+  });
+
+  /* ---------- ховер и клик по ингредиентам крафта ---------- */
+  document.addEventListener("mouseover", (e) => {
+    const el = e.target.closest && e.target.closest(".ing");
+    if (!el || !tipCard) return;
+    if (tt) tt.hidden = true;
+    if (!tipCard.hidden && tipCardAnchor === el) return;
+    showTipCard(el.dataset.ing || "", el);
+  });
+  document.addEventListener("mouseout", (e) => {
+    const el = e.target.closest && e.target.closest(".ing");
+    if (!el || !tipCard) return;
+    if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+    if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
+    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .ing")) return;
+    hideTipCardSoon();
+  });
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest && e.target.closest(".ing");
+    if (!el) return;
+    hideTipCard();
+    openCraftTree(el.dataset.ing || "");
+    e.preventDefault();
+  });
+  document.addEventListener("click", (e) => {
+    if (!tipCard || tipCard.hidden) return;
+    if (tipCard.contains(e.target)) return;
+    if (e.target.closest && (e.target.closest(".tip") || e.target.closest(".ing"))) return;
+    hideTipCard();
   });
 
   const store = {
@@ -182,6 +413,143 @@
       catch { /* The guide still works when private storage is unavailable. */ }
     }
   };
+
+  /* ---------- звуковой движок (WebAudio-синтез, без аудиофайлов) ---------- */
+  const SND = (() => {
+    let ctx = null;
+    let master = null;
+    let enabled = store.get().sound !== false;
+    const ensure = () => {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+        master = ctx.createGain();
+        master.gain.value = 0.14;
+        master.connect(ctx.destination);
+      }
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      return ctx;
+    };
+    const tone = (f0, f1, dur, type, vol, delay) => {
+      const c = ensure();
+      if (!c || !enabled) return;
+      const t = c.currentTime + (delay || 0);
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(Math.max(f0, 1), t);
+      if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(f1, 1), t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g);
+      g.connect(master);
+      o.start(t);
+      o.stop(t + dur + 0.03);
+    };
+    const noise = (dur, vol, cutoff) => {
+      const c = ensure();
+      if (!c || !enabled) return;
+      const len = Math.max(1, Math.floor(c.sampleRate * dur));
+      const buf = c.createBuffer(1, len, c.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      const filter = c.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = cutoff || 800;
+      const g = c.createGain();
+      g.gain.value = vol;
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+      src.start();
+    };
+    return {
+      get enabled() { return enabled; },
+      setEnabled(value) { enabled = !!value; store.set({ sound: enabled }); },
+      unlock() { ensure(); },
+      play(name) {
+        if (!enabled) return;
+        switch (name) {
+          case "tick": tone(880, 660, 0.05, "square", 0.4); break;
+          case "select": tone(520, 760, 0.07, "square", 0.35); break;
+          case "open": tone(300, 540, 0.09, "triangle", 0.4); break;
+          case "close": tone(540, 300, 0.09, "triangle", 0.4); break;
+          case "pop": tone(660, 990, 0.12, "square", 0.45); tone(1320, 1320, 0.08, "sine", 0.25, 0.05); break;
+          case "snap": tone(520, 300, 0.1, "square", 0.3); break;
+          case "check": tone(392, 392, 0.08, "square", 0.3); tone(523, 523, 0.08, "square", 0.3, 0.09); tone(784, 784, 0.16, "square", 0.3, 0.18); break;
+          case "chime": [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.14, "square", 0.3, i * 0.09)); break;
+          case "roar": noise(0.7, 0.3, 150); tone(110, 42, 0.8, "sawtooth", 0.22); break;
+          case "blip": tone(1000, 1000, 0.03, "sine", 0.2); break;
+          case "power": tone(220, 880, 0.28, "sawtooth", 0.3); noise(0.3, 0.35, 1200); break;
+          default: break;
+        }
+      }
+    };
+  })();
+
+  /* ---------- тосты, вспышки, звёзды, тряска ---------- */
+  let toastTimer = 0;
+  function toast(message, mark) {
+    const el = document.getElementById("toast");
+    if (!el) return;
+    el.innerHTML = `<span class="toast-mark">${mark || "✓"}</span><span>${esc(message)}</span>`;
+    el.hidden = false;
+    el.classList.remove("go");
+    void el.offsetWidth;
+    el.classList.add("go");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 2400);
+  }
+  function flashScreen() {
+    const el = document.getElementById("flash");
+    if (!el) return;
+    el.classList.remove("go");
+    void el.offsetWidth;
+    el.classList.add("go");
+  }
+  function starPop(x, y, cls) {
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const s = document.createElement("span");
+    s.className = "star-pop" + (cls ? " " + cls : "");
+    s.textContent = "★";
+    s.style.left = x + "px";
+    s.style.top = y + "px";
+    s.style.setProperty("--dx", Math.round(Math.random() * 48 - 24) + "px");
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 950);
+  }
+  function shakeStage() {
+    const st = document.querySelector(".stage");
+    if (!st) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    st.classList.remove("shake");
+    void st.offsetWidth;
+    st.classList.add("shake");
+    setTimeout(() => st.classList.remove("shake"), 500);
+  }
+  function syncRevengeanceUI(on) {
+    document.body.dataset.revengeance = on ? "1" : "";
+    const rev = document.getElementById("rail-rev");
+    if (rev) rev.hidden = !on;
+  }
+  function toggleRevengeance() {
+    const on = document.body.dataset.revengeance !== "1";
+    syncRevengeanceUI(on);
+    store.set({ revengeance: on });
+    if (on) {
+      SND.play("power");
+      flashScreen();
+      toast("Месть активирована — режим REVENGEANCE", "☠");
+      FX.set("fire");
+    } else {
+      SND.play("snap");
+      toast("Месть отменена — спокойный режим", "✕");
+    }
+  }
 
   const FAVORITE_TYPES = { item: "Предмет", boss: "Босс", craft: "Рецепт" };
   const favoriteValues = (value) => Array.isArray(value) ? value : [];
@@ -213,6 +581,7 @@
     store.set({ favorites: { ...raw, [type]: [...values] } });
     favoriteCache = null;
     updateFavoritesBadge();
+    SND.play(removing ? "snap" : "pop");
     announce(`${FAVORITE_TYPES[type]} ${removing ? "удалён из избранного" : "добавлен в избранное"}`);
   }
   function favoriteButton(type, key, label) {
@@ -221,7 +590,157 @@
     return `<button class="favorite-btn ${saved ? "saved" : ""}" type="button" data-favorite-type="${type}" data-favorite-key="${escAttr(key)}" aria-pressed="${saved}" aria-label="${action}: ${escAttr(label)}" title="${action}"><span aria-hidden="true">${saved ? "★" : "☆"}</span></button>`;
   }
 
+  /* ---------- сворачивание/разворачивание карточек + masonry-раскладка ---------- */
+  const MASONRY_VIEWS = ["items", "favorites"];
+  function isMasonryView() { return MASONRY_VIEWS.includes(document.body.dataset.view || ""); }
+  function cardStateMap() { return store.get().cardCollapsed || {}; }
+  function isCardCollapsed(key) {
+    const m = cardStateMap();
+    if (m[key] !== undefined) return !!m[key];
+    // по классике: на страницах предметов всё свёрнуто по умолчанию
+    return isMasonryView();
+  }
+  function setCardCollapsed(key, collapsed) {
+    const next = { ...cardStateMap() };
+    next[key] = collapsed ? 1 : 0;
+    store.set({ cardCollapsed: next });
+  }
+  function cardKeyFor(card) {
+    const fav = card.querySelector("[data-favorite-type]");
+    if (fav && fav.dataset.favoriteKey) return `${fav.dataset.favoriteType}::${fav.dataset.favoriteKey}`;
+    const title = (card.querySelector(".card-title") || card.querySelector("h3"))?.textContent.trim() || "";
+    return `${document.body.dataset.view || "?"}::${title}`;
+  }
+  function applyCardState(card, collapsed) {
+    card.classList.toggle("collapsed", collapsed);
+    const btn = card.querySelector(".card-toggle");
+    if (btn) {
+      btn.setAttribute("aria-expanded", String(!collapsed));
+      btn.setAttribute("aria-label", collapsed ? "Развернуть карточку" : "Свернуть карточку");
+      btn.textContent = collapsed ? "▸" : "▾";
+    }
+  }
+  function toggleCardState(card, force) {
+    const collapsed = force !== undefined ? force : !card.classList.contains("collapsed");
+    applyCardState(card, collapsed);
+    setCardCollapsed(cardKeyFor(card), collapsed);
+    SND.play(collapsed ? "close" : "open");
+  }
+
+  /* Masonry: карточки жадно раскладываются по колонкам в самую короткую;
+     при разворачивании одной карточки следующие «присасываются» к верху
+     в освободившееся место соседних колонок. */
+  const MASONRY_GAP = 12;
+  // Две колонки на десктопе: три давали слишком узкие карточки и текст.
+  function masonryColCount() { return innerWidth < 760 ? 1 : 2; }
+  function layoutMasonry(container, pinned) {
+    if (!container || !isMasonryView()) return;
+    const colCount = masonryColCount();
+    // 1) собрать ссылки на карточки, пока они ещё в DOM
+    const cards = [];
+    container.querySelectorAll(":scope > .masonry-col").forEach((col) => {
+      [...col.children].forEach((card) => cards.push(card));
+    });
+    [...container.children].forEach((el) => {
+      if (!el.classList || !el.classList.contains("masonry-col")) cards.push(el);
+    });
+    if (!cards.length) return;
+    // 2) стабильный исходный порядок: индекс присваивается один раз (при первом
+    //    рендере DOM плоский — порядок рендера) и переживает пере-раскладки,
+    //    чтобы карточки не прыгали и чтение оставалось по порядку
+    if (!container.dataset.masonryReady) {
+      container.dataset.masonryReady = "1";
+      cards.forEach((c, i) => { c.dataset.masonryIndex = String(i); });
+    }
+    cards.sort((a, b) => Number(a.dataset.masonryIndex || 0) - Number(b.dataset.masonryIndex || 0));
+    // 3) замерить высоты пачкой (карточки ещё в DOM — один reflow)
+    const heights = cards.map((c) => c.offsetHeight || 0);
+    // 4) разобрать старую раскладку
+    container.querySelectorAll(":scope > .masonry-col").forEach((col) => col.remove());
+    // 5) собрать колонки заново
+    container.classList.add("masonry");
+    const colEls = [];
+    const colH = [];
+    for (let i = 0; i < colCount; i++) {
+      const col = document.createElement("div");
+      col.className = "masonry-col";
+      container.appendChild(col);
+      colEls.push(col);
+      colH.push(0);
+    }
+    // 6) жадная раскладка в исходном порядке: каждую карточку — в самую
+    //    короткую колонку; закреплённая карточка удерживает СВОЮ колонку,
+    //    оставаясь на месте при разворачивании/сворачивании
+    const pinIdx = pinned && pinned.pinnedIdx >= 0 && pinned.pinnedIdx < colCount ? pinned.pinnedIdx : -1;
+    cards.forEach((card, i) => {
+      let target = -1;
+      if (pinIdx >= 0 && pinned.card === card) target = pinIdx;
+      else {
+        let min = 0;
+        for (let j = 1; j < colCount; j++) if (colH[j] < colH[min]) min = j;
+        target = min;
+      }
+      colEls[target].appendChild(card);
+      colH[target] += heights[i] + MASONRY_GAP;
+    });
+  }
+  let masonryResizeTimer = 0;
+  addEventListener("resize", () => {
+    clearTimeout(masonryResizeTimer);
+    masonryResizeTimer = setTimeout(() => {
+      document.querySelectorAll(".masonry").forEach((grid) => layoutMasonry(grid));
+    }, 180);
+  });
+  function relayoutAfterToggle(card) {
+    const grid = card.closest(".masonry");
+    if (!grid) return;
+    const col = card.closest(".masonry-col");
+    const pinnedIdx = col ? [...grid.children].indexOf(col) : -1;
+    layoutMasonry(grid, { card, pinnedIdx });
+  }
+  function enhanceCards(root) {
+    if (!root) return;
+    root.querySelectorAll(".item-grid .card, .craft-grid .card").forEach((card) => {
+      // ВАЖНО: маркер карточки НЕ должен совпадать с атрибутом кнопки —
+      // иначе e.target.closest() найдёт карточку и сворачивание сработает
+      // на любой клик внутри (чип, звезда, ссылка).
+      if (card.dataset.cardEnhanced) return;
+      card.dataset.cardEnhanced = "1";
+      const btn = document.createElement("button");
+      btn.className = "card-toggle";
+      btn.type = "button";
+      btn.setAttribute("aria-expanded", "true");
+      btn.setAttribute("aria-label", "Свернуть карточку");
+      btn.textContent = "▾";
+      card.appendChild(btn);
+      if (isCardCollapsed(cardKeyFor(card))) applyCardState(card, true);
+    });
+    if (isMasonryView()) {
+      root.querySelectorAll(".item-grid, .full-catalog-grid").forEach((grid) => layoutMasonry(grid));
+    }
+  }
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest && e.target.closest(".card-toggle");
+    if (btn) {
+      const card = btn.closest(".card");
+      if (card) {
+        e.preventDefault();
+        toggleCardState(card);
+        relayoutAfterToggle(card);
+      }
+      return;
+    }
+    const collapsedCard = e.target.closest && e.target.closest(".card.collapsed");
+    if (collapsedCard) {
+      if (e.target.closest("a, button, .ing, [data-favorite-type]")) return;
+      e.preventDefault();
+      toggleCardState(collapsedCard, false);
+      relayoutAfterToggle(collapsedCard);
+    }
+  });
+
   function announce(message) {
+    toast(message, "✓");
     if (!liveRegion) return;
     liveRegion.textContent = "";
     requestAnimationFrame(() => { liveRegion.textContent = message; });
@@ -239,17 +758,19 @@
     const count = document.getElementById("journey-count");
     const railLabel = document.getElementById("rail-progress-label");
     const railFill = document.getElementById("rail-progress-fill");
+    const journeyFill = document.getElementById("journey-fill");
     const journey = document.querySelector(".journey-mini");
     if (count) count.textContent = `${percent}%`;
     if (railLabel) railLabel.textContent = `${done.size} / ${total}`;
     if (railFill) railFill.style.width = `${percent}%`;
+    if (journeyFill) journeyFill.style.width = `${percent}%`;
     if (journey && current) journey.href = `#/novice?q=${current.id}`;
     return { done, total, percent, current };
   }
 
   /* ---------- themed particles ---------- */
   const FX = (() => {
-    const c = $("#embers");
+    const c = $("body") && $("#embers");
     if (!c) return { set() {} };
     const ctx = c.getContext("2d");
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -334,14 +855,15 @@
   }
 
   function applyTheme(q) {
-    const accent = (q && q.accent) || "#e8b84a";
+    const accent = (q && q.accent) || "#ffd97a";
     const fx = (q && q.fx) || "embers";
     document.body.style.setProperty("--accent", accent);
     const themeImage = q && q.bg ? new URL(q.bg, document.baseURI).href : "";
     document.body.style.setProperty("--theme-image", themeImage ? `url("${themeImage}")` : "none");
     document.body.style.setProperty("--theme-filter", (q && q.filter) || "none");
-    document.body.dataset.fx = fx;
-    FX.set(fx);
+    const revenge = document.body.dataset.revengeance === "1";
+    if (!revenge) document.body.dataset.fx = fx;
+    FX.set(revenge ? "fire" : fx);
   }
   function applySectionTheme(view) {
     applyTheme(SECTION_THEMES[view] || null);
@@ -394,6 +916,12 @@
     const scrim = document.getElementById("rail-scrim");
     if (scrim) scrim.hidden = true;
     searchPanel.classList.add("hidden");
+    hideTipCard();
+    const tm = document.getElementById("tree-modal");
+    if (tm && !tm.hidden) {
+      tm.hidden = true;
+      document.body.classList.remove("tree-open");
+    }
 
     if (view === "home") { applyTheme(null); renderHome(); }
     else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
@@ -405,9 +933,28 @@
     else if (view === "lex") { applyTheme(null); renderLex(params); }
     else if (view === "biomes") { applyTheme(null); renderBiomes(); }
 
+    enhanceCards(app);
+
+    if (view === "bosses" && viewChanged) { SND.play("roar"); shakeStage(); }
+
+    const contentKey = scrollKey(view, params);
+    const contentChanged = contentKey !== lastScrollKey;
+    lastScrollKey = contentKey;
+
     if (viewChanged) {
+      requestAnimationFrame(() => {
+        if (!app) return;
+        app.classList.remove("enter");
+        void app.offsetWidth;
+        app.classList.add("enter");
+        app.addEventListener("animationend", () => app.classList.remove("enter"), { once: true });
+        window.scrollTo({ top: 0, behavior: "auto" });
+      });
+    } else if (contentChanged) {
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
-    } else if (focusedId) {
+    }
+
+    if (!viewChanged && focusedId) {
       requestAnimationFrame(() => {
         const next = document.getElementById(focusedId);
         if (!next) return;
@@ -421,45 +968,65 @@
     applyTheme(null);
     fillRail("");
     document.body.style.setProperty("--theme-image", "none");
+    const { done, total, percent, current } = updateJourneyProgress();
+    const favorites = getFavorites();
+    const favTotal = favorites.item.size + favorites.boss.size + favorites.craft.size;
+    const itemCount = indexedItems().length.toLocaleString("ru-RU");
+    const jumps = [
+      ["#/novice?q=1", "assets/sprites/Wooden_Sword.png", "Путь новичка", `${CODEX.quests.length} квестов`],
+      ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
+      ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${CODEX.bosses.length} по порядку`],
+      ["#/items", "assets/sprites/StarterBag.png", "Предметы", `${itemCount} карточек`],
+      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Крафты", "дерево рецептов"],
+      ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`],
+      ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`],
+      ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`]
+    ];
     app.innerHTML = `
       <section class="hero">
         <div class="hero-bg"></div>
         <div class="hero-inner">
-          <div class="kicker">Террария · Каламити ${CODEX.version}</div>
+          <div class="kicker">Terraria · Calamity ${CODEX.version} · офлайн-справочник</div>
           <h1>Каламити<span>Кодекс</span></h1>
-          <p class="lede">С квеста 1 — если только поставил мод. Справочник — если уже в игре и нужно быстро.</p>
-          <div class="mode-grid">
-            <a class="mode-card" href="#/novice?q=1">
-              <img src="assets/novice.jpg" alt="" />
-              <span class="tag">Я новичок</span>
-              <h2>С квеста 1</h2>
-              <p>Дом, дроны, небо, море, червь… до ведьмы. Выбери класс слева. Подчёркнутое слово — наведи мышь.</p>
+          <p class="lede">Терминал прохождения: 30 квестов от первого дома до Верховной ведьмы, ${itemCount} предметов с настоящими спрайтами, боссы, крафты и биомы. Наведи мышь на ингредиент — увидишь, где взять и из чего собрать.</p>
+          <div class="hero-actions">
+            <a class="mode-btn" href="#/novice?q=1">
+              <span class="slot mode-slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" decoding="async" /></span>
+              <span class="mode-copy"><b>Путь новичка</b><small>30 квестов · от дома до ведьмы</small></span>
+              <span class="mode-arrow">▶</span>
             </a>
-            <a class="mode-card" href="#/wiki">
-              <img src="assets/veteran.jpg" alt="" />
-              <span class="tag">Уже играю</span>
-              <h2>Сжатый справочник</h2>
-              <p>Боссы, сеты, материалы, биомы — коротко, по этапам.</p>
+            <a class="mode-btn" href="#/wiki">
+              <span class="slot mode-slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" decoding="async" /></span>
+              <span class="mode-copy"><b>Справочник</b><small>броня · материалы · сердца · механики</small></span>
+              <span class="mode-arrow">▶</span>
             </a>
           </div>
         </div>
+        <aside class="hero-status panel" aria-label="Сводка прогресса">
+          <div class="hs-head"><span>Прогресс героя</span><b>${done.size} / ${total}</b></div>
+          <div class="hpbar"><i style="width:${percent}%"></i></div>
+          <div class="hs-stats">
+            <a href="#/bosses"><span class="slot hs-slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" decoding="async" /></span><span><b>${CODEX.bosses.length}</b><small>боссов</small></span></a>
+            <a href="#/items"><span class="slot hs-slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" decoding="async" /></span><span><b>${itemCount}</b><small>предметов</small></span></a>
+            <a href="#/favorites"><span class="slot hs-slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" decoding="async" /></span><span><b>${favTotal}</b><small>в рюкзаке</small></span></a>
+            <a href="#/crafts"><span class="slot hs-slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" decoding="async" /></span><span><b>${CODEX.crafts.length}</b><small>рецептов</small></span></a>
+          </div>
+          <a class="hs-continue" href="#/novice?q=${current ? current.id : 1}"><span>▶ продолжить</span><b>Квест ${current ? current.id : 1} · ${esc(current ? current.title : "")}</b></a>
+        </aside>
       </section>
       <section class="home-strip">
+        <div class="home-section-head">
+          <div><small>Быстрый доступ</small><h2>Разделы кодекса</h2></div>
+          <p>Все данные уже внутри страницы: спрайты, рецепты и описания работают без сети.</p>
+        </div>
         <div class="jump-grid">
-          <a class="jump" href="#/novice?q=1"><small>30 шагов</small><b>Путь новичка</b></a>
-          <a class="jump" href="#/bosses"><small>по порядку</small><b>Боссы</b></a>
-          <a class="jump" href="#/items"><small>где и зачем</small><b>Предметы</b></a>
-          <a class="jump" href="#/crafts"><small>стол и ингредиенты</small><b>Крафты</b></a>
-          <a class="jump" href="#/biomes"><small>куда идти</small><b>Биомы</b></a>
-          <a class="jump" href="#/lex"><small>наведи мышь</small><b>Словарь</b></a>
+          ${jumps.map(([href, img, label, sub]) => `<a class="jump" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
         </div>
-        <div class="stat-row">
-          <div class="stat"><b>${CODEX.quests.length}</b><span>квестов</span></div>
-          <div class="stat"><b>${indexedItems().length.toLocaleString("ru-RU")}</b><span>предметов</span></div>
-          <div class="stat"><b>${CODEX.bosses.length}</b><span>боссов</span></div>
-          <div class="stat"><b>${CODEX.crafts.length}</b><span>крафтов</span></div>
+        <div class="home-section-head">
+          <div><small>Эпохи мира</small><h2>С чего начать</h2></div>
+          <p>Каждая эпоха — свой набор противников и снаряжения. Маршрут ведёт по порядку.</p>
         </div>
-        <div class="era-grid">${CODEX.eras.map((e) => `<article class="era-card"><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol></article>`).join("")}</div>
+        <div class="era-grid">${CODEX.eras.map((e) => `<article class="era-card panel"><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol><a class="era-link" href="#/bosses?era=${escAttr(e.id)}">Боссы эпохи →</a></article>`).join("")}</div>
       </section>
     `;
   }
@@ -472,6 +1039,23 @@
   const esc = (s) => String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const escAttr = (s) => esc(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  /* Транслитерация: русский запрос находит и английские названия. */
+  const RU_LAT = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "h", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu", я: "ya" };
+  const ruToLat = (s) => String(s || "").toLocaleLowerCase("ru").split("").map((ch) => (RU_LAT[ch] !== undefined ? RU_LAT[ch] : ch)).join("");
+  function matchesSearch(blob, q) {
+    if (!q) return true;
+    const lower = blob.toLocaleLowerCase("ru");
+    if (lower.includes(q)) return true;
+    // Транслитерация только для осмысленных кириллических запросов (>= 3 букв):
+    // иначе «а» → «a» и подсвечивает почти каждый предмет.
+    if (/[а-яё]/.test(q) && q.length >= 3) {
+      const qLat = ruToLat(q);
+      if (qLat && qLat !== q) {
+        return lower.includes(qLat) || ruToLat(lower).includes(qLat);
+      }
+    }
+    return false;
+  }
   const plainName = (name) => {
     const lex = CODEX.lookup ? CODEX.lookup(name) : null;
     if (lex) {
@@ -561,24 +1145,51 @@
     const detail = detailedNameMap().get(cleanName.toLocaleLowerCase("ru"));
     const art = catalogArtIndex().get(nameKey)
       || CRAFT_ART[cleanName]
-      || (detail && CODEX.spriteOf ? CODEX.spriteOf(detail) : "")
+      || (detail ? spriteOfFixed(detail) : "")
       || resolveArt(cleanName)
       || craftStationSprite(station);
-    const icons = ings.map((x) => {
-      const clean = String(x).replace(/^\d+\s*[×x]\s*/i, "").replace(/\s+и\s+/g, " / ").trim();
-      const hit = resolveArt(clean);
+    // Русские имена ингредиентов в квестах: точные EN-оригиналы по позиции.
+    // В первую очередь берём рецепт из полного каталога (точные имена), иначе rec маршрута.
+    getRecipeIndex();
+    const catRecipe = catalogByName(cleanName);
+    const catIngNames = catRecipe && getRecipeIndex().get(normalizeArtName(catRecipe.name))
+      ? getRecipeIndex().get(normalizeArtName(catRecipe.name)).ings.map((i) => i.name)
+      : [];
+    const recIngNames = detail && detail.rec ? splitIngs(String(detail.rec)
+      .replace(/\s*@\s*.+$/, "")
+      .replace(/\s+(?:у|на)\s+(?:железной|свинцовой|мифриловой|орихалковой|космической|адской|алхимическом|ткацком|тяжёлом|книжном)?\s*(?:наковальне|верстаке|печи|кузне|алтаре|столе|манипуляторе|конденсаторе|шкафу|мастерской|станции|взломостойке)\s*\.?$/, "")) : [];
+    const enIngs = catIngNames.length ? catIngNames : recIngNames;
+    const cleanIng = (x) => String(x)
+      .replace(/^\d+(?:[.,]\d+)?\s*(?:[×x]\s*)?/, "")
+      .replace(/\s+и\s+/g, " / ")
+      .replace(/[.,;:]$/, "")
+      .trim();
+    const icons = ings.map((x, i) => {
+      const enName = enIngs[i] ? cleanIng(enIngs[i]) : "";
+      const clean = enName || cleanIng(x);
+      const hit = resolveArt(clean) || (enName ? resolveArt(cleanIng(x)) : "");
       return hit
         ? `<img class="ings-icon" src="${escAttr(hit)}" alt="" loading="lazy" decoding="async" />`
         : `<span class="ings-bullet" aria-hidden="true">+</span>`;
     });
-    return `<article class="craft-card">
-      <div class="craft-shot">${art ? `<img src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : ""}</div>
-      <div class="craft-body">
+    return `<article class="card craft-card">
+      <div class="card-shot slot craft-shot" data-kind="tool">
+        ${art ? `<span class="shot-window"><img src="${escAttr(art)}" alt="" loading="lazy" decoding="async" /></span>` : unavailableArt("tool")}
         ${favoriteButton("craft", src.name, ru)}
-        ${station ? `<div class="station-tag">${esc(station)}</div>` : ""}
-        <b>${esc(ru)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</b>
-        ${ings.length ? `<ul class="ings-list">${ings.map((x, i) => `<li>${icons[i]}<span>${esc(x)}</span></li>`).join("")}</ul>` : ""}
-        ${why ? `<div class="item-foot"><div class="fact"><span>Зачем</span><p>${esc(why)}</p></div></div>` : ""}
+      </div>
+      <div class="card-body">
+        ${station ? `<span class="station-tag"><img src="${escAttr(craftStationSprite(station))}" alt="" /><span>${esc(station)}</span></span>` : ""}
+        <div class="card-title">${esc(ru)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
+        ${ings.length ? `<ul class="ings-list">${ings.map((x, i) => {
+      const enName = enIngs[i] ? cleanIng(enIngs[i]) : "";
+      const ingKey = enName || cleanIng(x);
+      return `<li class="ing" data-ing="${escAttr(ingKey)}" tabindex="0" role="button" aria-label="Подробнее об ингредиенте: ${escAttr(ingKey)}">${icons[i]}<span>${esc(x)}</span></li>`;
+    }).join("")}</ul>` : ""}
+        ${why ? `<div class="facts"><div class="fact"><span>Зачем</span><p>${esc(why)}</p></div></div>` : ""}
+        <div class="card-actions">
+          <button class="tree-btn" type="button" data-tree="${escAttr(cleanName)}">⤓ Дерево крафта</button>
+          ${catRecipe ? `<a class="craft-catalog-link" href="#/items?s=${encodeURIComponent(catRecipe.name)}" title="Открыть полную карточку в каталоге">в каталоге ↗</a>` : ""}
+        </div>
       </div>
     </article>`;
   }
@@ -588,15 +1199,15 @@
     const loot = Array.isArray(b.loot) ? b.loot : String(b.loot || "").split(/,\s*/).filter(Boolean);
     const d = String(b.danger || "");
     const lvl = b.dangerLvl || (/смерт/i.test(d) ? "dead" : /высок/i.test(d) ? "high" : /средн/i.test(d) ? "mid" : "low");
-    return `<article class="biome-card">
-      <div class="shot" style="background-image:url('${b.img || "assets/hero.jpg"}');filter:${b.filter || "none"}">
+    return `<article class="card biome-card">
+      <div class="biome-shot" style="background-image:url('${b.img || "assets/hero.jpg"}');filter:${b.filter || "none"}">
         <span class="danger-pill ${lvl}">${esc(d)}</span>
       </div>
       <div class="body">
         <h3>${esc(title)}</h3>
         ${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}
         ${b.desc ? `<p class="desc">${esc(b.desc)}</p>` : ""}
-        <div class="item-foot">
+        <div class="facts">
           ${b.where ? `<div class="fact"><span>Где</span><p>${esc(b.where)}</p></div>` : ""}
           ${b.when ? `<div class="fact"><span>Когда</span><p>${esc(b.when)}</p></div>` : ""}
           ${loot.length ? `<div class="fact"><span>Лут</span><div class="loot-chips">${loot.map((x) => `<em>${esc(x)}</em>`).join("")}</div></div>` : ""}
@@ -612,12 +1223,12 @@
     "Wooden Sword / Bow / Staff из мешка": "Wooden_Sword",
     "Hermes / Flurry / Sailfish / Dunerider Boots": "Hermes_Boots",
     "Cloud / Blizzard / Sandstorm in a Bottle": "Cloud_in_a_Bottle",
-    "Wulfrum Hat & Goggles": "Wulfrum_Hat_and_Goggles",
+    "Wulfrum Hat & Goggles": "WulfrumHat",
     "Wulfrum Jacket": "Wulfrum_Jacket",
     "Wulfrum Overalls": "Wulfrum_Overalls",
-    "Wulfrum Blade / Screwdriver": "Wulfrum_Blade",
-    "Wulfrum Bow / Blunderbuss": "Wulfrum_Bow",
-    "Wulfrum Prosthesis / Staff": "Wulfrum_Prosthesis",
+    "Wulfrum Blade / Screwdriver": "WulfrumScrewdriver",
+    "Wulfrum Bow / Blunderbuss": "WulfrumBlunderbuss",
+    "Wulfrum Prosthesis / Staff": "WulfrumProsthesis",
     "Железная / свинцовая наковальня": "Iron_Anvil",
     "Кровать": "Bed",
     "Dubious Plating / Mysterious Circuitry": "Dubious_Plating",
@@ -629,7 +1240,7 @@
     "Bee Gun / Bee's Knees / Hive-Five": "Bee_Gun",
     "Muramasa / Aqua Scepter / Magic Missile / Handgun": "Muramasa",
     "Warrior / Ranger / Sorcerer / Summoner / Rogue Emblem": "Warrior_Emblem",
-    "Cobalt / Palladium armor": "Cobalt_armor",
+    "Cobalt / Palladium armor": "Cobalt_Breastplate",
     "Frostspark / Lightning / Terraspark Boots": "Terraspark_Boots",
     "Soul of Sight / Might / Fright": "Soul_of_Sight",
     "Seedler / Pygmy Staff / Venus Magnum / Leaf Blower": "Seedler",
@@ -637,19 +1248,266 @@
     "Empress оружия / Terraprisma": "Terraprisma",
     "Soaring Insignia / Wings Empress": "Soaring_Insignia",
     "Celestial Sigil / столбы": "Celestial_Sigil",
-    "Solar / Vortex / Nebula / Stardust / Empyrean armor": "Solar_Flare_armor",
+    "Solar / Vortex / Nebula / Stardust / Empyrean armor": "Solar_Flare_Breastplate",
     "Mycoroot / Hyphae Rod / Fungicide": "Mycoroot",
     "Acid Gun / Toxibow": "Toxibow",
     "Slimy Saddle / Hook": "Slimy_Saddle",
-    "Chlorophyte armor / оружие": "Chlorophyte_armor",
-    "Plaguebringer / Plague Reaper armor": "Plaguebringer_armor",
-    "God Slayer / Silva armor": "God_Slayer_armor"
+    "Chlorophyte armor / оружие": "Chlorophyte_Plate_Mail",
+    "Plaguebringer / Plague Reaper armor": "PlaguebringerCarapace",
+    "God Slayer / Silva armor": "GodSlayerChestplate"
   };
   function unavailableArt(kind = "misc") {
     const mark = ITEM_KIND_MARK[kind] || "·";
     return `<span class="sprite-unavailable" aria-label="Официальный спрайт не найден"><b aria-hidden="true">${esc(mark)}</b><small>нет спрайта</small></span>`;
   }
 
+
+  // Точечные исправления: эти карточки раньше показывали чужой спрайт
+  // (например, Ashes of Calamity выводил логотип мода). Теперь — точные
+  // официальные текстуры из полного каталога.
+  const GUIDE_ART_FIX = {
+    "Ashes of Calamity": "assets/item-sprites/AshesofCalamity.png",
+    "Core of Calamity": "assets/item-sprites/CoreofCalamity.png",
+    "Prism Shard": "assets/item-sprites/PrismShard.png"
+  };
+  const spriteOfFixed = (it) => {
+    if (it && GUIDE_ART_FIX[it.name]) return GUIDE_ART_FIX[it.name];
+    return CODEX.spriteOf ? CODEX.spriteOf(it) : "";
+  };
+
+  /* ---------- граф рецептов: дерево крафта и подсказки ингредиентов ---------- */
+  const CATALOG_BY_NORM = new Map();
+  const GUIDE_BY_NORM = new Map();
+  const CATALOG_LEX = new Map();
+  function buildNameIndexes() {
+    if (CATALOG_BY_NORM.size) return;
+    indexedItems().forEach((it) => {
+      const k = normalizeArtName(it.name);
+      if (k && !CATALOG_BY_NORM.has(k)) CATALOG_BY_NORM.set(k, it);
+    });
+    (CODEX.items || []).forEach((it) => {
+      [it.name, it.nameRu].forEach((n) => {
+        const k = normalizeArtName(n);
+        if (k && !GUIDE_BY_NORM.has(k)) GUIDE_BY_NORM.set(k, it);
+      });
+    });
+    // Русские имена/алиасы словаря для поиска по каталогу («кровать» → Bed)
+    CATALOG_BY_NORM.forEach((it, k) => {
+      const lex = exactLexLookup(it.name);
+      if (lex) CATALOG_LEX.set(k, `${lex.ru} ${lex.en} ${(lex.aliases || []).join(" ")}`);
+    });
+  }
+
+  const STATION_RX = /^(Печь|Верстак|Наковальня|Железная наковальня|Свинцовая наковальня|Алтарь зла|Алтарь|Адская кузня|Хардмод-наковальня|Мифриловая наковальня|Орихалковая наковальня|Книжный шкаф|Манипулятор|Древний манипулятор|Космическая наковальня|Кузня Дрейдона|Взломостойка|Мастерская|Мастерская гоблина|Алхимический стол|Алхимия|Ткацкий станок|Тяжёлый верстак|Конденсатор пустоты|Стационарный конденсатор|Алтарь \/ наковальня)[:：]\s*(.+)$/i;
+
+  function parseIngredientList(rest) {
+    const out = [];
+    String(rest || "").split(/\s+\+\s+/).forEach((p) => {
+      const em = p.match(/^ещё\s+(\d+(?:[.,]\d+)?)$/i);
+      if (em) {
+        // «X + ещё N» — добавить к количеству предыдущего ингредиента
+        if (out.length) {
+          const prev = out[out.length - 1];
+          prev.count = String((parseFloat(prev.count || "1") + parseFloat(em[1].replace(",", "."))));
+        }
+        return;
+      }
+      const pm = p.match(/^(\d+(?:[.,]\d+)?)\s*[×x]\s*(.+)$/);
+      if (pm) out.push({ count: pm[1].replace(",", "."), name: pm[2].replace(/[.,;:]$/, "").trim() });
+      else out.push({ count: null, name: p.replace(/[.,;:]$/, "").trim() });
+    });
+    return out.filter((i) => i.name);
+  }
+
+  function parseRecipeText(text, station) {
+    const raw = String(text || "").trim();
+    if (!raw) return null;
+    let m = raw.match(/^Скрафтить из:\s*(.+?)\s*\.?\s*$/i);
+    if (m) return { ings: parseIngredientList(m[1]), station: station || "" };
+    m = raw.match(/^Скрафтить:\s*(.+)$/i);
+    if (m) {
+      let rest = m[1].trim();
+      let st = station || "";
+      const at = rest.match(/^(.*?)\s*[·•]\s*(?:у|на|в)\s+(.+?)\.?\s*$/);
+      if (at) { rest = at[1].trim(); st = st || at[2].trim(); }
+      const ings = parseIngredientList(rest);
+      if (ings.length) return { ings, station: st };
+      return null;
+    }
+    // «Станция: ингредиенты» — формат квестовых рецептов
+    const stm = raw.match(STATION_RX);
+    if (stm) return { ings: parseIngredientList(stm[2]), station: stm[1].trim() };
+    return null;
+  }
+
+  let recipeIndex = null;
+  function getRecipeIndex() {
+    if (recipeIndex) return recipeIndex;
+    buildNameIndexes();
+    recipeIndex = new Map();
+    const add = (name, text, station) => {
+      const parsed = parseRecipeText(text, station);
+      if (!parsed) return;
+      const key = normalizeArtName(name);
+      if (key && !recipeIndex.has(key)) recipeIndex.set(key, parsed);
+    };
+    indexedItems().forEach((it) => {
+      if (/^Скрафтить/i.test(it.obtain || "")) add(it.name, it.obtain, "");
+    });
+    (CODEX.crafts || []).forEach((c) => add(c.name || c.t, c.ings || c.r || "", c.station || ""));
+    CODEX.quests.forEach((q) => (q.crafts || []).forEach((c) => {
+      const t = c.t || c.name || "";
+      const detail = detailedNameMap().get(String(t).replace(/\s*\([^)]*\)\s*$/, "").trim().toLocaleLowerCase("ru"));
+      // Русский текст квеста не парсится по именам предметов — берём EN-двойник из маршрута.
+      const enText = detail && detail.rec ? detail.rec : (c.r || c.ings || "");
+      add(t, enText, c.station || "");
+    }));
+    return recipeIndex;
+  }
+
+  function exactLexLookup(name) {
+    if (!CODEX.lex) return null;
+    const low = String(name).toLocaleLowerCase("ru");
+    const exact = Object.values(CODEX.lex).find((e) =>
+      String(e.ru || "").toLocaleLowerCase("ru") === low
+      || String(e.en || "").toLocaleLowerCase("ru") === low
+      || (e.aliases || []).some((a) => String(a).toLocaleLowerCase("ru") === low));
+    return exact || (CODEX.lookup ? CODEX.lookup(name) : null);
+  }
+  function catalogByName(name) {
+    buildNameIndexes();
+    const k = normalizeArtName(name);
+    let hit = CATALOG_BY_NORM.get(k);
+    if (hit) return hit;
+    const lex = exactLexLookup(name);
+    hit = lex && CATALOG_BY_NORM.get(normalizeArtName(lex.en));
+    if (hit) return hit;
+    const guide = GUIDE_BY_NORM.get(k);
+    if (guide) {
+      hit = CATALOG_BY_NORM.get(normalizeArtName(guide.name));
+      if (hit) return hit;
+      const gLex = exactLexLookup(guide.name);
+      hit = gLex && CATALOG_BY_NORM.get(normalizeArtName(gLex.en));
+      if (hit) return hit;
+    }
+    return null;
+  }
+  const VANILLA_LOCAL_ART = {
+    "fallen star": "assets/lex/vanilla/fallen-star.png",
+    acorn: "assets/lex/vanilla/acorn.png",
+    coral: "assets/lex/vanilla/coral.png",
+    seashell: "assets/lex/vanilla/seashell.png",
+    "sand block": "assets/lex/vanilla/sand-block.png",
+    "ice block": "assets/lex/vanilla/ice-block.png",
+    "snow block": "assets/lex/vanilla/snow-block.png",
+    hellstone: "assets/lex/vanilla/hellstone.png",
+    "jungle spores": "assets/lex/vanilla/jungle-spores.png",
+    "glowing mushroom": "assets/lex/vanilla/mushroom.png",
+    "mana crystal": "assets/lex/vanilla/mana-crystal.png",
+    "life fruit": "assets/lex/vanilla/life-fruit.png",
+    "crystal shard": "assets/lex/vanilla/crystal-shard.png",
+    "chlorophyte ore": "assets/lex/vanilla/chlorophyte-ore.png",
+    "hermes boots": "assets/lex/vanilla/hermes-boots.png",
+    "cloud in a bottle": "assets/lex/vanilla/cloud-in-a-bottle.png",
+    "ancient manipulator": "assets/lex/vanilla/ancient-manipulator.png",
+    "demon altar": "assets/lex/vanilla/demon-altar.png",
+    "iron anvil": "assets/lex/vanilla/iron-anvil.png",
+    hellforge: "assets/lex/vanilla/hellforge.png",
+    "mythril anvil": "assets/lex/vanilla/mythril-anvil.png",
+    "tinkerers workshop": "assets/lex/vanilla/tinkerers-workshop.png",
+    guide: "assets/lex/vanilla/guide.png",
+    minishark: "assets/lex/vanilla/minishark.png",
+    deerclops: "assets/lex/vanilla/deerclops.png",
+    "lunatic cultist": "assets/lex/vanilla/lunatic-cultist.png",
+    mechanic: "assets/lex/vanilla/mechanic.png",
+    "blue dungeon brick": "assets/lex/vanilla/blue-dungeon-brick.png",
+    "nights edge": "assets/lex/vanilla/nights-edge.png",
+    "pearlstone block": "assets/lex/vanilla/pearlstone-block.png",
+    "любой песок": "assets/lex/vanilla/sand-block.png"
+  };
+  const VANILLA_EN_MAP = {
+    "золотой или платиновый слиток": "Gold Bar",
+    "демонитовый или кримтановый слиток": "Demonite Bar",
+    "любой колчан": "Quiver",
+    "любой песок": "Sand Block",
+    "любой камень": "Stone Block",
+    "любое дерево": "Wood",
+    "любой снег": "Snow Block",
+    "любой лёд": "Ice Block",
+    "any evil block": "Ebonstone Block"
+  };
+  function fixVanillaName(en) {
+    // Данные каталога пишут «Soulof Light», «Rodof Discord» без пробелов
+    return String(en)
+      .replace(/^([A-Za-z]+)of([A-Z][a-z]*)/, "$1 of $2")
+      .replace(/^([A-Za-z]+)ofthe\s+/, "$1 of the ")
+      .replace(/^Fragment (Solar|Vortex|Nebula|Stardust)$/i, "$1 Fragment")
+      .trim();
+  }
+  function vanillaIngredientArt(name) {
+    const key = normalizeArtName(name);
+    if (VANILLA_LOCAL_ART[key]) return { local: VANILLA_LOCAL_ART[key] };
+    const mapped = VANILLA_EN_MAP[key];
+    let en = mapped || name;
+    if (!mapped) {
+      // «Any X» → X; «X или Y» → X
+      en = String(en).replace(/^any\s+/i, "").replace(/^любой\s+|^любого\s+|^любая\s+|^любое\s+|^любые\s+/i, "").split(/\s+или\s+/)[0].trim();
+      if (!/[A-Za-z]/.test(en)) return null;
+    }
+    en = fixVanillaName(en);
+    return { remote: `https://terraria.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(en)}.png` };
+  }
+
+  function ingredientInfo(name) {
+    buildNameIndexes();
+    const key = normalizeArtName(name);
+    const cat = catalogByName(name);
+    const lex = exactLexLookup(name);
+    const guide = GUIDE_BY_NORM.get(key)
+      || (lex && (GUIDE_BY_NORM.get(normalizeArtName(lex.en)) || GUIDE_BY_NORM.get(normalizeArtName(lex.ru))))
+      || null;
+    let ru = (lex && lex.ru) || (guide && (guide.nameRu || guide.name)) || name;
+    let en = (lex && lex.en && String(lex.en).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) ? lex.en : "";
+    if (!en && cat && cat.name.toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = cat.name;
+    if (!en && guide && /[A-Za-z]/.test(String(guide.name)) && String(guide.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = guide.name;
+    let art = cat
+      ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
+      : (resolveArt(name) || (lex && resolveArt(lex.en)) || (guide ? spriteOfFixed(guide) : ""));
+    let remoteArt = "";
+    if (!art) {
+      const vanilla = vanillaIngredientArt(name);
+      if (vanilla && vanilla.local) art = vanilla.local;
+      else if (vanilla && vanilla.remote) remoteArt = vanilla.remote;
+    }
+    const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || "";
+    const obtain = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || "";
+    const recipe = getRecipeIndex().get(key)
+      || (cat && getRecipeIndex().get(normalizeArtName(cat.name)))
+      || (lex && getRecipeIndex().get(normalizeArtName(lex.en)))
+      || (guide && getRecipeIndex().get(normalizeArtName(guide.name)))
+      || null;
+    return { name, ru, en, art, desc, obtain, recipe, kind: cat ? cat.kind : "mat", catName: cat ? cat.name : "", remoteArt };
+  }
+
+  /* Чипы-«полочки» ингредиентов: спрайт, количество, имя; ховер — карточка, клик — дерево */
+  function ingChipHTML(name, count) {
+    const info = ingredientInfo(name);
+    const art = info.art
+      ? `<img class="ings-icon" src="${escAttr(info.art)}" alt="" loading="lazy" decoding="async" />`
+      : (info.remoteArt
+        ? `<img class="ings-icon remote" src="${escAttr(info.remoteArt)}" alt="" loading="lazy" decoding="async" />`
+        : `<span class="ings-bullet" aria-hidden="true">+</span>`);
+    return `<span class="craft-chip ing" data-ing="${escAttr(name)}" tabindex="0" role="button" aria-label="Ингредиент: ${escAttr(info.ru)}">${art}${count ? `<em>×${esc(count)}</em>` : ""}<b>${esc(info.ru)}</b></span>`;
+  }
+  function stationChipHTML(station) {
+    if (!station) return "";
+    return `<span class="craft-chip station-chip" title="${escAttr(station)}"><img class="ings-icon" src="${escAttr(craftStationSprite(station))}" alt="" loading="lazy" decoding="async" /><b>${esc(station)}</b></span>`;
+  }
+  function craftChipsHTML(name) {
+    const rec = getRecipeIndex().get(normalizeArtName(name));
+    if (!rec || !rec.ings.length) return "";
+    return rec.ings.map((i) => ingChipHTML(i.name, i.count)).join("") + stationChipHTML(rec.station);
+  }
 
   const BOSS_ART = {
     1: "assets/sprites/Slime_Crown.png",
@@ -882,7 +1740,7 @@
   function visualArt(name, kind = "mat", explicit = "") {
     const src = resolveArt(name, explicit);
     return src
-      ? `<img class="item-art" src="${escAttr(src)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(kind)}">`
+      ? `<span class="shot-window"><img class="item-art" src="${escAttr(src)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(kind)}"></span>`
       : unavailableArt(kind);
   }
   function spriteKey(it) {
@@ -955,28 +1813,31 @@
     const classLabel = item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls);
     const detailName = detail && (detail.nameRu || detail.name);
     const purpose = catalogPurpose(item);
+    const isCraft = /^Скрафтить/i.test(item.obtain || "");
     const useWhen = CATALOG_STAGE[Math.min(Math.max(item.stage, 0), CATALOG_STAGE.length - 1)];
     const art = item.image
-      ? `<img class="item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async" data-kind="${escAttr(item.kind || "mat")}">`
+      ? `<span class="shot-window"><img class="item-art" src="assets/item-sprites/${encodeURIComponent(item.id)}.png" alt="" loading="lazy" decoding="async" data-kind="${escAttr(item.kind || "mat")}"></span>`
       : unavailableArt(item.kind);
-    return `<article class="item-card has-art catalog-item-card" data-kind="${escAttr(item.kind)}">
-      <div class="item-shot ${escAttr(item.cls)} ${escAttr(item.kind)}">
+    const craftChips = isCraft ? craftChipsHTML(item.name) : "";
+    return `<article class="card has-art catalog-item-card">
+      <div class="card-shot slot" data-kind="${escAttr(item.kind)}">
         ${art}
         ${favoriteButton("item", item.name, item.name)}
         <span class="kind-pill">${esc(KIND_RU[item.kind] || item.kind)}</span>
         <span class="tag-cls ${escAttr(item.cls)}">${esc(classLabel)}</span>
       </div>
-      <div class="body">
-        <b>${esc(item.name)}<span class="en-sub">${esc(item.group)}</span></b>
+      <div class="card-body">
+        <div class="card-title">${esc(item.name)}<span class="en-sub">${esc(item.group)}</span></div>
         <p class="desc">${esc(item.description || purpose)}</p>
-        <div class="item-foot">
-          <div class="fact"><span>Где</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>
+        <div class="facts">
+          ${isCraft ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(item.obtain)}</p>`}</div>` : `<div class="fact"><span>Где</span><p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p></div>`}
           <div class="fact"><span>Зачем</span><p>${esc(purpose)}</p></div>
           <div class="fact"><span>Когда</span><p>${esc(useWhen)}</p></div>
         </div>
-        <div class="catalog-card-links">
+        <div class="card-links">
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Рецепт и шансы на wiki ↗</a>
           ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть практическую рекомендацию ${escAttr(detailName)}">Рекомендация кодекса →</a>` : ""}
+          ${/^Скрафтить/i.test(item.obtain || "") ? `<button class="tree-btn" type="button" data-tree="${escAttr(item.name)}">⤓ Дерево крафта</button>` : ""}
         </div>
       </div>
     </article>`;
@@ -999,23 +1860,25 @@
     const getPlain = String(it.get || "").replace(/\bCalamity\b/g, "Каламити").trim();
     const rec = String(it.rec || "").trim();
     const showGet = getPlain && !/^крафт\.?$/i.test(getPlain);
-    const local = (CODEX.spriteOf ? CODEX.spriteOf(it) : (CODEX.sprites && (CODEX.sprites[it.name] || CODEX.sprites[it.nameRu]))) || "";
-    return `<article class="item-card has-art ${hide ? "hidden" : ""} ${dim ? "dim" : ""} ${mine && filter !== "all" ? "mine" : ""}">
-      <div class="item-shot ${it.cls} ${it.kind || ""}">
-        ${local ? `<img class="item-art" alt="" src="${local}" loading="lazy" decoding="async" data-file="${escAttr(spriteKey(it))}" data-kind="${escAttr(it.kind || "mat")}" />` : unavailableArt(it.kind)}
+    const local = spriteOfFixed(it) || (CODEX.sprites && (CODEX.sprites[it.name] || CODEX.sprites[it.nameRu])) || "";
+    const craftChips = rec ? craftChipsHTML(it.name) : "";
+    return `<article class="card has-art ${hide ? "hidden" : ""} ${dim ? "dim" : ""} ${mine && filter !== "all" ? "mine" : ""}">
+      <div class="card-shot slot ${escAttr(it.cls)} ${escAttr(it.kind || "")}" data-kind="${escAttr(it.kind || "mat")}">
+        ${local ? `<span class="shot-window"><img class="item-art" alt="" src="${local}" loading="lazy" decoding="async" data-file="${escAttr(spriteKey(it))}" data-kind="${escAttr(it.kind || "mat")}" /></span>` : unavailableArt(it.kind)}
         ${favoriteButton("item", it.name, title)}
         <span class="kind-pill">${esc(kind)}</span>
-        <span class="tag-cls ${it.cls}">${CLS_RU[it.cls] || it.cls}</span>
+        <span class="tag-cls ${escAttr(it.cls)}">${CLS_RU[it.cls] || it.cls}</span>
       </div>
-      <div class="body">
-        <b>${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</b>
+      <div class="card-body">
+        <div class="card-title">${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
         ${!fake ? `<div class="stats-line">${esc(stats)}</div>` : ""}
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
-        <div class="item-foot">
+        <div class="facts">
           ${showGet ? `<div class="fact"><span>Где</span><p>${esc(getPlain)}</p></div>` : ""}
-          ${rec ? `<div class="fact"><span>Крафт</span><p>${esc(rec)}</p></div>` : ""}
+          ${rec ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(rec)}</p>`}</div>` : ""}
           ${showWhy ? `<div class="fact"><span>Зачем</span><p>${esc(why)}</p></div>` : ""}
         </div>
+        ${rec ? `<button class="tree-btn" type="button" data-tree="${escAttr(it.name)}">⤓ Дерево крафта</button>` : ""}
       </div>
     </article>`;
   }
@@ -1032,30 +1895,39 @@
       all: gear.length,
       mine: gear.filter((i) => i.cls === "all" || i.cls === cls).length
     };
+    const CLASS_TITLES = {
+      melee: "Бьёт мечом вблизи",
+      ranged: "Лук и пушки издалека",
+      mage: "Заклинания, нужна мана",
+      summoner: "Помощники бьют за тебя",
+      rogue: "Кинжалы и скрытность"
+    };
+    const CLASS_HINTS = {
+      melee: "Воин: стой ближе, бей мечом или цепом.",
+      ranged: "Стрелок: бегай, стреляй. Нужны стрелы или пули.",
+      mage: "Маг: синяя шкала маны. Не стой вплотную.",
+      summoner: "Призыватель: ты уворачиваешься, бьют помощники.",
+      rogue: "Плут: постой без ударов — удар из скрытности сильнее."
+    };
+    const gearHTML = gear.length
+      ? `<div class="filter-row">
+          <button class="mini ${itemFilter === "mine" ? "on" : ""}" data-if="mine">Мой класс</button>
+          <button class="mini ${itemFilter === "all" ? "on" : ""}" data-if="all">Все</button>
+        </div>
+        <div class="item-grid">${gear.map((it) => itemCard(it, cls, itemFilter)).join("")}</div>`
+      : `<div class="item-grid">${q.collect.map((x) => `<div class="card text-only"><div class="card-body"><div class="card-title">${T(RU(x.t))}</div><p class="desc">${T(x.d)}</p></div></div>`).join("")}</div>`;
 
     app.innerHTML = `
       <div class="page">
         <div class="novice-layout">
           <aside class="quest-side">
-            <div class="progress-box">
-              <strong>${done.size} / ${quests.length} квестов</strong>
-              <div class="bar"><i style="width:${pct}%"></i></div>
+            <div class="qpanel">
+              <div class="qpanel-head"><span>Путь героя</span><b>${done.size} / ${quests.length}</b></div>
+              <div class="hpbar"><i style="width:${pct}%"></i></div>
               <div class="class-pick">
-                ${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${({
-                  melee: "Бьёт мечом вблизи",
-                  ranged: "Лук и пушки издалека",
-                  mage: "Заклинания, нужна мана",
-                  summoner: "Помощники бьют за тебя",
-                  rogue: "Кинжалы и скрытность"
-                })[c.id]}">${c.name}</button>`).join("")}
+                ${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${CLASS_TITLES[c.id]}">${c.name}</button>`).join("")}
               </div>
-              <p style="font-size:11px;color:var(--muted);margin-top:8px">${({
-                melee: "Воин: стой ближе, бей мечом или цепом.",
-                ranged: "Стрелок: бегай, стреляй. Нужны стрелы или пули.",
-                mage: "Маг: синяя шкала маны. Не стой вплотную.",
-                summoner: "Призыватель: ты уворачиваешься, бьют помощники.",
-                rogue: "Плут: постой без ударов — удар из скрытности сильнее."
-              })[cls]}</p>
+              <p class="qpanel-hint">${CLASS_HINTS[cls]}</p>
             </div>
             ${quests.map((item) => `
               <div class="q-item ${item.id === q.id ? "active" : ""} ${done.has(item.id) ? "done" : ""}" data-qid="${item.id}">
@@ -1065,8 +1937,6 @@
             `).join("")}
           </aside>
           <article class="quest">
-            <div class="frame-c tl"></div><div class="frame-c tr"></div>
-            <div class="frame-c bl"></div><div class="frame-c br"></div>
             <div class="quest-hero">
               <div class="pic" style="background-image:url('${q.bg || "assets/hero.jpg"}');filter:${q.filter || "none"}"></div>
               <div class="hero-glow"></div>
@@ -1084,14 +1954,7 @@
             ${shelf("Зачем это", "", `<p class="story" style="margin:0">${T(q.story)}</p><p class="how-tip" style="margin-top:10px">Наведи на слово — всплывёт, что это.</p>`)}
             ${q.steps ? shelf("Шаги", q.steps.length, `<div class="steps">${q.steps.map((s, i) => `<div class="step"><div class="step-n">${i + 1}</div><div><h4>${T(s.t)}</h4><p>${T(s.d)}</p></div></div>`).join("")}</div>`, true) : ""}
             ${shelf("Куда идти", (q.where || []).length, `<div class="cards">${q.where.map((x, i) => `<div class="info-card"><em class="pin">${i + 1}</em><b>${esc(plainName(x.t).ru)}</b><p>${T(x.d)}</p></div>`).join("")}</div>`)}
-            ${shelf("Предметы", `${counts.mine}/${counts.all}`, `
-              <div class="filter-row">
-                <button class="mini ${itemFilter === "mine" ? "on" : ""}" data-if="mine">Мой класс</button>
-                <button class="mini ${itemFilter === "all" ? "on" : ""}" data-if="all">Все</button>
-              </div>
-              <div class="item-grid">
-                ${gear.map((it) => itemCard(it, cls, itemFilter)).join("") || q.collect.map((x) => `<div class="item-card"><b>${T(RU(x.t))}</b><p class="desc">${T(x.d)}</p></div>`).join("")}
-              </div>`)}
+            ${shelf("Предметы", `${counts.mine}/${counts.all}`, gearHTML)}
             ${shelf("Крафт", (q.crafts || []).length, `<div class="craft-grid">${(q.crafts || []).map((x) => craftCard(x)).join("")}</div>`)}
             ${shelf("Кого бить", (q.fight || []).length, q.fight.map((x) => `<div class="kill-card"><b>${esc(plainName(x.t).ru)}</b><p>${T(x.d)}</p></div>`).join(""))}
             ${shelf("Чеклист", (q.tasks || []).length, `<div class="tasks">${q.tasks.map((t, i) => {
@@ -1118,6 +1981,7 @@
       const s = store.get();
       store.set({ tasks: { ...(s.tasks || {}), [el.dataset.task]: el.checked } });
       el.closest(".task").classList.toggle("checked", el.checked);
+      SND.play(el.checked ? "check" : "snap");
     });
     const fin = app.querySelector("[data-finish]");
     if (fin) fin.onclick = () => {
@@ -1127,6 +1991,7 @@
       else set.add(q.id);
       store.set({ doneQuests: [...set] });
       updateJourneyProgress();
+      SND.play(wasDone ? "snap" : "chime");
       announce(wasDone ? `Квест ${q.id} снова отмечен как активный` : `Квест ${q.id} завершён`);
       renderNovice(q.id);
     };
@@ -1145,7 +2010,8 @@
     rail?.querySelectorAll("[data-cls]").forEach((el) => {
       el.onclick = () => { store.set({ cls: el.dataset.cls }); renderNovice(q.id); };
     });
-    rail?.querySelector(".q-item.active")?.scrollIntoView({ block: "nearest" });
+    const railActive = rail?.querySelector(".q-item.active");
+    if (railActive && typeof railActive.scrollIntoView === "function") railActive.scrollIntoView({ block: "nearest" });
     const saved = store.get().openSh || {};
     app.querySelectorAll(".shelf").forEach((el) => {
       const key = q.id + ":" + (el.querySelector(".shelf-t")?.textContent || "");
@@ -1164,22 +2030,23 @@
     const artNote = LEX_ART_NOTE[e.en || e.ru] || "";
     const wikiName = e.en || e.ru;
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(wikiName)}`;
-    return `<article class="item-card has-art lex-card" data-kind="${escAttr(kind)}">
-      <div class="item-shot lex-shot ${escAttr(kind)}">
+    const top = artNote ? " top" : "";
+    return `<article class="card has-art lex-card">
+      <div class="card-shot slot" data-kind="${escAttr(kind)}">
         ${visualArt(e.en || e.ru, kind, art)}
         ${artNote ? `<span class="art-provenance">${esc(artNote)}</span>` : ""}
-        <span class="kind-pill">${esc(e.type)}</span>
-        <span class="tag-cls all">RU / EN</span>
+        <span class="kind-pill${top}">${esc(e.type)}</span>
+        <span class="tag-cls all${top}">RU / EN</span>
       </div>
-      <div class="body">
-        <b>${esc(e.ru)}${e.en ? `<span class="en-sub">в игре: ${esc(e.en)}</span>` : ""}</b>
+      <div class="card-body">
+        <div class="card-title">${esc(e.ru)}${e.en ? `<span class="en-sub">в игре: ${esc(e.en)}</span>` : ""}</div>
         <p class="desc">${esc(e.desc)}</p>
-        <div class="item-foot">
+        <div class="facts">
           ${e.where ? `<div class="fact"><span>Где</span><p>${esc(e.where)}</p></div>` : ""}
           ${e.used ? `<div class="fact"><span>Зачем</span><p>${esc(e.used)}</p></div>` : ""}
           ${e.craft ? `<div class="fact"><span>Крафт</span><p>${esc(e.craft)}</p></div>` : ""}
         </div>
-        <div class="catalog-card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Найти на официальной wiki ↗</a></div>
+        <div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Найти на официальной wiki ↗</a></div>
       </div>
     </article>`;
   }
@@ -1195,7 +2062,7 @@
     const list = allEntries.filter((e) => {
       if (type !== "all" && e.type !== type) return false;
       const blob = `${e.ru} ${e.en} ${e.type} ${e.desc} ${e.where || ""} ${e.used || ""} ${e.craft || ""} ${(e.aliases || []).join(" ")}`.toLocaleLowerCase("ru");
-      return !search || blob.includes(search);
+      return !search || matchesSearch(blob, search);
     }).sort((a, b) => a.ru.localeCompare(b.ru, "ru"));
     const visible = list.slice(0, limit);
     app.innerHTML = `
@@ -1229,7 +2096,7 @@
       if (replace) { history.replaceState(null, "", hash); route(); }
       else location.hash = hash;
     };
-    const input = $("#lex-s");
+    const input = $("body") && $("#lex-s");
     let timer;
     if (input) input.oninput = () => { clearTimeout(timer); timer = setTimeout(() => build({ q: input.value, limit: pageSize }, true), 220); };
     const typeSelect = $("#lex-type");
@@ -1247,37 +2114,37 @@
     const en = options.en || lex?.en || "";
     const desc = options.desc || lex?.desc || "";
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(options.wiki || en || title)}`;
-    return `<article class="item-card has-art wiki-card">
-      <div class="item-shot wiki-shot ${escAttr(kind)}">
+    return `<article class="card has-art wiki-card">
+      <div class="card-shot slot" data-kind="${escAttr(kind)}">
         ${visualArt(title, kind, options.art || "")}
         <span class="kind-pill">${esc(options.type || "Справочник")}</span>
         ${options.badge ? `<span class="tag-cls all">${esc(options.badge)}</span>` : ""}
       </div>
-      <div class="body">
-        <b>${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</b>
+      <div class="card-body">
+        <div class="card-title">${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
-        <div class="item-foot">${rows.map(([k, v]) => v ? `<div class="fact"><span>${esc(k)}</span><p>${esc(v)}</p></div>` : "").join("")}</div>
-        ${options.noWiki ? "" : `<div class="catalog-card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>`}
+        <div class="facts">${rows.map(([k, v]) => v ? `<div class="fact"><span>${esc(k)}</span><p>${esc(v)}</p></div>` : "").join("")}</div>
+        ${options.noWiki ? "" : `<div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>`}
       </div>
     </article>`;
   }
 
   function guideReferenceCard(q) {
-    return `<article class="item-card has-art wiki-card guide-reference-card">
-      <div class="item-shot wiki-shot guide ${escAttr(q.era || "pre")}">
+    return `<article class="card has-art wiki-card guide-reference-card">
+      <div class="card-shot slot" data-kind="mechanic">
         ${visualArt(q.title, "mechanic", GUIDE_ART[q.id] || "")}
         <span class="kind-pill">Глава ${String(q.id).padStart(2, "0")}</span>
         <span class="tag-cls all">${esc(({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[q.era] || "Маршрут")}</span>
       </div>
-      <div class="body">
-        <b>${esc(q.title)}<span class="en-sub">${esc(q.subtitle || "Этап прохождения")}</span></b>
+      <div class="card-body">
+        <div class="card-title">${esc(q.title)}<span class="en-sub">${esc(q.subtitle || "Этап прохождения")}</span></div>
         <p class="desc">${esc(q.mood || q.story || q.subtitle || "Практический этап маршрута прохождения.")}</p>
-        <div class="item-foot">
+        <div class="facts">
           ${q.objective ? `<div class="fact"><span>Цель</span><p>${esc(q.objective)}</p></div>` : ""}
           <div class="fact"><span>Когда</span><p>${esc(q.subtitle || "По порядку маршрута")}</p></div>
           <div class="fact"><span>Дальше</span><p>Открой главу: внутри шаги, предметы, крафты, противники и чеклист.</p></div>
         </div>
-        <div class="catalog-card-links"><a href="#/novice?q=${q.id}">Открыть полный маршрут →</a></div>
+        <div class="card-links"><a href="#/novice?q=${q.id}">Открыть полный маршрут →</a></div>
       </div>
     </article>`;
   }
@@ -1300,7 +2167,7 @@
       const name = entry.name || entry.title || "";
       const lex = CODEX.lookup ? CODEX.lookup(name) : null;
       const blob = `${JSON.stringify(entry)} ${lex?.en || ""} ${(lex?.aliases || []).join(" ")}`.toLocaleLowerCase("ru");
-      return blob.includes(search);
+      return matchesSearch(blob, search);
     });
     let cards;
     if (tab === "armor") {
@@ -1350,12 +2217,16 @@
 
   function renderItems(params) {
     fillRail("");
+    buildNameIndexes();
     const mode = params.mode === "guide" ? "guide" : "catalog";
     const cls = params.cls || "all";
     const kind = params.kind || "all";
     const qid = mode === "guide" ? (params.q || "all") : "all";
     const searchRaw = params.s || "";
     const search = searchRaw.trim().toLocaleLowerCase("ru");
+    // Короче двух символов поиск не фильтрует: одна буква «а» матчила бы
+    // почти каждое русское описание и «показывала не те предметы».
+    const searchActive = search.length >= 2;
     const favoriteOnly = params.fav === "1";
     const favoriteItems = getFavorites().item;
     const pool = mode === "guide" ? CODEX.items : indexedItems();
@@ -1364,11 +2235,11 @@
       if (cls !== "all" && item.cls !== "all" && item.cls !== cls) return false;
       if (kind !== "all" && item.kind !== kind) return false;
       if (qid !== "all" && String(item.q) !== String(qid)) return false;
-      if (!search) return true;
+      if (!searchActive) return true;
       const blob = mode === "guide"
         ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
-        : `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`;
-      return blob.toLocaleLowerCase("ru").includes(search);
+        : `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""}`;
+      return matchesSearch(blob, search);
     });
     const requestedLimit = Number.parseInt(params.limit, 10);
     const limit = mode === "catalog" && Number.isFinite(requestedLimit)
@@ -1434,10 +2305,11 @@
         </div>
         <div class="filter-bar">
           <label class="search-wrap">
-            <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+            <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
             <input id="item-s" type="search" aria-label="Поиск предметов" placeholder="${mode === "catalog" ? "Название, механика, рецепт или источник…" : "Название или «где взять»…"}" value="${escAttr(searchRaw)}" />
             ${search ? `<button class="catalog-search-clear" type="button" id="item-search-clear" aria-label="Очистить поиск">×</button>` : ""}
           </label>
+          ${mode === "catalog" ? `<button class="random-btn" type="button" id="item-random" title="Случайный предмет из каталога" aria-label="Случайный предмет">🎲</button>` : ""}
           ${mode === "guide" ? `<select id="item-q" aria-label="Фильтр предметов по этапу">
             <option value="all" ${qid === "all" ? "selected" : ""}>Все этапы</option>
             ${CODEX.quests.map((quest) => `<option value="${quest.id}" ${String(qid) === String(quest.id) ? "selected" : ""}>${quest.id}. ${quest.title}</option>`).join("")}
@@ -1445,7 +2317,11 @@
         </div>
         <div class="catalog-found">
           <p class="found">Найдено: <b>${fmt(list.length)}</b>${mode === "catalog" && visible.length < list.length ? ` · показано ${fmt(visible.length)}` : ""}</p>
-          ${search || cls !== "all" || kind !== "all" || favoriteOnly || qid !== "all" ? `<a href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a>` : ""}
+          <div class="card-controls">
+            <button class="mini" type="button" id="cards-collapse" aria-label="Свернуть все карточки">⊟ Свернуть все</button>
+            <button class="mini" type="button" id="cards-expand" aria-label="Развернуть все карточки">⊞ Развернуть все</button>
+            ${search || cls !== "all" || kind !== "all" || favoriteOnly || qid !== "all" ? `<a href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a>` : ""}
+          </div>
         </div>
         ${visible.length
           ? mode === "catalog"
@@ -1491,6 +2367,26 @@
     if (questSelect) questSelect.onchange = () => build({ q: questSelect.value });
     const more = $("#catalog-more");
     if (more) more.onclick = () => build({ limit: visible.length + CATALOG_PAGE_SIZE }, true);
+    const randomBtn = $("#item-random");
+    if (randomBtn) randomBtn.onclick = () => {
+      const poolList = indexedItems();
+      const pick = poolList[Math.floor(Math.random() * poolList.length)];
+      SND.play("pop");
+      build({ s: pick.name });
+    };
+    const collapseAllBtn = $("#cards-collapse");
+    const expandAllBtn = $("#cards-expand");
+    const applyAllCards = (collapsed) => {
+      app.querySelectorAll(".item-grid .card").forEach((card) => {
+        applyCardState(card, collapsed);
+        setCardCollapsed(cardKeyFor(card), collapsed);
+      });
+      app.querySelectorAll(".masonry").forEach((grid) => layoutMasonry(grid));
+      SND.play(collapsed ? "close" : "open");
+      toast(collapsed ? "Все карточки свёрнуты" : "Все карточки развёрнуты", collapsed ? "⊟" : "⊞");
+    };
+    if (collapseAllBtn) collapseAllBtn.onclick = () => applyAllCards(true);
+    if (expandAllBtn) expandAllBtn.onclick = () => applyAllCards(false);
     if (mode === "guide") bindSprites(app);
   }
   function renderBosses(params = {}) {
@@ -1503,9 +2399,9 @@
     ];
     const list = CODEX.bosses.filter((b) => {
       if (era !== "all" && b.era !== era) return false;
-      return !search || `${b.name} ${b.en || ""} ${b.type} ${b.where} ${b.when} ${b.summon} ${b.drops} ${b.tip || ""}`.toLowerCase().includes(search);
+      return !search || matchesSearch(`${b.name} ${b.en || ""} ${b.type} ${b.where} ${b.when} ${b.summon} ${b.drops} ${b.tip || ""}`, search);
     });
-    const minis = era === "all" ? CODEX.minis.filter((m) => !search || `${m.name} ${m.en || ""} ${m.where} ${m.when} ${m.drops}`.toLowerCase().includes(search)) : [];
+    const minis = era === "all" ? CODEX.minis.filter((m) => !search || matchesSearch(`${m.name} ${m.en || ""} ${m.where} ${m.when} ${m.drops}`, search)) : [];
     const countFor = (id) => id === "all" ? CODEX.bosses.length : CODEX.bosses.filter((b) => b.era === id).length;
     app.innerHTML = `
       <div class="page">
@@ -1543,24 +2439,26 @@
 
   function bossCard(b) {
     const era = ({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[b.era] || b.era;
+    const danger = { pre: 22, hard: 46, post: 72, end: 100 }[b.era] || 30;
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(b.en || b.name)}`;
-    return `<article class="item-card has-art boss-card">
-      <div class="item-shot boss-shot boss ${escAttr(b.era)}">
+    return `<article class="card has-art boss-card" data-era="${escAttr(b.era)}">
+      <div class="card-shot slot boss-shot" data-kind="boss">
         ${visualArt(b.name, "boss", BOSS_ART[b.n] || "")}
         ${favoriteButton("boss", b.n, b.name)}
-        <span class="kind-pill">#${String(b.n).padStart(2, "0")} · ${esc(b.type)}</span>
+        <span class="kind-pill">#${String(b.n).padStart(2, "0")}</span>
         <span class="tag-cls all">${esc(era)}</span>
       </div>
-      <div class="body">
-        <b>${esc(b.name)}${b.en ? `<span class="en-sub">в игре: ${esc(b.en)}</span>` : ""}</b>
+      <div class="card-body">
+        <div class="card-title">${esc(b.name)}${b.en ? `<span class="en-sub">в игре: ${esc(b.en)}</span>` : ""}</div>
         <p class="desc">${esc(b.tip || "Ключевой противник маршрута: подготовь арену, мобильность и подходящее этапу снаряжение.")}</p>
-        <div class="item-foot">
+        <div class="danger-row"><label>Опасность <b>${danger}%</b></label><div class="hpbar"><i style="width:${danger}%"></i></div></div>
+        <div class="facts">
           <div class="fact"><span>Где</span><p>${esc(b.where)}</p></div>
           <div class="fact"><span>Когда</span><p>${esc(b.when)}</p></div>
           <div class="fact"><span>Зови</span><p>${esc(b.summon)}</p></div>
           <div class="fact"><span>Дроп</span><p>${esc(b.drops)}</p></div>
         </div>
-        <div class="catalog-card-links">
+        <div class="card-links">
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Тактика и дроп на wiki ↗</a>
           ${b.q ? `<a class="catalog-guide-link" href="#/novice?q=${b.q}">Открыть квест ${b.q} →</a>` : ""}
         </div>
@@ -1573,21 +2471,22 @@
       : m.name === "Great Sand Shark" ? BOSS_ART_BY_ID["sand-shark"]
       : "assets/boss-sprites/cragmaw-mire.png";
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(m.name)}`;
-    return `<article class="item-card has-art boss-card mini-boss-card">
-      <div class="item-shot boss-shot boss">
+    return `<article class="card has-art boss-card mini-boss-card" data-era="hard">
+      <div class="card-shot slot boss-shot" data-kind="boss">
         ${visualArt(m.name, "boss", art)}
         <span class="kind-pill">Мини-босс</span>
         <span class="tag-cls all">Дополнительно</span>
       </div>
-      <div class="body">
-        <b>${esc(m.name)}${m.en ? `<span class="en-sub">в игре: ${esc(m.en)}</span>` : ""}</b>
+      <div class="card-body">
+        <div class="card-title">${esc(m.name)}${m.en ? `<span class="en-sub">в игре: ${esc(m.en)}</span>` : ""}</div>
         <p class="desc">Опциональный сильный противник с полезными материалами и оружием.</p>
-        <div class="item-foot">
+        <div class="danger-row"><label>Опасность <b>40%</b></label><div class="hpbar"><i style="width:40%"></i></div></div>
+        <div class="facts">
           <div class="fact"><span>Когда</span><p>${esc(m.when)}</p></div>
           <div class="fact"><span>Где</span><p>${esc(m.where)}</p></div>
           <div class="fact"><span>Дроп</span><p>${esc(m.drops)}</p></div>
         </div>
-        <div class="catalog-card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>
+        <div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>
       </div>
     </article>`;
   }
@@ -1611,9 +2510,9 @@
       <div class="page favorites-page">
         ${mast("Рюкзак героя", "Личная подборка предметов, противников и рецептов. Нажми на звезду ещё раз, чтобы убрать запись.")}
         <div class="favorite-summary" aria-label="Сводка избранного">
-          <a href="#/items?fav=1"><span>◆</span><b>${itemTotal}</b><small>предметов</small></a>
-          <a href="#/bosses"><span>☠</span><b>${bosses.length}</b><small>боссов</small></a>
-          <a href="#/crafts"><span>⚒</span><b>${crafts.length}</b><small>рецептов</small></a>
+          <a href="#/items?fav=1"><span>◆</span><span><b>${itemTotal}</b><small>предметов</small></span></a>
+          <a href="#/bosses"><span>☠</span><span><b>${bosses.length}</b><small>боссов</small></span></a>
+          <a href="#/crafts"><span>⚒</span><span><b>${crafts.length}</b><small>рецептов</small></span></a>
         </div>
         ${total ? `
           ${items.length ? shelf("Предметы с рекомендациями", items.length, `<div class="item-grid">${items.map((item) => itemCard(item, "all", "all")).join("")}</div>`, true) : ""}
@@ -1636,7 +2535,7 @@
       seen.add(key);
       const blob = `${c.name} ${c.ings} ${c.why} ${c.stage} ${c.station || ""}`;
       const ru = (CODEX.ru ? CODEX.ru(c.name) : c.name) || "";
-      return !q || `${blob} ${ru}`.toLowerCase().includes(q);
+      return !q || matchesSearch(`${blob} ${ru}`, q);
     });
     const groups = [];
     const map = {};
@@ -1650,7 +2549,7 @@
       <div class="page">
         ${mast("Крафты", "Полка по этапу. На карточке — стол, ингредиенты и зачем это нужно.")}
         <label class="search-wrap">
-          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
           <input id="craft-filter" type="search" aria-label="Поиск рецептов" placeholder="Название, материал, этап…" value="${escAttr(filter || "")}" />
         </label>
         ${groups.length
@@ -1686,50 +2585,52 @@
     if (q.length < 2) { searchPanel.classList.add("hidden"); return; }
     const hits = [];
     CODEX.quests.forEach((x) => {
-      if (`${x.title} ${x.subtitle} ${x.story} ${x.mood || ""} ${x.objective || ""}`.toLowerCase().includes(q))
-        hits.push({ href: `#/novice?q=${x.id}`, title: `Квест ${x.id}: ${x.title}`, sub: x.subtitle, type: "Квест", mark: String(x.id) });
+      if (matchesSearch(`${x.title} ${x.subtitle} ${x.story} ${x.mood || ""} ${x.objective || ""}`, q))
+        hits.push({ href: `#/novice?q=${x.id}`, title: `Квест ${x.id}: ${x.title}`, sub: x.subtitle, type: "Квест", mark: String(x.id), art: GUIDE_ART[x.id] || "" });
     });
     Object.values(CODEX.lex || {}).forEach((x) => {
       const blob = `${x.ru} ${x.en} ${x.type} ${x.desc} ${x.where || ""} ${x.used || ""} ${x.craft || ""} ${(x.aliases || []).join(" ")}`.toLowerCase();
-      if (blob.includes(q))
-        hits.push({ href: `#/lex?q=${encodeURIComponent(x.ru)}`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Словарь", mark: "A" });
+      if (matchesSearch(blob, q))
+        hits.push({ href: `#/lex?q=${encodeURIComponent(x.ru)}`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Словарь", mark: "A", art: BOSS_ART_BY_ID[x.id] || LEX_ART[x.en || x.ru] || resolveArt(x.en || x.ru) || "" });
     });
     const itemHitNames = new Set();
     (CODEX.items || []).forEach((x) => {
       const title = x.nameRu || x.name;
-      if (`${x.name} ${title} ${x.get} ${x.why} ${x.desc || ""}`.toLowerCase().includes(q)) {
-        hits.push({ href: `#/items?mode=guide&s=${encodeURIComponent(x.name)}`, title, sub: x.get, type: "Рекомендация", mark: "◆" });
+      if (matchesSearch(`${x.name} ${title} ${x.get} ${x.why} ${x.desc || ""}`, q)) {
+        hits.push({ href: `#/items?mode=guide&s=${encodeURIComponent(x.name)}`, title, sub: x.get, type: "Рекомендация", mark: "◆", art: spriteOfFixed(x) || resolveArt(x.name) || "" });
         itemHitNames.add(String(x.name).toLocaleLowerCase("ru"));
         itemHitNames.add(String(title).toLocaleLowerCase("ru"));
       }
     });
+    buildNameIndexes();
     indexedItems().forEach((item) => {
-      const blob = `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""}`.toLocaleLowerCase("ru");
+      const blob = `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""}`.toLocaleLowerCase("ru");
       const key = String(item.name).toLocaleLowerCase("ru");
-      if (blob.includes(q) && !itemHitNames.has(key)) {
+      if (matchesSearch(blob, q) && !itemHitNames.has(key)) {
         hits.push({
           href: `#/items?s=${encodeURIComponent(item.name)}`,
           title: item.name,
           sub: `${item.group} · ${item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls)}`,
           type: "Полный индекс",
-          mark: ITEM_KIND_MARK[item.kind] || "◆"
+          mark: ITEM_KIND_MARK[item.kind] || "◆",
+          art: `assets/item-sprites/${encodeURIComponent(item.id)}.png`
         });
       }
     });
     CODEX.bosses.forEach((x) => {
-      if (`${x.name} ${x.en || ""} ${x.drops} ${x.summon}`.toLowerCase().includes(q))
-        hits.push({ href: `#/bosses?q=${encodeURIComponent(x.name)}`, title: x.name, sub: x.summon, type: "Босс", mark: "☠" });
+      if (matchesSearch(`${x.name} ${x.en || ""} ${x.drops} ${x.summon}`, q))
+        hits.push({ href: `#/bosses?q=${encodeURIComponent(x.name)}`, title: x.name, sub: x.summon, type: "Босс", mark: "☠", art: BOSS_ART[x.n] || "" });
     });
     CODEX.crafts.forEach((x) => {
-      if (`${x.name} ${x.ings} ${x.why}`.toLowerCase().includes(q))
-        hits.push({ href: `#/crafts?q=${encodeURIComponent(x.name)}`, title: x.name, sub: x.ings, type: "Крафт", mark: "⚒" });
+      if (matchesSearch(`${x.name} ${x.ings} ${x.why}`, q))
+        hits.push({ href: `#/crafts?q=${encodeURIComponent(x.name)}`, title: x.name, sub: x.ings, type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
     });
     const shown = hits.slice(0, 24);
     searchPanel.classList.remove("hidden");
     searchPanel.innerHTML = hits.length
       ? `<div class="search-drop-head"><span>Найдено: ${hits.length}</span><kbd>Esc</kbd></div>${shown.map((h) => `
           <a class="search-hit" href="${h.href}">
-            <span class="search-hit-mark">${esc(h.mark)}</span>
+            <span class="search-hit-art slot">${h.art ? `<img src="${escAttr(h.art)}" alt="" loading="lazy" decoding="async" />` : `<b>${esc(h.mark)}</b>`}</span>
             <span><b>${esc(h.title)}</b><small>${esc(h.sub || "")}</small></span>
             <span class="search-hit-type">${esc(h.type)}</span>
           </a>`).join("")}`
@@ -1744,8 +2645,27 @@
     const control = e.target.closest && e.target.closest("[data-favorite-type]");
     if (!control) return;
     e.preventDefault();
-    toggleFavorite(control.dataset.favoriteType, control.dataset.favoriteKey);
-    route();
+    const type = control.dataset.favoriteType;
+    const key = control.dataset.favoriteKey;
+    const removing = getFavorites()[type]?.has(String(key));
+    toggleFavorite(type, key);
+    starPop(e.clientX, e.clientY, removing ? "remove" : "");
+    // Обновляем кнопку на месте вместо перерисовки всей страницы.
+    const saved = !removing;
+    control.classList.toggle("saved", saved);
+    control.setAttribute("aria-pressed", String(saved));
+    const label = control.getAttribute("aria-label") || "";
+    const action = saved ? "Добавить в избранное" : "Удалить из избранного";
+    const baseLabel = label.replace(/^(Добавить в избранное|Удалить из избранного)/, action);
+    control.setAttribute("aria-label", baseLabel);
+    control.title = baseLabel;
+    control.querySelector("span").textContent = saved ? "★" : "☆";
+    // Счётчик на чипе «Избранное» страницы предметов
+    const chip = document.querySelector(".favorite-chip em");
+    if (chip) chip.textContent = getFavorites().item.size;
+    // На странице избранного структура меняется — перерисовываем.
+    const view = document.body.dataset.view;
+    if (view === "favorites" || (view === "items" && location.hash.includes("fav=1"))) route();
   });
 
   addEventListener("storage", (e) => {
@@ -1782,6 +2702,11 @@
     const next = e.key === "ArrowDown" ? (index + 1) % links.length : (index - 1 + links.length) % links.length;
     links[next].focus();
   });
+
+  /* Konami: ↑↑↓↓←→←→BA — секретный режим REVENGEANCE */
+  let konamiStep = 0;
+  const KONAMI_SEQ = ["arrowup", "arrowup", "arrowdown", "arrowdown", "arrowleft", "arrowright", "arrowleft", "arrowright", "b", "a"];
+
   document.addEventListener("keydown", (e) => {
     const target = e.target;
     const typing = target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName);
@@ -1795,8 +2720,23 @@
     } else if (e.key === "Escape") {
       searchPanel.classList.add("hidden");
       document.getElementById("tt")?.setAttribute("hidden", "");
+      hideTipCard();
+    }
+    const k = (e.key || "").toLowerCase();
+    if (k === KONAMI_SEQ[konamiStep]) {
+      konamiStep += 1;
+      if (konamiStep === KONAMI_SEQ.length) { konamiStep = 0; toggleRevengeance(); }
+    } else {
+      konamiStep = k === KONAMI_SEQ[0] ? 1 : 0;
     }
   });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest && e.target.closest(".chip, .mini, .class-pick button")) SND.play("select");
+  });
+  document.addEventListener("toggle", (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains("shelf")) SND.play(e.target.open ? "open" : "close");
+  }, true);
   document.addEventListener("click", (e) => {
     if (!searchPanel.contains(e.target) && e.target !== searchInput) searchPanel.classList.add("hidden");
   });
@@ -1808,6 +2748,7 @@
     const open = !!railEl?.classList.contains("open");
     menuButton.setAttribute("aria-expanded", String(open));
     if (scrim) scrim.hidden = !open;
+    SND.play("tick");
   };
   if (scrim) scrim.onclick = () => {
     railEl?.classList.remove("open");
@@ -1815,10 +2756,246 @@
     scrim.hidden = true;
   };
 
+  const soundToggle = document.getElementById("sound-toggle");
+  if (soundToggle) {
+    soundToggle.setAttribute("aria-pressed", String(SND.enabled));
+    soundToggle.setAttribute("aria-label", SND.enabled ? "Звук интерфейса: включён" : "Звук интерфейса: выключен");
+    soundToggle.onclick = () => {
+      SND.setEnabled(!SND.enabled);
+      soundToggle.setAttribute("aria-pressed", String(SND.enabled));
+      soundToggle.setAttribute("aria-label", SND.enabled ? "Звук интерфейса: включён" : "Звук интерфейса: выключен");
+      if (SND.enabled) SND.play("blip");
+      toast(SND.enabled ? "Звук интерфейса включён" : "Звук интерфейса выключен", SND.enabled ? "♪" : "∅");
+    };
+  }
+  document.addEventListener("pointerdown", () => SND.unlock(), { once: true });
+
+  /* Полоса прокрутки в виде HP босса */
+  const scrollHp = document.getElementById("scroll-hp");
+  let scrollTicking = false;
+  addEventListener("scroll", () => {
+    if (scrollTicking) return;
+    scrollTicking = true;
+    requestAnimationFrame(() => {
+      scrollTicking = false;
+      if (!scrollHp) return;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const p = max > 0 ? Math.min(100, (scrollY / max) * 100) : 0;
+      scrollHp.style.width = p + "%";
+    });
+  }, { passive: true });
+
+  addEventListener("scroll", (e) => {
+    if (!tipCard || tipCard.hidden) return;
+    if (e.target && tipCard.contains(e.target)) return; // внутренний скролл карточки
+    hideTipCard();
+  }, { capture: true, passive: true });
+
   const toTop = document.getElementById("to-top");
   addEventListener("scroll", () => toTop?.classList.toggle("show", scrollY > 650), { passive: true });
   if (toTop) toTop.onclick = () => scrollTo({ top: 0, behavior: "smooth" });
 
-  addEventListener("hashchange", route);
+  /* ---------- дерево крафта ---------- */
+  const treeModal = document.getElementById("tree-modal");
+  const treeBody = document.getElementById("tree-body");
+  let treeStack = [];
+  let treeCurrent = "";
+
+  function treeNodeHTML(name, depth, seen, count) {
+    const info = ingredientInfo(name);
+    const key = normalizeArtName(name);
+    const recipe = info.recipe;
+    const kids = recipe && recipe.ings.length ? recipe.ings : [];
+    const cyclic = seen.has(key);
+    if (!cyclic) seen.add(key);
+    const tooDeep = depth >= 5;
+    const showKids = !cyclic && kids.length > 0 && !tooDeep;
+    const art = info.art
+      ? `<img src="${escAttr(info.art)}" alt="" loading="lazy" decoding="async" />`
+      : (info.remoteArt
+        ? `<img class="remote" src="${escAttr(info.remoteArt)}" alt="" loading="lazy" decoding="async" />`
+        : unavailableArt("mat"));
+    const linkName = info.catName || info.en || name;
+    const srcLine = recipe
+      ? (recipe.station ? `крафт · ${esc(recipe.station)}` : "крафт")
+      : (info.obtain ? esc(info.obtain.replace(/\s*[·•].*$/, "")) : "источник — смотри в полном каталоге");
+    const stationIcon = recipe && recipe.station
+      ? `<img class="tstation" src="${escAttr(craftStationSprite(recipe.station))}" alt="" loading="lazy" decoding="async" />`
+      : "";
+    const kidsHTML = showKids
+      ? `<div class="tkids" hidden>${kids.map((k) => treeNodeHTML(k.name, depth + 1, seen, k.count)).join("")}</div>`
+      : "";
+    const moreHTML = kids.length > 0 && tooDeep
+      ? `<div class="tmore">рецепт уходит глубже — открой предмет в полном каталоге</div>`
+      : "";
+    return `
+    <div class="tnode${cyclic ? " cyclic" : ""}${showKids ? " has-kids" : ""}">
+      <div class="tnode-card" data-ing="${escAttr(name)}" role="button" tabindex="0" aria-label="Открыть дерево: ${escAttr(info.ru)}">
+        <span class="slot tslot">${art}</span>
+        <span class="tinfo">
+          <b>${esc(info.ru)}</b>
+          ${info.en ? `<small>${esc(info.en)}</small>` : ""}
+        </span>
+        <span class="tmeta">
+          ${count ? `<em class="tcount">×${esc(count)}</em>` : ""}
+          ${stationIcon}
+          <span class="tsrc" title="${escAttr(srcLine)}">${srcLine}</span>
+          <a class="tlink" href="#/items?s=${encodeURIComponent(linkName)}" title="Открыть в полном каталоге" aria-label="Открыть ${escAttr(info.ru)} в каталоге">↗</a>
+        </span>
+        <button class="ttoggle" type="button" ${showKids ? 'data-toggle aria-expanded="false" aria-label="Развернуть рецепт"' : (cyclic ? 'disabled aria-hidden="true"' : 'disabled aria-hidden="true"')}>${showKids ? "▸" : (cyclic ? "↺" : "")}</button>
+      </div>
+      ${kidsHTML}${moreHTML}
+    </div>`;
+  }
+
+  function renderTree(name) {
+    if (!treeModal || !treeBody) return;
+    treeCurrent = name;
+    const info = ingredientInfo(name);
+    const rootImg = document.getElementById("tree-root-img");
+    const rootName = document.getElementById("tree-root-name");
+    const rootSub = document.getElementById("tree-root-sub");
+    const rootDesc = document.getElementById("tree-root-desc");
+    const rootSrc = document.getElementById("tree-root-src");
+    if (rootImg) {
+      if (info.art) rootImg.src = info.art;
+      else if (info.remoteArt) rootImg.src = info.remoteArt;
+      else rootImg.removeAttribute("src");
+    }
+    if (rootName) rootName.textContent = info.ru;
+    if (rootSub) rootSub.textContent = info.en ? `в игре: ${info.en}` : "";
+    if (rootDesc) rootDesc.textContent = info.desc || "";
+    if (rootSrc) {
+      let line = "";
+      if (info.recipe && info.recipe.ings.length) {
+        line = "рецепт: " + info.recipe.ings.map((i) => (i.count ? `${i.count} × ${i.name}` : i.name)).join(" + ") + (info.recipe.station ? ` · у ${info.recipe.station}` : "");
+      } else if (info.obtain) {
+        line = info.obtain.replace(/\s*[·•].*$/, "").trim();
+      }
+      rootSrc.textContent = line;
+      rootSrc.title = line;
+    }
+    const backBtn = document.getElementById("tree-back");
+    if (backBtn) backBtn.disabled = treeStack.length === 0;
+    const seen = new Set();
+    treeBody.innerHTML = treeNodeHTML(name, 0, seen);
+    bindSprites(treeBody);
+  }
+
+  function openCraftTree(name) {
+    if (!treeModal) return;
+    if (treeCurrent && normalizeArtName(treeCurrent) !== normalizeArtName(name)) {
+      treeStack.push(treeCurrent);
+    }
+    renderTree(name);
+    treeModal.hidden = false;
+    document.body.classList.add("tree-open");
+    SND.play("open");
+    const close = document.getElementById("tree-close");
+    if (close) close.focus();
+  }
+
+  function closeCraftTree() {
+    if (!treeModal) return;
+    treeModal.hidden = true;
+    document.body.classList.remove("tree-open");
+    SND.play("close");
+  }
+
+  if (treeModal) {
+    treeModal.addEventListener("click", (e) => {
+      if (e.target.closest("[data-tree-close]")) { closeCraftTree(); return; }
+      const t = e.target.closest("[data-toggle]");
+      if (t) {
+        const kids = t.closest(".tnode")?.querySelector(":scope > .tkids");
+        if (!kids) return;
+        const open = kids.hidden;
+        kids.hidden = !open;
+        t.textContent = open ? "▾" : "▸";
+        t.setAttribute("aria-expanded", String(open));
+        t.setAttribute("aria-label", open ? "Свернуть рецепт" : "Развернуть рецепт");
+        SND.play(open ? "open" : "close");
+        return;
+      }
+      const ing = e.target.closest("[data-ing]");
+      if (ing) {
+        if (e.target.closest("a")) return; // ↗ ведёт в каталог штатно
+        const ingName = ing.dataset.ing || "";
+        if (treeCurrent && normalizeArtName(ingName) === normalizeArtName(treeCurrent)) {
+          // клик по карточке корня — развернуть/свернуть его ветку
+          const rootNode = treeBody.querySelector(":scope > .tnode");
+          const kids = rootNode ? rootNode.querySelector(":scope > .tkids") : null;
+          const toggle = rootNode ? rootNode.querySelector(":scope > .tnode-card > .ttoggle[data-toggle]") : null;
+          if (kids && toggle) {
+            const open = kids.hidden;
+            kids.hidden = !open;
+            toggle.textContent = open ? "▾" : "▸";
+            toggle.setAttribute("aria-expanded", String(open));
+            SND.play(open ? "open" : "close");
+          }
+          return;
+        }
+        openCraftTree(ingName);
+        e.preventDefault();
+      }
+    });
+    treeModal.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && e.target.closest && e.target.closest("[data-ing]")) {
+        e.preventDefault();
+        openCraftTree(e.target.closest("[data-ing]").dataset.ing || "");
+      }
+    });
+    const setAllNodes = (open) => {
+      treeBody.querySelectorAll(".tnode").forEach((node) => {
+        const kids = node.querySelector(":scope > .tkids");
+        const toggle = node.querySelector(":scope > .tnode-card > .ttoggle[data-toggle]");
+        if (!kids || !toggle) return;
+        kids.hidden = !open;
+        toggle.textContent = open ? "▾" : "▸";
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.setAttribute("aria-label", open ? "Свернуть рецепт" : "Развернуть рецепт");
+      });
+      SND.play("open");
+    };
+    const expandAll = document.getElementById("tree-expand");
+    const collapseAll = document.getElementById("tree-collapse");
+    if (expandAll) expandAll.onclick = () => setAllNodes(true);
+    if (collapseAll) collapseAll.onclick = () => setAllNodes(false);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && treeModal && !treeModal.hidden) closeCraftTree();
+    });
+    const backBtn = document.getElementById("tree-back");
+    if (backBtn) backBtn.onclick = () => {
+      const prev = treeStack.pop();
+      if (prev) {
+        renderTree(prev);
+        SND.play("select");
+      }
+    };
+  }
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest && e.target.closest("[data-tree]");
+    if (!btn) return;
+    e.preventDefault();
+    openCraftTree(btn.dataset.tree || "");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    if (e.target.closest && e.target.closest("#tree-modal")) return;
+    const ing = e.target.closest && e.target.closest(".ing");
+    if (ing) {
+      e.preventDefault();
+      openCraftTree(ing.dataset.ing || "");
+    }
+  });
+
+  addEventListener("hashchange", () => { SND.play("tick"); route(); });
   route();
+
+  /* Восстановление режима мести из сохранения */
+  if (store.get().revengeance) {
+    syncRevengeanceUI(true);
+    FX.set("fire");
+  }
 })();
