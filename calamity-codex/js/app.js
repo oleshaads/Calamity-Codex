@@ -2833,6 +2833,9 @@
       ? `<img class="craft-tree-inspector-art${info.remoteArt && !info.art ? " remote" : ""}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />`
       : `<span class="craft-tree-inspector-art-fallback" aria-hidden="true">◆</span>`;
     const where = sourceHTML || info.obtain || "Точный источник указан в соответствующем биоме или событии Terraria / Calamity.";
+    const recipeText = info.recipe && info.recipe.ings.length
+      ? `${info.recipe.ings.map((item) => `${item.count ? `${item.count} × ` : ""}${ruItemName(item.name)}`).join(" + ")}${info.recipe.station ? ` · ${ruText(info.recipe.station)}` : ""}`
+      : "Предмет добывается или находится в мире; рецепта нет.";
     const recipeHTML = info.recipe && info.recipe.ings.length
       ? `<div class="craft-chips">${info.recipe.ings.map((item) => ingChipHTML(item.name, item.count)).join("")}${stationChipHTML(info.recipe.station)}</div>`
       : `<p>Не крафтится напрямую: добывается, находится в мире или выпадает из указанного источника.</p>`;
@@ -2856,7 +2859,42 @@
         <div class="fact"><span>Когда</span><p>${esc(ruText(info.when || "По мере открытия соответствующей ветки Terraria / Calamity."))}</p></div>
         <div class="fact recipe-fact"><span>Полный рецепт</span>${recipeHTML}</div>
       </div>
-      <div class="craft-tree-inspector-actions"><a class="craft-catalog-link" href="${escAttr(wiki)}" target="_blank" rel="noopener noreferrer">Открыть справочную страницу ↗</a></div>`;
+      <div class="craft-tree-inspector-actions">
+        <button class="tree-btn inspector-copy" type="button" data-copy-recipe="${escAttr(recipeText)}">⧉ Скопировать рецепт</button>
+        <a class="craft-catalog-link" href="${escAttr(wiki)}" target="_blank" rel="noopener noreferrer">Открыть справочную страницу ↗</a>
+      </div>`;
+  }
+
+  async function copyCraftRecipe(text) {
+    const value = String(text || "");
+    if (!value) return;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const area = document.createElement("textarea");
+        area.value = value;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+      }
+      toast("Рецепт скопирован", "⧉");
+    } catch {
+      toast("Не удалось скопировать рецепт", "!");
+    }
+  }
+
+  function markCraftTreeNode(section, name) {
+    const surface = section?.querySelector("[data-tree-surface='inline']");
+    if (!surface) return;
+    surface.querySelectorAll(".tnode-card.is-selected").forEach((card) => card.classList.remove("is-selected"));
+    const selected = [...surface.querySelectorAll(".tnode-card[data-ing]")]
+      .find((card) => normalizeArtName(card.dataset.ing || "") === normalizeArtName(name || ""));
+    if (selected) selected.classList.add("is-selected");
   }
 
   function renderCraftTreeInspector(section, name, scroll = false) {
@@ -2866,10 +2904,12 @@
     if (!name) {
       panel.hidden = true;
       content.innerHTML = "";
+      markCraftTreeNode(section, "");
       return;
     }
     content.innerHTML = craftTreeInspectorHTML(name);
     panel.hidden = false;
+    markCraftTreeNode(section, name);
     bindSprites(content);
     if (scroll) requestAnimationFrame(() => panel.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
@@ -2964,6 +3004,11 @@
       toast("Ветка крафта очищена", "×");
     };
     section.addEventListener("click", (e) => {
+      const copy = e.target.closest("[data-copy-recipe]");
+      if (copy) {
+        copyCraftRecipe(copy.dataset.copyRecipe || "");
+        return;
+      }
       const more = e.target.closest("[data-choice-more]");
       if (more) {
         section.dataset.choiceLimit = String(Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE) + CRAFT_PICKER_PAGE_SIZE);
