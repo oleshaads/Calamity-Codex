@@ -12,8 +12,13 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(root, "js/catalog.js"), "utf8"), context);
 const index = context.window.CALAMITY_ITEM_INDEX;
 const items = index?.items || [];
+const ruNamesPath = path.join(root, "js/ru-names.js");
+check(fs.existsSync(ruNamesPath), "Russian catalog name layer is missing");
+vm.runInContext(fs.readFileSync(ruNamesPath, "utf8"), context, { filename: "js/ru-names.js" });
+const russianNames = context.window.CALAMITY_RU_NAMES?.byId || {};
 
 check(items.length === 2535, `Expected 2535 verified catalog items, got ${items.length}`);
+check(items.every((item) => /[А-Яа-яЁё]/.test(russianNames[item[2]] || "")), "A public catalog record has no Russian display name");
 check(index.coverage?.sprites === items.length, "Sprite coverage does not match public item count");
 check(index.coverage?.russianDescriptions === items.length, "Russian description coverage is incomplete");
 check(index.coverage?.omittedWithoutSprite === 38, "Unexpected localization-only omission count");
@@ -25,7 +30,10 @@ const spriteFiles = fs.readdirSync(path.join(root, "assets/item-sprites")).filte
 check(spriteFiles.length === items.length, `Expected ${items.length} item sprite files, got ${spriteFiles.length}`);
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
-check(app.includes("esc(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
+const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+check(indexHtml.includes("js/ru-names.js"), "Russian catalog name layer is not loaded by index.html");
+check(app.includes("ruItemName"), "Catalog cards are not using the Russian display-name layer");
+check(app.includes("item.description || purpose") && app.includes("ruText(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
 check(!app.includes("KIND_SVG"), "Generated category SVG fallbacks are still present");
 check(app.includes("нет спрайта"), "Honest missing-sprite state is absent for non-catalog references");
 

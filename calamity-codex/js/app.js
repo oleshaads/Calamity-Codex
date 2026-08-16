@@ -143,15 +143,15 @@
         : `<i aria-hidden="true">${esc(ing.count || "?")}</i>`;
     }).join("");
     const craftLine = info.recipe
-      ? `${info.recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(i.name)}` : esc(i.name))).join(" + ")}${info.recipe.station ? ` · у ${esc(info.recipe.station)}` : ""}`
+      ? `${info.recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(ruItemName(i.name))}` : esc(ruItemName(i.name)))).join(" + ")}${info.recipe.station ? ` · у ${esc(ruText(info.recipe.station))}` : ""}`
       : "";
     const obtainLine = (!info.recipe || !/^Скрафтить/i.test(info.obtain || "")) ? info.obtain : "";
     tt.innerHTML = `
       <div class="tt-type">Ингредиент · ${esc(KIND_RU[info.kind] || "Предмет")}</div>
       <div class="tt-ru">${esc(info.ru)}</div>
       ${info.en ? `<div class="tt-en">в игре: ${esc(info.en)}</div>` : ""}
-      ${info.desc ? `<p>${esc(info.desc)}</p>` : ""}
-      ${obtainLine ? `<p><b>Где взять</b> — ${esc(obtainLine)}</p>` : ""}
+      ${info.desc ? `<p>${esc(ruText(info.desc))}</p>` : ""}
+      ${obtainLine ? `<p><b>Где взять</b> — ${esc(ruText(obtainLine))}</p>` : ""}
       ${craftLine
         ? `<p><b>Рецепт</b> — ${craftLine}</p><div class="tt-ings">${ingIcons}</div>`
         : `<p><b>Рецепт</b> — предмет не крафтится: добывается или находится в мире.</p>`}
@@ -164,10 +164,10 @@
       <div class="tt-type">${info.type}</div>
       <div class="tt-ru">${info.ru}</div>
       <div class="tt-en">${info.en}</div>
-      <p>${info.desc}</p>
-      ${info.where ? `<p><b>Где взять / где это</b> — ${info.where}</p>` : ""}
-      ${info.craft ? `<p><b>Крафт</b> — ${info.craft}</p>` : ""}
-      ${info.used ? `<p><b>Зачем</b> — ${info.used}</p>` : ""}
+      <p>${ruText(info.desc)}</p>
+      ${info.where ? `<p><b>Где взять / где это</b> — ${ruText(info.where)}</p>` : ""}
+      ${info.craft ? `<p><b>Крафт</b> — ${ruText(info.craft)}</p>` : ""}
+      ${info.used ? `<p><b>Зачем</b> — ${ruText(info.used)}</p>` : ""}
     `;
   };
   const placeTT = (el) => {
@@ -232,12 +232,12 @@
     const when = info.when || "";
     const type = (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
     const craftLine = recipe
-      ? recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(i.name)}` : esc(i.name))).join(" + ") + (recipe.station ? ` · у ${esc(recipe.station)}` : "")
-      : ((lex && lex.craft) || "");
+      ? recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(ruItemName(i.name))}` : esc(ruItemName(i.name)))).join(" + ") + (recipe.station ? ` · у ${esc(ruText(recipe.station))}` : "")
+      : ruText((lex && lex.craft) || "");
     const treeHTML = recipe
       ? `<div class="tip-card-tree">${treeNodeHTML(name, 0, new Set())}</div>`
       : "";
-    const desc = info.desc || (lex && lex.desc) || "";
+    const desc = ruText(info.desc || (lex && lex.desc) || "");
     const catItem = catalogByName(name);
     const tipSources = npcSourceForItem({ id: catItem ? catItem.id : "" });
     tipCard.innerHTML = `
@@ -293,7 +293,7 @@
     const lex = exactLexLookup(npcName);
     const boss = bossRecordForName(npcName);
     const mini = boss ? null : miniRecordForName(npcName);
-    const ru = boss ? boss.name : mini ? mini.name : npcRuName(npcName);
+    const ru = boss ? boss.name : mini ? ruItemName(mini.name) : npcRuName(npcName);
     const type = boss ? "Босс" : mini ? "Мини-босс" : "Противник";
     const localArt = routeBossArt(boss)
       || (mini && (mini.name === "Giant Clam" ? BOSS_ART_BY_ID["giant-clam"] : mini.name === "Great Sand Shark" ? BOSS_ART_BY_ID["sand-shark"] : "assets/boss-sprites/cragmaw-mire.png"))
@@ -302,22 +302,22 @@
     const artHTML = localArt
       ? `<img class="item-art" src="${escAttr(localArt)}" alt="" loading="lazy" decoding="async" data-kind="boss" />`
       : `<b class="npc-mono" aria-hidden="true">${escAttr(String(ru || npcName).trim().charAt(0).toUpperCase())}</b>`;
-    const desc = (boss && boss.tip) || NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || "");
+    const desc = ruText((boss && boss.tip) || NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || ""));
     const facts = [];
     if (boss) {
-      if (boss.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(boss.where)}</p></div>`);
-      if (boss.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(boss.when)}</p></div>`);
-      if (boss.summon) facts.push(`<div class="fact"><span>Как призвать</span><p>${esc(boss.summon)}</p></div>`);
-      if (boss.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(boss.drops)}</p></div>`);
+      if (boss.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(ruText(boss.where))}</p></div>`);
+      if (boss.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(ruText(boss.when))}</p></div>`);
+      if (boss.summon) facts.push(`<div class="fact"><span>Как призвать</span><p>${esc(ruText(boss.summon))}</p></div>`);
+      if (boss.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(ruText(boss.drops))}</p></div>`);
     } else if (mini) {
-      if (mini.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(mini.where)}</p></div>`);
-      if (mini.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(mini.when)}</p></div>`);
-      if (mini.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(mini.drops)}</p></div>`);
+      if (mini.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(ruText(mini.where))}</p></div>`);
+      if (mini.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(ruText(mini.when))}</p></div>`);
+      if (mini.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(ruText(mini.drops))}</p></div>`);
     } else {
-      if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(info.biome)}</p></div>`);
-      if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(info.time)}</p></div>`);
-      if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(info.req)}</p></div>`);
-      if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(info.source)}</p></div>`);
+      if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(ruText(info.biome))}</p></div>`);
+      if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(ruText(info.time))}</p></div>`);
+      if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(ruText(info.req))}</p></div>`);
+      if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(ruText(info.source))}</p></div>`);
     }
     if (!facts.length) facts.push(`<div class="fact"><span>Где</span><p>Точные условия спавна — на официальной wiki.</p></div>`);
     const drops = [];
@@ -1167,17 +1167,36 @@
     }
     return false;
   }
+  const RU_NAMES = window.CALAMITY_RU_NAMES || { byId: {}, byName: {}, translate: (name) => name, text: (text) => text };
+  const EXACT_RU_NAMES = new Map();
+  Object.values(CODEX.lex || {}).forEach((entry) => {
+    [entry.en, entry.ru, ...(entry.aliases || [])].filter(Boolean).forEach((name) => EXACT_RU_NAMES.set(String(name).toLocaleLowerCase("ru"), entry.ru));
+  });
+  function ruItemName(value, record) {
+    const raw = typeof value === "object" ? (value.name || "") : String(value || "");
+    const item = typeof value === "object" ? value : record;
+    if (item && item.nameRu) return item.nameRu;
+    const exact = EXACT_RU_NAMES.get(raw.toLocaleLowerCase("ru"));
+    if (exact && /[А-Яа-яЁё]/.test(exact)) return exact;
+    if (item && item.id && RU_NAMES.byId[item.id]) return RU_NAMES.byId[item.id];
+    if (RU_NAMES.byName[raw]) return RU_NAMES.byName[raw];
+    return RU_NAMES.translate(raw);
+  }
+  const ruText = (value) => RU_NAMES.text(value);
   const plainName = (name) => {
-    const lex = CODEX.lookup ? CODEX.lookup(name) : null;
-    if (lex) {
-      const ru = lex.ru || name;
-      const en = lex.en && lex.en.toLowerCase() !== String(ru).toLowerCase() ? lex.en : "";
-      return { ru, en };
-    }
-    const ru = CODEX.ru ? CODEX.ru(name) : name;
-    const en = /[A-Za-z]/.test(String(name)) && String(name) !== ru ? name : "";
+    const ru = ruItemName(name);
+    const en = /[A-Za-z]/.test(String(name)) && String(name) !== ru ? String(name) : "";
     return { ru, en };
   };
+  function ruRecipePart(value) {
+    const raw = String(value || "").trim();
+    const match = raw.match(/^(\d+(?:[.,]\d+)?\s*[×x]?\s*)(.+)$/);
+    const amount = match ? match[1].trim() : "";
+    const item = match ? match[2].trim() : raw;
+    const translated = ruItemName(item);
+    const label = translated && translated !== item ? translated : ruText(item);
+    return amount ? `${amount} ${label}` : label;
+  }
   const splitIngs = (s) => {
     if (Array.isArray(s)) return s.map((x) => String(x).trim()).filter(Boolean);
     const raw = String(s || "").replace(/\s*@\s*.+$/, "").trim();
@@ -1289,14 +1308,14 @@
         ${favoriteButton("craft", src.name, ru)}
       </div>
       <div class="card-body">
-        ${station ? `<span class="station-tag"><img src="${escAttr(craftStationSprite(station))}" alt="" /><span>${esc(station)}</span></span>` : ""}
-        <div class="card-title">${esc(ru)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
+        ${station ? `<span class="station-tag"><img src="${escAttr(craftStationSprite(station))}" alt="" /><span>${esc(ruText(station))}</span></span>` : ""}
+        <div class="card-title">${esc(ru)}${en ? `<span class="en-sub">оригинал: ${esc(en)}</span>` : ""}</div>
         ${ings.length ? `<ul class="ings-list">${ings.map((x, i) => {
       const enName = enIngs[i] ? cleanIng(enIngs[i]) : "";
       const ingKey = enName || cleanIng(x);
-      return `<li class="ing" data-ing="${escAttr(ingKey)}" tabindex="0" role="button" aria-label="Подробнее об ингредиенте: ${escAttr(ingKey)}">${icons[i]}<span>${esc(x)}</span></li>`;
+      return `<li class="ing" data-ing="${escAttr(ingKey)}" tabindex="0" role="button" aria-label="Подробнее об ингредиенте: ${escAttr(ruItemName(ingKey))}">${icons[i]}<span>${esc(ruRecipePart(x))}</span></li>`;
     }).join("")}</ul>` : ""}
-        ${why ? `<div class="facts"><div class="fact"><span>Зачем</span><p>${esc(why)}</p></div></div>` : ""}
+        ${why ? `<div class="facts"><div class="fact"><span>Зачем</span><p>${esc(ruText(why))}</p></div></div>` : ""}
         <div class="card-actions">
           <button class="tree-btn" type="button" data-tree="${escAttr(cleanName)}">⤓ Дерево крафта</button>
           ${catRecipe ? `<a class="craft-catalog-link" href="#/items?s=${encodeURIComponent(catRecipe.name)}" title="Открыть полную карточку в каталоге">в каталоге ↗</a>` : ""}
@@ -1317,13 +1336,13 @@
       <div class="body">
         <h3>${esc(title)}</h3>
         ${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}
-        ${b.desc ? `<p class="desc">${esc(b.desc)}</p>` : ""}
+        ${b.desc ? `<p class="desc">${esc(ruText(b.desc))}</p>` : ""}
         <div class="facts">
-          ${b.where ? `<div class="fact"><span>Где</span><p>${esc(b.where)}</p></div>` : ""}
-          ${b.when ? `<div class="fact"><span>Когда</span><p>${esc(b.when)}</p></div>` : ""}
-          ${loot.length ? `<div class="fact"><span>Лут</span><div class="loot-chips">${loot.map((x) => `<em>${esc(x)}</em>`).join("")}</div></div>` : ""}
-          ${b.need ? `<div class="fact"><span>Бери</span><p>${esc(b.need)}</p></div>` : ""}
-          ${b.tip ? `<div class="fact"><span>Совет</span><p>${esc(b.tip)}</p></div>` : ""}
+          ${b.where ? `<div class="fact"><span>Где</span><p>${esc(ruText(b.where))}</p></div>` : ""}
+          ${b.when ? `<div class="fact"><span>Когда</span><p>${esc(ruText(b.when))}</p></div>` : ""}
+          ${loot.length ? `<div class="fact"><span>Лут</span><div class="loot-chips">${loot.map((x) => `<em>${esc(ruText(x))}</em>`).join("")}</div></div>` : ""}
+          ${b.need ? `<div class="fact"><span>Бери</span><p>${esc(ruText(b.need))}</p></div>` : ""}
+          ${b.tip ? `<div class="fact"><span>Совет</span><p>${esc(ruText(b.tip))}</p></div>` : ""}
         </div>
       </div>
     </article>`;
@@ -1405,7 +1424,8 @@
     // Русские имена/алиасы словаря для поиска по каталогу («кровать» → Bed)
     CATALOG_BY_NORM.forEach((it, k) => {
       const lex = exactLexLookup(it.name);
-      if (lex) CATALOG_LEX.set(k, `${lex.ru} ${lex.en} ${(lex.aliases || []).join(" ")}`);
+      if (lex) CATALOG_LEX.set(k, `${lex.ru} ${lex.en} ${(lex.aliases || []).join(" ")} ${ruItemName(it)}`);
+      else CATALOG_LEX.set(k, ruItemName(it));
     });
   }
 
@@ -1586,7 +1606,7 @@
     const guide = GUIDE_BY_NORM.get(key)
       || (lex && (GUIDE_BY_NORM.get(normalizeArtName(lex.en)) || GUIDE_BY_NORM.get(normalizeArtName(lex.ru))))
       || null;
-    let ru = (lex && lex.ru) || (guide && (guide.nameRu || guide.name)) || name;
+    let ru = (guide && guide.nameRu) || (lex && lex.ru) || (cat ? ruItemName(name, cat) : ruItemName(name)) || name;
     let en = (lex && lex.en && String(lex.en).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) ? lex.en : "";
     if (!en && cat && cat.name.toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = cat.name;
     if (!en && guide && /[A-Za-z]/.test(String(guide.name)) && String(guide.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = guide.name;
@@ -1600,7 +1620,8 @@
       else if (vanilla && vanilla.remote) remoteArt = vanilla.remote;
     }
     const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || "";
-    const obtain = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || "";
+    const obtainRaw = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || "";
+    const obtain = ruText(obtainRaw);
     const recipe = getRecipeIndex().get(key)
       || (cat && getRecipeIndex().get(normalizeArtName(cat.name)))
       || (lex && getRecipeIndex().get(normalizeArtName(lex.en)))
@@ -1632,7 +1653,7 @@
   }
   function npcRuName(name) {
     buildNpcRu();
-    return NPC_RU.get(name) || name;
+    return NPC_RU.get(name) || ruText(name) || name;
   }
   function matchRouteName(left, right) {
     const a = normalizeArtName(left);
@@ -1664,9 +1685,8 @@
   }
   function itemRuById(id) {
     const it = itemById(id);
-    if (!it) return id;
-    const lex = exactLexLookup(it.name);
-    return (lex && lex.ru) || it.name;
+    if (!it) return ruItemName(id);
+    return ruItemName(it);
   }
   function npcSourceLines(sources, short) {
     if (!sources) return "";
@@ -1677,8 +1697,8 @@
       parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${chance}${cond}</span>`);
     });
     if (!short) {
-      if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i><span>Выбивается из: ${esc(sources.tiles.join(", "))}</span></span>`);
-      if ((sources.chests || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">▤</i><span>Лежит в: ${esc(sources.chests.join(", "))}</span></span>`);
+      if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i><span>Выбивается из: ${esc(ruText(sources.tiles.join(", ")))}</span></span>`);
+      if ((sources.chests || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">▤</i><span>Лежит в: ${esc(ruText(sources.chests.join(", ")))}</span></span>`);
     }
     return parts.join("");
   }
@@ -2001,11 +2021,12 @@
     return byKind[item.kind] || byKind.misc;
   }
   function indexedItemCard(item) {
+    const title = ruItemName(item);
     const detail = detailedNameMap().get(String(item.name).toLocaleLowerCase("ru"));
     const wikiTitle = encodeURIComponent(String(item.name).replace(/ /g, "_"));
     const wikiUrl = `https://calamitymod.wiki.gg/wiki/${wikiTitle}`;
     const classLabel = item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls);
-    const detailName = detail && (detail.nameRu || detail.name);
+    const detailName = detail && (detail.nameRu || ruItemName(detail));
     const purpose = catalogPurpose(item);
     const isCraft = /^Скрафтить/i.test(item.obtain || "");
     const useWhen = CATALOG_STAGE[Math.min(Math.max(item.stage, 0), CATALOG_STAGE.length - 1)];
@@ -2017,15 +2038,15 @@
     return `<article class="card has-art catalog-item-card">
       <div class="card-shot slot" data-kind="${escAttr(item.kind)}">
         ${art}
-        ${favoriteButton("item", item.name, item.name)}
+        ${favoriteButton("item", item.name, title)}
         <span class="kind-pill">${esc(KIND_RU[item.kind] || item.kind)}</span>
         <span class="tag-cls ${escAttr(item.cls)}">${esc(classLabel)}</span>
       </div>
       <div class="card-body">
-        <div class="card-title">${esc(item.name)}<span class="en-sub">${esc(item.group)}</span></div>
-        <p class="desc">${esc(item.description || purpose)}</p>
+        <div class="card-title">${esc(title)}<span class="en-sub">оригинал: ${esc(item.name)}</span></div>
+        <p class="desc">${esc(ruText(item.description || purpose))}</p>
         <div class="facts">
-          ${isCraft ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(item.obtain)}</p>`}</div>` : `<div class="fact"><span>Где</span>${npcSourceLines(itemSources) ? `<div class="src-list">${npcSourceLines(itemSources)}</div>` : `<p>${esc(item.obtain || "Точный источник указан на официальной wiki.")}</p>`}</div>`}
+          ${isCraft ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(ruText(item.obtain))}</p>`}</div>` : `<div class="fact"><span>Где</span>${npcSourceLines(itemSources) ? `<div class="src-list">${npcSourceLines(itemSources)}</div>` : `<p>${esc(ruText(item.obtain || "Точный источник указан на официальной wiki."))}</p>`}</div>`}
           <div class="fact"><span>Зачем</span><p>${esc(purpose)}</p></div>
           <div class="fact"><span>Когда</span><p>${esc(useWhen)}</p></div>
         </div>
@@ -2043,16 +2064,16 @@
     const hide = filter === "mine" && !mine;
     const dim = filter === "all" && !mine;
     const lex = CODEX.lookup ? CODEX.lookup(it.name) : null;
-    const title = it.nameRu || (lex ? lex.ru : it.name);
+    const title = it.nameRu || ruItemName(it);
     const enRaw = lex ? lex.en : (/[A-Za-z]/.test(it.name) ? it.name : "");
     const en = enRaw && enRaw.toLowerCase() !== String(title).toLowerCase() ? enRaw : "";
     const kind = KIND_RU[it.kind] || it.kind;
     const stats = (it.stats || "").trim();
     const fake = !stats || stats === kind || /^(Оружие|Броня|Аксессуар|Инструмент|Материал|Предмет|Расходник)/i.test(stats);
-    const desc = (it.desc || (lex && lex.desc) || "").trim();
-    const why = (it.why || "").trim();
+    const desc = ruText((it.desc || (lex && lex.desc) || "").trim());
+    const why = ruText((it.why || "").trim());
     const showWhy = why && why !== desc;
-    const getPlain = String(it.get || "").replace(/\bCalamity\b/g, "Каламити").trim();
+    const getPlain = ruText(String(it.get || "").replace(/\bCalamity\b/g, "Каламити").trim());
     const rec = String(it.rec || "").trim();
     const showGet = getPlain && !/^крафт\.?$/i.test(getPlain);
     const local = spriteOfFixed(it) || (CODEX.sprites && (CODEX.sprites[it.name] || CODEX.sprites[it.nameRu])) || "";
@@ -2066,7 +2087,7 @@
         <span class="tag-cls ${escAttr(it.cls)}">${CLS_RU[it.cls] || it.cls}</span>
       </div>
       <div class="card-body">
-        <div class="card-title">${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
+        <div class="card-title">${esc(title)}${en ? `<span class="en-sub">оригинал: ${esc(en)}</span>` : ""}</div>
         ${!fake ? `<div class="stats-line">${esc(stats)}</div>` : ""}
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
         <div class="facts">
@@ -2237,11 +2258,11 @@
       </div>
       <div class="card-body">
         <div class="card-title">${esc(e.ru)}${e.en ? `<span class="en-sub">в игре: ${esc(e.en)}</span>` : ""}</div>
-        <p class="desc">${esc(e.desc)}</p>
+        <p class="desc">${esc(ruText(e.desc))}</p>
         <div class="facts">
-          ${e.where ? `<div class="fact"><span>Где</span><p>${esc(e.where)}</p></div>` : ""}
-          ${e.used ? `<div class="fact"><span>Зачем</span><p>${esc(e.used)}</p></div>` : ""}
-          ${e.craft ? `<div class="fact"><span>Крафт</span><p>${esc(e.craft)}</p></div>` : ""}
+          ${e.where ? `<div class="fact"><span>Где</span><p>${esc(ruText(e.where))}</p></div>` : ""}
+          ${e.used ? `<div class="fact"><span>Зачем</span><p>${esc(ruText(e.used))}</p></div>` : ""}
+          ${e.craft ? `<div class="fact"><span>Крафт</span><p>${esc(ruText(e.craft))}</p></div>` : ""}
         </div>
         <div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Найти на официальной wiki ↗</a></div>
       </div>
@@ -2444,7 +2465,7 @@
       if (!key || choices.has(key) || !recipe || !recipe.ings.length) return;
       const lex = exactLexLookup(canonical) || exactLexLookup(raw);
       const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
-      const ru = (lex && lex.ru) || (guide && (guide.nameRu || guide.name)) || canonical;
+      const ru = (guide && guide.nameRu) || (lex && lex.ru) || ruItemName(canonical, cat) || canonical;
       const en = (lex && lex.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
       const art = cat
         ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
@@ -2683,13 +2704,13 @@
       if (!searchActive) return true;
       const blob = mode === "guide"
         ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
-        : `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`;
+        : `${item.name} ${ruItemName(item)} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${ruText(item.obtain)} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`;
       return matchesSearch(blob, search);
     });
     // Точное совпадение имени всегда первым: «dubious plating» не должен
     // прятаться за 80 предметами, которые его упоминают в рецепте.
     if (searchActive) {
-      const exact = new Set(list.filter((x) => String(x.name).toLocaleLowerCase("ru") === search).map((x) => x));
+      const exact = new Set(list.filter((x) => String(x.name).toLocaleLowerCase("ru") === search || ruItemName(x).toLocaleLowerCase("ru") === search).map((x) => x));
       if (exact.size) list.sort((a, b) => (exact.has(b) ? 1 : 0) - (exact.has(a) ? 1 : 0));
     }
     const requestedLimit = Number.parseInt(params.limit, 10);
@@ -2850,9 +2871,9 @@
     ];
     const list = CODEX.bosses.filter((b) => {
       if (era !== "all" && b.era !== era) return false;
-      return !search || matchesSearch(`${b.name} ${b.en || ""} ${b.type} ${b.where} ${b.when} ${b.summon} ${b.drops} ${b.tip || ""}`, search);
+      return !search || matchesSearch(`${b.name} ${b.en || ""} ${b.type} ${ruText(b.where)} ${ruText(b.when)} ${ruText(b.summon)} ${ruText(b.drops)} ${ruText(b.tip || "")}`, search);
     });
-    const minis = era === "all" ? CODEX.minis.filter((m) => !search || matchesSearch(`${m.name} ${m.en || ""} ${m.where} ${m.when} ${m.drops}`, search)) : [];
+    const minis = era === "all" ? CODEX.minis.filter((m) => !search || matchesSearch(`${m.name} ${ruItemName(m.name)} ${m.en || ""} ${ruText(m.where)} ${ruText(m.when)} ${ruText(m.drops)}`, search)) : [];
     const countFor = (id) => id === "all" ? CODEX.bosses.length : CODEX.bosses.filter((b) => b.era === id).length;
     app.innerHTML = `
       <div class="page">
@@ -2901,13 +2922,13 @@
       </div>
       <div class="card-body">
         <div class="card-title">${esc(b.name)}${b.en ? `<span class="en-sub">в игре: ${esc(b.en)}</span>` : ""}</div>
-        <p class="desc">${esc(b.tip || "Ключевой противник маршрута: подготовь арену, мобильность и подходящее этапу снаряжение.")}</p>
+        <p class="desc">${esc(ruText(b.tip || "Ключевой противник маршрута: подготовь арену, мобильность и подходящее этапу снаряжение."))}</p>
         <div class="danger-row"><label>Опасность <b>${danger}%</b></label><div class="hpbar"><i style="width:${danger}%"></i></div></div>
         <div class="facts">
-          <div class="fact"><span>Где</span><p>${esc(b.where)}</p></div>
-          <div class="fact"><span>Когда</span><p>${esc(b.when)}</p></div>
-          <div class="fact"><span>Зови</span><p>${esc(b.summon)}</p></div>
-          <div class="fact"><span>Дроп</span><p>${esc(b.drops)}</p></div>
+          <div class="fact"><span>Где</span><p>${esc(ruText(b.where))}</p></div>
+          <div class="fact"><span>Когда</span><p>${esc(ruText(b.when))}</p></div>
+          <div class="fact"><span>Зови</span><p>${esc(ruText(b.summon))}</p></div>
+          <div class="fact"><span>Дроп</span><p>${esc(ruText(b.drops))}</p></div>
         </div>
         <div class="card-links">
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Тактика и дроп на wiki ↗</a>
@@ -2929,13 +2950,13 @@
         <span class="tag-cls all">Дополнительно</span>
       </div>
       <div class="card-body">
-        <div class="card-title">${esc(m.name)}${m.en ? `<span class="en-sub">в игре: ${esc(m.en)}</span>` : ""}</div>
+        <div class="card-title">${esc(ruItemName(m.name))}<span class="en-sub">оригинал: ${esc(m.en || m.name)}</span></div>
         <p class="desc">Опциональный сильный противник с полезными материалами и оружием.</p>
         <div class="danger-row"><label>Опасность <b>40%</b></label><div class="hpbar"><i style="width:40%"></i></div></div>
         <div class="facts">
-          <div class="fact"><span>Когда</span><p>${esc(m.when)}</p></div>
-          <div class="fact"><span>Где</span><p>${esc(m.where)}</p></div>
-          <div class="fact"><span>Дроп</span><p>${esc(m.drops)}</p></div>
+          <div class="fact"><span>Когда</span><p>${esc(ruText(m.when))}</p></div>
+          <div class="fact"><span>Где</span><p>${esc(ruText(m.where))}</p></div>
+          <div class="fact"><span>Дроп</span><p>${esc(ruText(m.drops))}</p></div>
         </div>
         <div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>
       </div>
@@ -2984,8 +3005,8 @@
       const key = String(c.name || "").toLocaleLowerCase("ru");
       if (seen.has(key)) return false;
       seen.add(key);
-      const blob = `${c.name} ${c.ings} ${c.why} ${c.stage} ${c.station || ""}`;
-      const ru = (CODEX.ru ? CODEX.ru(c.name) : c.name) || "";
+      const blob = `${c.name} ${ruItemName(c.name)} ${ruText(c.ings)} ${c.why} ${c.stage} ${c.station || ""}`;
+      const ru = ruItemName(c.name) || c.name;
       return !q || matchesSearch(`${blob} ${ru}`, q);
     });
     const groups = [];
@@ -3068,21 +3089,21 @@
     });
     const itemHitNames = new Set();
     (CODEX.items || []).forEach((x) => {
-      const title = x.nameRu || x.name;
-      if (matchesSearch(`${x.name} ${title} ${x.get} ${x.why} ${x.desc || ""}`, q)) {
-        hits.push({ href: `#/items?mode=guide&s=${encodeURIComponent(x.name)}`, title, sub: x.get, type: "Рекомендация", mark: "◆", art: spriteOfFixed(x) || resolveArt(x.name) || "" });
+      const title = x.nameRu || ruItemName(x);
+      if (matchesSearch(`${x.name} ${title} ${ruText(x.get)} ${x.why} ${x.desc || ""}`, q)) {
+        hits.push({ href: `#/items?mode=guide&s=${encodeURIComponent(x.name)}`, title, sub: ruText(x.get), type: "Рекомендация", mark: "◆", art: spriteOfFixed(x) || resolveArt(x.name) || "" });
         itemHitNames.add(String(x.name).toLocaleLowerCase("ru"));
         itemHitNames.add(String(title).toLocaleLowerCase("ru"));
       }
     });
     buildNameIndexes();
     indexedItems().forEach((item) => {
-      const blob = `${item.name} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`.toLocaleLowerCase("ru");
+      const blob = `${item.name} ${ruItemName(item)} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${ruText(item.obtain)} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`.toLocaleLowerCase("ru");
       const key = String(item.name).toLocaleLowerCase("ru");
       if (matchesSearch(blob, q) && !itemHitNames.has(key)) {
         hits.push({
           href: `#/items?s=${encodeURIComponent(item.name)}`,
-          title: item.name,
+          title: ruItemName(item),
           sub: `${item.group} · ${item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls)}`,
           type: "Полный индекс",
           mark: ITEM_KIND_MARK[item.kind] || "◆",
@@ -3091,12 +3112,13 @@
       }
     });
     CODEX.bosses.forEach((x) => {
-      if (matchesSearch(`${x.name} ${x.en || ""} ${x.drops} ${x.summon}`, q))
-        hits.push({ href: `#/bosses?q=${encodeURIComponent(x.name)}`, title: x.name, sub: x.summon, type: "Босс", mark: "☠", art: BOSS_ART[x.n] || "" });
+      if (matchesSearch(`${x.name} ${x.en || ""} ${ruText(x.drops)} ${ruText(x.summon)}`, q))
+        hits.push({ href: `#/bosses?q=${encodeURIComponent(x.name)}`, title: x.name, sub: ruText(x.summon), type: "Босс", mark: "☠", art: BOSS_ART[x.n] || "" });
     });
     CODEX.crafts.forEach((x) => {
-      if (matchesSearch(`${x.name} ${x.ings} ${x.why}`, q))
-        hits.push({ href: `#/crafts?q=${encodeURIComponent(x.name)}`, title: x.name, sub: x.ings, type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
+      const title = ruItemName(x.name);
+      if (matchesSearch(`${x.name} ${title} ${ruText(x.ings)} ${x.why}`, q))
+        hits.push({ href: `#/crafts?q=${encodeURIComponent(x.name)}`, title, sub: ruText(x.ings), type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
     });
     const shown = hits.slice(0, 24);
     searchPanel.classList.remove("hidden");
@@ -3321,7 +3343,7 @@
     const nodeSources = catItem ? (NPC_SOURCES[catItem.id] || null) : null;
     const nodeDrops = npcSourceLines(nodeSources);
     const srcLine = recipe
-      ? (recipe.station ? `крафт · ${esc(recipe.station)}` : "крафт")
+      ? (recipe.station ? `крафт · ${esc(ruText(recipe.station))}` : "крафт")
       : (info.obtain ? esc(info.obtain.replace(/\s*[·•].*$/, "")) : "источник — смотри в полном каталоге");
     const stationIcon = recipe && recipe.station
       ? `<img class="tstation" src="${escAttr(craftStationSprite(recipe.station))}" alt="" loading="lazy" decoding="async" />`
@@ -3372,15 +3394,15 @@
     if (rootSub) rootSub.textContent = info.en ? `в игре: ${info.en}` : "";
     if (rootDesc) {
       rootDesc.textContent = [
-        info.desc,
-        info.used ? `Зачем: ${info.used}` : "",
-        info.when ? `Когда: ${info.when}` : ""
+        info.desc ? ruText(info.desc) : "",
+        info.used ? `Зачем: ${ruText(info.used)}` : "",
+        info.when ? `Когда: ${ruText(info.when)}` : ""
       ].filter(Boolean).join(" · ");
     }
     if (rootSrc) {
       let line = "";
       if (info.recipe && info.recipe.ings.length) {
-        line = "рецепт: " + info.recipe.ings.map((i) => (i.count ? `${i.count} × ${i.name}` : i.name)).join(" + ") + (info.recipe.station ? ` · у ${info.recipe.station}` : "");
+        line = "рецепт: " + info.recipe.ings.map((i) => (i.count ? `${i.count} × ${ruItemName(i.name)}` : ruItemName(i.name))).join(" + ") + (info.recipe.station ? ` · у ${ruText(info.recipe.station)}` : "");
       } else if (info.obtain) {
         line = info.obtain.replace(/\s*[·•].*$/, "").trim();
       }
