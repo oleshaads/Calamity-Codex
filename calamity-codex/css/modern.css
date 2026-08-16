@@ -2073,7 +2073,7 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 .tip-card {
   position: fixed;
   z-index: 75;
-  width: 560px;
+  width: 640px;
   max-height: 640px;
   display: flex;
   flex-direction: column;
@@ -2160,15 +2160,16 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 .tip-card-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
 .tip-card-facts .fact:only-child { grid-column: 1 / -1; }
 .tip-card-tree { margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--line); }
-.tip-card-tree .tnode-card { width: 188px; }
-.tip-card-tree .tslot { width: 38px; height: 38px; }
-.tip-card-tree .tinfo b { font-size: 11.5px; }
-.tip-card-tree .tinfo small { font-size: 8.5px; }
-.tip-card-tree .tsrc { font-size: 8px; }
-.tip-card-tree .tkids { padding-left: 28px; gap: 8px; }
-.tip-card-tree .tkids::before { left: 10px; }
-.tip-card-tree .tkids .tnode-card::before { left: -18px; width: 18px; }
-.tip-card-tree .tnode-card .ttoggle { right: -19px; width: 20px; height: 20px; font-size: 9px; }
+.tip-card-tree .tnode-card { width: 232px; }
+.tip-card-tree .tslot { width: 46px; height: 46px; }
+.tip-card-tree .tinfo b { font-size: 13px; }
+.tip-card-tree .tinfo small { font-size: 10px; }
+.tip-card-tree .tsrc { font-size: 9.5px; }
+.tip-card-tree .tkids { padding-left: 38px; gap: 10px; }
+.tip-card-tree .tkids::before { left: 12px; }
+.tip-card-tree .tkids .tnode-card::before { left: -26px; width: 26px; }
+.tip-card-tree .tnode-card .ttoggle { right: -21px; width: 22px; height: 22px; font-size: 10px; }
+.tip-card-tree .tnode-src .src-drop { font-size: 10.5px; }
 /* источники предмета прямо в узле дерева — единый блок в стиле .fact */
 .tnode-src {
   grid-column: 1 / -1;
@@ -2185,15 +2186,15 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 .tnode-src .src-drop {
   display: flex;
   align-items: baseline;
-  font-size: 9.5px;
-  line-height: 1.45;
-  color: #a9b4bf;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #c6ced6;
   overflow-wrap: anywhere;
   white-space: normal;
 }
-.tnode-src .src-drop em { font-size: 9px; }
-.tnode-src .src-drop i { font-size: 9.5px; }
-.tnode-src .src-ico { flex: 0 0 auto; margin-right: 5px; }
+.tnode-src .src-drop em { font-size: 10.5px; }
+.tnode-src .src-drop i { font-size: 10.5px; }
+.tnode-src .src-ico { flex: 0 0 auto; margin-right: 7px; color: var(--gold); }
 
 /* карточка NPC: монограмма-спрайт и цитата бестиария */
 .npc-slot { cursor: default; }
@@ -2262,7 +2263,7 @@ body.tree-open { overflow: hidden; }
 }
 .tree-panel {
   position: relative;
-  width: min(1040px, 100%);
+  width: min(1280px, 100%);
   max-height: min(86vh, 900px);
   display: flex;
   flex-direction: column;
@@ -2327,12 +2328,12 @@ body.tree-open { overflow: hidden; }
 .tree-nav-btn:active { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 1px 0 rgba(0,0,0,.5); }
 .tree-nav-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
 .tree-legend {
-  padding: 9px 18px;
+  padding: 10px 18px;
   border-bottom: 1px solid #1c2530;
-  color: #6b7682;
+  color: #8b97a4;
   background: #0d131b;
   font-family: var(--mono);
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .07em;
   text-transform: uppercase;
@@ -2344,13 +2345,13 @@ body.tree-open { overflow: hidden; }
 .tnode { display: flex; align-items: flex-start; }
 .tnode-card {
   position: relative;
-  width: 212px;
+  width: 280px;
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
-  gap: 9px 10px;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 11px 12px;
   align-items: center;
-  padding: 10px 12px 10px 10px;
+  padding: 12px 14px 12px 12px;
   border: 2px solid var(--line);
   border-radius: 5px;
   background: linear-gradient(180deg, #1a232e, #111821);
@@ -2370,16 +2371,16 @@ body.tree-open { overflow: hidden; }
   border-color: rgba(255, 217, 122, .42);
   background: linear-gradient(180deg, #262011, #161c13);
 }
-.tslot { width: 46px; height: 46px; }
-.tslot img { padding: 4px; }
+.tslot { width: 56px; height: 56px; }
+.tslot img { padding: 5px; }
 .tinfo { min-width: 0; }
 .tinfo b {
   display: block;
   color: #f2eee3;
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.4;
   letter-spacing: .03em;
   text-transform: uppercase;
   overflow-wrap: anywhere;
@@ -2388,11 +2389,11 @@ body.tree-open { overflow: hidden; }
 }
 .tinfo small {
   display: block;
-  margin-top: 3px;
-  color: #77838f;
+  margin-top: 4px;
+  color: #8b97a4;
   font-family: var(--mono);
-  font-size: 9px;
-  line-height: 1.35;
+  font-size: 10.5px;
+  line-height: 1.4;
   overflow-wrap: anywhere;
   white-space: normal;
 }
@@ -2406,13 +2407,13 @@ body.tree-open { overflow: hidden; }
   border-top: 1px solid #1f2a36;
 }
 .tcount {
-  padding: 2px 8px;
+  padding: 2px 9px;
   border: 1px solid #5d4a1e;
-  border-radius: 8px;
+  border-radius: 9px;
   color: var(--gold);
   background: #1d180a;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 700;
   white-space: nowrap;
@@ -2422,20 +2423,20 @@ body.tree-open { overflow: hidden; }
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   overflow: hidden;
-  color: #8b97a4;
+  color: #9aa6b2;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: .04em;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .tstation {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
   object-fit: contain;
   padding: 2px;
   border: 2px solid var(--line);
@@ -2464,11 +2465,11 @@ body.tree-open { overflow: hidden; }
 .ttoggle {
   position: absolute;
   z-index: 3;
-  right: -22px;
+  right: -24px;
   top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -2491,17 +2492,17 @@ body.tree-open { overflow: hidden; }
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-  padding-left: 34px;
+  gap: 12px;
+  padding-left: 46px;
   position: relative;
   animation: tree-branch .22s ease both;
 }
 .tkids::before {
   content: "";
   position: absolute;
-  left: 11px;
-  top: 10px;
-  bottom: 10px;
+  left: 15px;
+  top: 12px;
+  bottom: 12px;
   border-left: 2px solid rgba(255, 217, 122, .3);
   pointer-events: none;
 }
@@ -2511,9 +2512,9 @@ body.tree-open { overflow: hidden; }
 .tkids .tnode-card::before {
   content: "";
   position: absolute;
-  left: -23px;
+  left: -31px;
   top: 50%;
-  width: 23px;
+  width: 31px;
   border-top: 2px solid rgba(255, 217, 122, .3);
   pointer-events: none;
 }
@@ -2522,7 +2523,7 @@ body.tree-open { overflow: hidden; }
   to { opacity: 1; transform: none; }
 }
 .tmore {
-  width: 212px;
+  width: 280px;
   margin-top: 4px;
   padding: 8px 10px;
   border: 1px dashed #3a4755;
@@ -2695,9 +2696,10 @@ body.tree-open { overflow: hidden; }
   .card { grid-template-columns: 88px minmax(0, 1fr); gap: 11px; padding: 10px; }
   .card-shot { width: 88px; height: 88px; }
   .tip-card { width: calc(100vw - 16px) !important; }
-  .tip-card-tree .tnode-card { width: 152px; }
-  .tip-card-tree .tslot { width: 34px; height: 34px; }
-  .tip-card-tree .tinfo b { font-size: 10.5px; }
+  .tip-card-tree .tnode-card { width: 168px; }
+  .tip-card-tree .tslot { width: 38px; height: 38px; }
+  .tip-card-tree .tinfo b { font-size: 11.5px; }
+  .tip-card-tree .tinfo small { font-size: 9.5px; }
   .tip-card-tree .tsrc { display: none; }
   .tip-card-tree .tkids { padding-left: 24px; gap: 7px; }
   .tip-card-tree .tkids::before { left: 8px; }
@@ -2705,9 +2707,11 @@ body.tree-open { overflow: hidden; }
   .tip-card-tree .tnode-card .ttoggle { right: -17px; width: 18px; height: 18px; font-size: 8px; }
   .tree-modal { padding: 10px; }
   .tree-panel { max-height: 92vh; }
-  .tnode-card { width: 152px; }
-  .tslot { width: 34px; height: 34px; }
-  .tinfo b { font-size: 10.5px; }
+  .tnode-card { width: 172px; }
+  .tslot { width: 38px; height: 38px; }
+  .tinfo b { font-size: 11.5px; }
+  .tinfo small { font-size: 9.5px; }
+  .tnode-src .src-drop { font-size: 10px; }
   .tnode-card .tsrc { display: none; }
   .tkids { padding-left: 24px; gap: 7px; }
   .tkids::before { left: 8px; }

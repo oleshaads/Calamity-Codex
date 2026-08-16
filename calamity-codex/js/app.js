@@ -203,7 +203,7 @@
   function placeTipCard(el) {
     if (!tipCard || !el) return;
     const r = el.getBoundingClientRect();
-    const w = Math.min(560, innerWidth - 16);
+    const w = Math.min(640, innerWidth - 16);
     tipCard.style.width = w + "px";
     const maxH = Math.min(640, innerHeight - 16);
     tipCard.style.maxHeight = maxH + "px";
@@ -1617,13 +1617,13 @@
     if (!sources) return "";
     const parts = [];
     (sources.npcs || []).forEach((d) => {
-      const chance = d.chance ? `<em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
-      const cond = d.cond ? ` <i>(${esc(d.cond)})</i>` : "";
-      parts.push(`<span class="src-drop">${chance}<i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${cond}</span>`);
+      const chance = d.chance ? ` — <em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
+      const cond = d.cond ? ` <i>· ${esc(d.cond)}</i>` : "";
+      parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${chance}${cond}</span>`);
     });
     if (!short) {
-      if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i>выбивается: ${esc(sources.tiles.join(", "))}</span>`);
-      if ((sources.chests || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">▤</i>в: ${esc(sources.chests.join(", "))}</span>`);
+      if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i><span>Выбивается из: ${esc(sources.tiles.join(", "))}</span></span>`);
+      if ((sources.chests || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">▤</i><span>Лежит в: ${esc(sources.chests.join(", "))}</span></span>`);
     }
     return parts.join("");
   }
