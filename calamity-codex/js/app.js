@@ -2949,7 +2949,7 @@
   let treeStack = [];
   let treeCurrent = "";
 
-  function treeNodeHTML(name, depth, seen, count) {
+  function treeNodeHTML(name, depth, seen, count, idx = 0) {
     const info = ingredientInfo(name);
     const key = normalizeArtName(name);
     const recipe = info.recipe;
@@ -2974,26 +2974,27 @@
       ? `<img class="tstation" src="${escAttr(craftStationSprite(recipe.station))}" alt="" loading="lazy" decoding="async" />`
       : "";
     const kidsHTML = showKids
-      ? `<div class="tkids" hidden>${kids.map((k) => treeNodeHTML(k.name, depth + 1, seen, k.count)).join("")}</div>`
+      ? `<div class="tkids" hidden>${kids.map((k, i) => treeNodeHTML(k.name, depth + 1, seen, k.count, i)).join("")}</div>`
       : "";
     const moreHTML = kids.length > 0 && tooDeep
       ? `<div class="tmore">рецепт уходит глубже — открой предмет в полном каталоге</div>`
       : "";
     return `
     <div class="tnode${cyclic ? " cyclic" : ""}${showKids ? " has-kids" : ""}">
-      <div class="tnode-card" data-ing="${escAttr(name)}" role="button" tabindex="0" aria-label="Открыть дерево: ${escAttr(info.ru)}">
+      <div class="tnode-card" data-ing="${escAttr(name)}" role="button" tabindex="0" aria-label="Открыть дерево: ${escAttr(info.ru)}" style="--d:${idx}">
         <span class="slot tslot">${art}</span>
         <span class="tinfo">
           <b>${esc(info.ru)}</b>
           ${info.en ? `<small>${esc(info.en)}</small>` : ""}
         </span>
+        <span class="tnode-divider" aria-hidden="true"><i></i><em>◆</em><i></i></span>
         <span class="tmeta">
           ${count ? `<em class="tcount">×${esc(count)}</em>` : ""}
           ${stationIcon}
           <span class="tsrc" title="${escAttr(srcLine)}">${srcLine}</span>
           <a class="tlink" href="#/items?s=${encodeURIComponent(linkName)}" title="Открыть в полном каталоге" aria-label="Открыть ${escAttr(info.ru)} в каталоге">↗</a>
         </span>
-        ${nodeDrops ? `<span class="tnode-src">${nodeDrops}</span>` : ""}
+        ${nodeDrops ? `<span class="tnode-divider src-div" aria-hidden="true"><i></i><em>◆</em><i></i></span><span class="tnode-src">${nodeDrops}</span>` : ""}
         <button class="ttoggle" type="button" ${showKids ? 'data-toggle aria-expanded="false" aria-label="Развернуть рецепт"' : (cyclic ? 'disabled aria-hidden="true"' : 'disabled aria-hidden="true"')}>${showKids ? "▸" : (cyclic ? "↺" : "")}</button>
       </div>
       ${kidsHTML}${moreHTML}

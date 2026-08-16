@@ -1586,12 +1586,29 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
   font-style: normal;
 }
 .npc-tip {
+  position: relative;
   color: var(--gold);
-  border-bottom: 1px dashed rgba(255, 217, 122, .55);
   cursor: help;
   font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 217, 122, .18);
+  transition: text-shadow .25s ease, color .25s ease;
 }
-.npc-tip:hover, .npc-tip:focus-visible { border-bottom-style: solid; outline: 0; }
+.npc-tip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  transition: right .35s ease;
+}
+.npc-tip:hover, .npc-tip:focus-visible {
+  outline: 0;
+  color: #ffe9b0;
+  text-shadow: 0 0 16px rgba(255, 217, 122, .6);
+}
+.npc-tip:hover::after, .npc-tip:focus-visible::after { right: 0; }
 /* кнопка дерева крафта */
 .tree-btn {
   display: inline-flex;
@@ -2170,6 +2187,43 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 .tip-card-tree .tkids .tnode-card::before { left: -26px; width: 26px; }
 .tip-card-tree .tnode-card .ttoggle { right: -21px; width: 22px; height: 22px; font-size: 10px; }
 .tip-card-tree .tnode-src .src-drop { font-size: 10.5px; }
+/* декоративный разделитель с ромбом */
+.tnode-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 1px 0;
+  min-height: 12px;
+}
+.tnode-divider i {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 217, 122, .4), transparent);
+  background-size: 200% 100%;
+  animation: line-shimmer 3.2s linear infinite;
+}
+.tnode-divider i:last-child {
+  background: linear-gradient(90deg, transparent, rgba(255, 217, 122, .4), transparent);
+  animation-direction: reverse;
+}
+@keyframes line-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+.tnode-divider em {
+  color: var(--gold);
+  font-size: 8px;
+  font-style: normal;
+  text-shadow: 0 0 8px rgba(255, 217, 122, .9);
+  animation: diamond-glow 2.6s ease-in-out infinite;
+}
+@keyframes diamond-glow {
+  0%, 100% { opacity: .55; text-shadow: 0 0 5px rgba(255, 217, 122, .5); }
+  50% { opacity: 1; text-shadow: 0 0 12px rgba(255, 217, 122, 1); }
+}
+.tnode-divider.src-div { margin-top: 2px; }
+
 /* источники предмета прямо в узле дерева — единый блок в стиле .fact */
 .tnode-src {
   grid-column: 1 / -1;
@@ -2191,10 +2245,35 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
   color: #c6ced6;
   overflow-wrap: anywhere;
   white-space: normal;
+  animation: line-in .42s ease both;
+}
+.tnode-src .src-drop:nth-child(1) { animation-delay: .06s; }
+.tnode-src .src-drop:nth-child(2) { animation-delay: .13s; }
+.tnode-src .src-drop:nth-child(3) { animation-delay: .2s; }
+.tnode-src .src-drop:nth-child(4) { animation-delay: .27s; }
+.tnode-src .src-drop:nth-child(5) { animation-delay: .34s; }
+@keyframes line-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
 }
 .tnode-src .src-drop em { font-size: 10.5px; }
 .tnode-src .src-drop i { font-size: 10.5px; }
-.tnode-src .src-ico { flex: 0 0 auto; margin-right: 7px; color: var(--gold); }
+.tnode-src .src-ico {
+  flex: 0 0 auto;
+  margin-right: 7px;
+  color: var(--gold);
+  display: inline-block;
+  animation: ico-pop .5s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+.tnode-src .src-drop:nth-child(1) .src-ico { animation-delay: .1s; }
+.tnode-src .src-drop:nth-child(2) .src-ico { animation-delay: .17s; }
+.tnode-src .src-drop:nth-child(3) .src-ico { animation-delay: .24s; }
+.tnode-src .src-drop:nth-child(4) .src-ico { animation-delay: .31s; }
+.tnode-src .src-drop:nth-child(5) .src-ico { animation-delay: .38s; }
+@keyframes ico-pop {
+  from { opacity: 0; transform: scale(0) rotate(-40deg); }
+  to { opacity: 1; transform: none; }
+}
 
 /* карточка NPC: монограмма-спрайт и цитата бестиария */
 .npc-slot { cursor: default; }
@@ -2270,6 +2349,20 @@ body.tree-open { overflow: hidden; }
   overflow: hidden;
   animation: tree-in .28s ease both;
 }
+.tree-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(620px circle at 18% 0%, rgba(255, 217, 122, .06), transparent 62%);
+  animation: tree-ambient 9s ease-in-out infinite alternate;
+}
+@keyframes tree-ambient {
+  from { transform: translateX(0); }
+  to { transform: translateX(22%); }
+}
+.tree-head, .tree-legend, .tree-body { position: relative; z-index: 1; }
 @keyframes tree-in {
   from { opacity: 0; transform: translateY(18px) scale(.98); }
   to { opacity: 1; transform: none; }
@@ -2338,13 +2431,16 @@ body.tree-open { overflow: hidden; }
   letter-spacing: .07em;
   text-transform: uppercase;
 }
-.tree-legend b { color: var(--gold); }
+.tree-legend b { color: var(--gold); text-shadow: 0 0 8px rgba(255, 217, 122, .5); animation: diamond-glow 3s ease-in-out infinite; }
 .tree-body { flex: 1; overflow: auto; padding: 18px 20px 26px; scrollbar-width: thin; }
 
 /* --- узлы: горизонтальное дерево, ветки слева направо --- */
 .tnode { display: flex; align-items: flex-start; }
 .tnode-card {
   position: relative;
+  /* анимация появления оставляет identity-transform → stacking context,
+     поэтому карточку поднимаем над соседними ветками явно */
+  z-index: 2;
   width: 280px;
   flex: 0 0 auto;
   display: grid;
@@ -2357,19 +2453,64 @@ body.tree-open { overflow: hidden; }
   background: linear-gradient(180deg, #1a232e, #111821);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), inset 0 0 0 4px rgba(8, 11, 16, .35), 0 4px 10px rgba(0, 0, 0, .35);
   cursor: pointer;
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: border-color .18s ease, box-shadow .22s ease;
+  animation: node-in .5s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--d, 0) * 60ms);
+}
+@keyframes node-in {
+  from { opacity: 0; transform: translateY(14px) scale(.94); }
+  to { opacity: 1; transform: none; }
+}
+/* блик, пробегающий по карточке при наведении */
+.tnode-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 5px;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 217, 122, .07) 50%, transparent 60%);
+  background-size: 240% 100%;
+  background-position: 130% 0;
+  transition: background-position .7s ease;
+}
+.tnode-card:hover::after { background-position: -30% 0; }
+/* спрайт появляется с «подбором» */
+.tslot { overflow: hidden; }
+.tslot img {
+  animation: sprite-in .55s cubic-bezier(.34, 1.56, .64, 1) both;
+  animation-delay: calc(var(--d, 0) * 60ms + 90ms);
+}
+@keyframes sprite-in {
+  from { opacity: 0; transform: scale(0) rotate(-14deg); }
+  to { opacity: 1; transform: none; }
 }
 /* ВАЖНО: без transform/filter в hover — transform делает карточку containing
  * block, и вынесенная за её край кнопка-тумблер выпадает из хит-теста,
  * вызывая пинг-понг hover'а и «проваливающиеся» клики. */
 .tnode-card:hover {
-  border-color: #6a5a2e;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 4px rgba(8, 11, 16, .35), 0 0 18px rgba(255, 217, 122, .18);
+  border-color: #7a5f28;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09), inset 0 0 0 4px rgba(8, 11, 16, .35), 0 0 22px rgba(255, 217, 122, .22);
 }
 .tnode-card:focus-visible { border-color: var(--gold); outline: 0; }
 .tree-body > .tnode > .tnode-card {
-  border-color: rgba(255, 217, 122, .42);
+  border-color: rgba(255, 217, 122, .5);
   background: linear-gradient(180deg, #262011, #161c13);
+}
+.tree-body > .tnode > .tnode-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 5px;
+  background: linear-gradient(115deg, transparent 36%, rgba(255, 217, 122, .1) 50%, transparent 64%);
+  background-size: 220% 100%;
+  animation: root-sweep 5.5s linear infinite;
+}
+@keyframes root-sweep {
+  from { background-position: 130% 0; }
+  to { background-position: -130% 0; }
 }
 .tslot { width: 56px; height: 56px; }
 .tslot img { padding: 5px; }
@@ -2417,6 +2558,12 @@ body.tree-open { overflow: hidden; }
   font-style: normal;
   font-weight: 700;
   white-space: nowrap;
+  animation: chip-in .45s cubic-bezier(.34, 1.56, .64, 1) both;
+  animation-delay: calc(var(--d, 0) * 60ms + 140ms);
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: none; }
 }
 .tsrc {
   flex: 1;
@@ -2444,6 +2591,12 @@ body.tree-open { overflow: hidden; }
   background: linear-gradient(135deg, #36434f, #1e2933);
   box-shadow: inset 0 0 0 2px #4d5a68, inset 0 0 0 3px rgba(9, 13, 18, .85);
   image-rendering: pixelated;
+  animation: station-bob 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--d, 0) * 80ms);
+}
+@keyframes station-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 .tlink {
   width: 22px;
@@ -2459,9 +2612,13 @@ body.tree-open { overflow: hidden; }
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;
-  transition: filter .13s ease;
+  transition: filter .15s ease, transform .2s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s ease;
 }
-.tlink:hover { filter: brightness(1.25); }
+.tlink:hover {
+  filter: brightness(1.3);
+  transform: rotate(8deg) translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 0 10px rgba(255, 217, 122, .35);
+}
 .ttoggle {
   position: absolute;
   z-index: 3;
@@ -2486,6 +2643,14 @@ body.tree-open { overflow: hidden; }
 .ttoggle:hover { filter: brightness(1.3); box-shadow: 0 0 0 3px rgba(8, 11, 16, .9), 0 0 16px rgba(255, 217, 122, .45); }
 .ttoggle:disabled { opacity: 0; pointer-events: none; }
 .tnode.cyclic .ttoggle:disabled { opacity: .6; pointer-events: none; }
+/* у раскрываемых узлов тумблер мягко пульсирует, приглашая кликнуть */
+.tnode.has-kids > .tnode-card > .ttoggle {
+  animation: tgl-pulse 2.6s ease-in-out infinite;
+}
+@keyframes tgl-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(8, 11, 16, .9), 0 0 8px rgba(255, 217, 122, .25); }
+  50% { box-shadow: 0 0 0 3px rgba(8, 11, 16, .9), 0 0 18px rgba(255, 217, 122, .6); }
+}
 
 /* ветки: колонка ингредиентов справа от карточки */
 .tkids {
@@ -2495,7 +2660,8 @@ body.tree-open { overflow: hidden; }
   gap: 12px;
   padding-left: 46px;
   position: relative;
-  animation: tree-branch .22s ease both;
+  z-index: 1;
+  animation: tree-branch .3s ease both;
 }
 .tkids::before {
   content: "";
@@ -2505,6 +2671,12 @@ body.tree-open { overflow: hidden; }
   bottom: 12px;
   border-left: 2px solid rgba(255, 217, 122, .3);
   pointer-events: none;
+  transform-origin: top;
+  animation: spine-in .38s ease both;
+}
+@keyframes spine-in {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
 }
 .tkids .tnode { position: relative; }
 /* линия-коннектор идёт от ЦЕНТРА КАРТОЧКИ, а не от центра ноды с поддеревом —
@@ -2517,6 +2689,12 @@ body.tree-open { overflow: hidden; }
   width: 31px;
   border-top: 2px solid rgba(255, 217, 122, .3);
   pointer-events: none;
+  transform-origin: left;
+  animation: conn-in .32s ease both;
+}
+@keyframes conn-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 @keyframes tree-branch {
   from { opacity: 0; transform: translateY(6px); }
@@ -2525,6 +2703,7 @@ body.tree-open { overflow: hidden; }
 .tmore {
   width: 280px;
   margin-top: 4px;
+  animation: line-in .4s ease both;
   padding: 8px 10px;
   border: 1px dashed #3a4755;
   border-radius: 4px;
