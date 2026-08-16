@@ -278,19 +278,32 @@
     if (!tipCard) return;
     const info = NPC_DATA[npcName] || {};
     const lex = exactLexLookup(npcName);
-    const ru = (lex && lex.ru) || npcName;
-    const type = npcIsBoss(npcName) ? "Босс" : "Противник";
-    const art = (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id]))
-      || `https://calamitymod.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(npcName)}.png`;
-    const facts = [];
-    if (info.biome) facts.push(`<div class="fact"><span>Где обитает</span><p>${esc(info.biome)}</p></div>`);
-    if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(info.time)}</p></div>`);
-    if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(info.req)}</p></div>`);
-    if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(info.source)}</p></div>`);
-    if (!facts.length) facts.push(`<div class="fact"><span>Где</span><p>Точные условия спавна — на официальной wiki.</p></div>`);
+    const ru = npcRuName(npcName);
+    const type = npcIsBossByName(npcName) ? "Босс" : "Противник";
+    const localArt = (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id])) || "";
+    const art = localArt || `https://calamitymod.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(npcName)}.png`;
+    const desc = NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || "");
+    const rows = [];
+    if (info.biome) rows.push(`<div class="npc-row"><span class="npc-row-ico">⌖</span><span><em>Где обитает</em><b>${esc(info.biome)}</b></span></div>`);
+    if (info.time) rows.push(`<div class="npc-row"><span class="npc-row-ico">◷</span><span><em>Когда</em><b>${esc(info.time)}</b></span></div>`);
+    if (info.req) rows.push(`<div class="npc-row"><span class="npc-row-ico">⚑</span><span><em>Требования</em><b>${esc(info.req)}</b></span></div>`);
+    if (info.source) rows.push(`<div class="npc-row"><span class="npc-row-ico">♪</span><span><em>Как встретить</em><b>${esc(info.source)}</b></span></div>`);
+    if (!rows.length) rows.push(`<div class="npc-row"><span class="npc-row-ico">⌖</span><span><em>Где</em><b>Точные условия спавна — на официальной wiki.</b></span></div>`);
+    const drops = [];
+    Object.keys(NPC_SOURCES).forEach((itemKey) => {
+      const src = NPC_SOURCES[itemKey];
+      (src.npcs || []).forEach((d) => {
+        if (d.npc === npcName && !drops.some((x) => x.id === itemKey)) {
+          drops.push({ id: itemKey, chance: d.chance, qty: d.qty });
+        }
+      });
+    });
+    const dropsHTML = drops.length
+      ? `<div class="npc-drops"><em>Что дропает</em><div class="npc-drop-chips">${drops.map((d) => `<span class="npc-drop-chip" data-ing="${escAttr(d.id)}" role="button" tabindex="0"><img class="ings-icon" src="assets/item-sprites/${encodeURIComponent(d.id)}.png" alt="" loading="lazy" decoding="async" onerror="this.remove()" /><b>${esc(d.chance || "")}${d.qty ? ` ${esc(d.qty)}` : ""}</b></span>`).join("")}</div></div>`
+      : "";
     tipCard.innerHTML = `
       <div class="tip-card-head">
-        <span class="slot tip-card-slot"><img class="remote" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" /></span>
+        <span class="slot tip-card-slot npc-slot">${art ? `<img class="${localArt ? "item-art" : "remote"}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" data-kind="misc" />` : unavailableArt("misc")}</span>
         <span class="tip-card-title">
           <small>${esc(type)} · Calamity</small>
           <b>${esc(ru)}</b>
@@ -299,8 +312,9 @@
         <button class="tip-card-close" type="button" data-tip-close aria-label="Закрыть карточку">✕</button>
       </div>
       <div class="tip-card-body">
-        ${info.desc ? `<p class="tip-card-desc">${esc(info.desc)}</p><p class="tip-card-note">бестиарий игры (оригинал)</p>` : ""}
-        <div class="tip-card-facts">${facts.join("")}</div>
+        ${desc ? `<p class="tip-card-desc npc-desc">${esc(desc)}</p><p class="tip-card-note">бестиарий игры · перевод кодекса</p>` : ""}
+        <div class="npc-rows">${rows.join("")}</div>
+        ${dropsHTML}
         <div class="tip-card-actions">
           <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(npcName)}" target="_blank" rel="noopener noreferrer">На wiki ↗</a>
         </div>
@@ -346,6 +360,7 @@
       const ing = e.target.closest("[data-ing]");
       if (ing) {
         if (e.target.closest("a")) return;
+        if (e.target.closest(".npc-tip")) return;
         const rootCard = tipCard.querySelector(".tip-card-tree > .tnode > .tnode-card");
         const rootName = rootCard ? rootCard.dataset.ing : "";
         if (rootName && normalizeArtName(ing.dataset.ing || "") === normalizeArtName(rootName)) {
@@ -1557,28 +1572,32 @@
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
   const NPC_SOURCES = window.CALAMITY_NPC_SOURCES || {};
   const NPC_DATA = window.CALAMITY_NPCS || {};
+  const NPC_RU_EXTRA = window.CALAMITY_NPC_RU || {};
+  const NPC_BESTIARY_RU = window.CALAMITY_NPC_BESTIARY_RU || {};
   const NPC_RU = new Map();
   function buildNpcRu() {
     if (NPC_RU.size) return;
     Object.keys(NPC_DATA).forEach((name) => {
       const lex = exactLexLookup(name);
-      if (lex && lex.ru) NPC_RU.set(name, lex.ru);
+      if (lex && lex.ru && lex.ru !== name) NPC_RU.set(name, lex.ru);
     });
+    Object.keys(NPC_RU_EXTRA).forEach((name) => NPC_RU.set(name, NPC_RU_EXTRA[name]));
   }
   function npcRuName(name) {
     buildNpcRu();
     return NPC_RU.get(name) || name;
+  }
+  function npcIsBossByName(name) {
+    const low = String(name).toLowerCase();
+    return (CODEX.bosses || []).some((b) => String(b.en || b.name || "").toLowerCase() === low)
+      || (CODEX.minis || []).some((m) => String(m.en || m.name || "").toLowerCase() === low);
   }
   function npcSourceForItem(it) {
     if (!it) return null;
     const id = it.id || (catalogByName(it.name) ? catalogByName(it.name).id : "");
     return id ? (NPC_SOURCES[id] || null) : null;
   }
-  function npcIsBoss(name) {
-    const low = String(name).toLowerCase();
-    return (CODEX.bosses || []).some((b) => String(b.en || b.name || "").toLowerCase() === low)
-      || (CODEX.minis || []).some((m) => String(m.en || m.name || "").toLowerCase() === low);
-  }
+  function npcIsBoss(name) { return npcIsBossByName(name); }
   function npcSourceLines(sources, short) {
     if (!sources) return "";
     const parts = [];
@@ -2930,6 +2949,9 @@
         ? `<img class="remote" src="${escAttr(info.remoteArt)}" alt="" loading="lazy" decoding="async" />`
         : unavailableArt("mat"));
     const linkName = info.catName || info.en || name;
+    const catItem = catalogByName(name);
+    const nodeSources = catItem ? (NPC_SOURCES[catItem.id] || null) : null;
+    const nodeDrops = npcSourceLines(nodeSources);
     const srcLine = recipe
       ? (recipe.station ? `крафт · ${esc(recipe.station)}` : "крафт")
       : (info.obtain ? esc(info.obtain.replace(/\s*[·•].*$/, "")) : "источник — смотри в полном каталоге");
@@ -2956,6 +2978,7 @@
           <span class="tsrc" title="${escAttr(srcLine)}">${srcLine}</span>
           <a class="tlink" href="#/items?s=${encodeURIComponent(linkName)}" title="Открыть в полном каталоге" aria-label="Открыть ${escAttr(info.ru)} в каталоге">↗</a>
         </span>
+        ${nodeDrops ? `<span class="tnode-src">${nodeDrops}</span>` : ""}
         <button class="ttoggle" type="button" ${showKids ? 'data-toggle aria-expanded="false" aria-label="Развернуть рецепт"' : (cyclic ? 'disabled aria-hidden="true"' : 'disabled aria-hidden="true"')}>${showKids ? "▸" : (cyclic ? "↺" : "")}</button>
       </div>
       ${kidsHTML}${moreHTML}
@@ -3034,6 +3057,7 @@
       const ing = e.target.closest("[data-ing]");
       if (ing) {
         if (e.target.closest("a")) return; // ↗ ведёт в каталог штатно
+        if (e.target.closest(".npc-tip")) return; // имя моба — его карточка
         const ingName = ing.dataset.ing || "";
         if (treeCurrent && normalizeArtName(ingName) === normalizeArtName(treeCurrent)) {
           // клик по карточке корня — развернуть/свернуть его ветку
