@@ -2432,20 +2432,42 @@
     buildNameIndexes();
     const choices = new Map();
     const add = (name) => {
-      const raw = String(name || "").replace(/\s*\([^)]*\)\s*$/, "").trim();
-      const key = normalizeArtName(raw);
-      if (!key || choices.has(key) || !treeRecipeForName(raw)) return;
+      const raw = String(name || "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
+      if (!raw) return;
+      // Сначала приводим всё к имени записи каталога. Рекомендация маршрута,
+      // английское имя и запись из CODEX.crafts тогда занимают один и тот же
+      // слот, а не рисуются несколькими копиями одного предмета.
       const cat = catalogByName(raw);
-      const lex = exactLexLookup(raw);
-      const ru = (lex && lex.ru) || (cat && (cat.description ? (CODEX.lookup(cat.name)?.ru || cat.name) : cat.name)) || raw;
-      const en = (lex && lex.en) || (cat && cat.name) || (/[A-Za-z]/.test(raw) ? raw : "");
-      choices.set(key, { name: cat ? cat.name : raw, ru, en });
+      const canonical = cat ? cat.name : raw;
+      const key = cat ? `catalog:${cat.id}` : `name:${normalizeArtName(canonical)}`;
+      const recipe = treeRecipeForName(canonical) || treeRecipeForName(raw);
+      if (!key || choices.has(key) || !recipe || !recipe.ings.length) return;
+      const lex = exactLexLookup(canonical) || exactLexLookup(raw);
+      const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
+      const ru = (lex && lex.ru) || (guide && (guide.nameRu || guide.name)) || canonical;
+      const en = (lex && lex.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
+      const art = cat
+        ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
+        : (resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe.station));
+      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : "misc", ingredients: recipe.ings.length });
     };
     indexedItems().forEach((item) => add(item.name));
     (CODEX.items || []).forEach((item) => add(item.name));
     (CODEX.crafts || []).forEach((item) => add(item.name || item.t));
-    craftTreeChoicesCache = [...choices.values()].sort((a, b) => a.ru.localeCompare(b.ru, "ru"));
+    craftTreeChoicesCache = [...choices.values()].sort((a, b) => a.ru.localeCompare(b.ru, "ru") || a.name.localeCompare(b.name, "en"));
     return craftTreeChoicesCache;
+  }
+
+  function craftChoiceCardHTML(item) {
+    const art = item.art
+      ? `<img src="${escAttr(item.art)}" alt="" loading="lazy" decoding="async" />`
+      : unavailableArt(item.kind || "misc");
+    const search = `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru");
+    return `<button class="craft-choice-card" type="button" data-choice-name="${escAttr(item.name)}" data-choice-search="${escAttr(search)}" aria-pressed="false">
+      <span class="slot craft-choice-art">${art}</span>
+      <span class="craft-choice-copy"><b>${esc(item.ru)}</b>${item.en && item.en !== item.ru ? `<small>${esc(item.en)}</small>` : ""}<em>${item.ingredients} ингредиент${item.ingredients === 1 ? "" : item.ingredients < 5 ? "а" : "ов"}</em></span>
+      <span class="craft-choice-mark" aria-hidden="true">◆</span>
+    </button>`;
   }
 
   function craftTreeBranchHTML(root) {
@@ -2478,9 +2500,10 @@
               <span aria-hidden="true">▶</span>
               <input id="craft-tree-picker-search" type="search" placeholder="Фильтр по русскому или игровому имени…" autocomplete="off" />
             </label>
-            <select id="craft-tree-select" size="6" aria-label="Предмет для дерева крафта">
-              <option value="">Нажми «+», чтобы загрузить список рецептов</option>
-            </select>
+            <p class="craft-tree-choice-status" id="craft-tree-choice-status" aria-live="polite">Нажми на карточку предмета</p>
+            <div class="craft-tree-choice-grid" id="craft-tree-choice-grid" role="listbox" aria-label="Предмет для дерева крафта">
+              <div class="craft-tree-choice-placeholder">Нажми «+», чтобы загрузить карточки рецептов</div>
+            </div>
             <div class="craft-tree-picker-actions">
               <button class="btn" id="craft-tree-build" type="button">Построить ветку</button>
               <button class="btn ghost" id="craft-tree-clear" type="button">Очистить</button>
@@ -2499,12 +2522,31 @@
   }
 
   function populateCraftTreePicker(section) {
-    const select = section.querySelector("#craft-tree-select");
-    if (!select || select.dataset.ready) return;
+    const grid = section.querySelector("#craft-tree-choice-grid");
+    if (!grid || grid.dataset.ready) return;
     const options = craftTreeChoices();
-    select.innerHTML = `<option value="">Выбери предмет с рецептом…</option>${options.map((item) => `<option value="${escAttr(item.name)}">${esc(item.ru)}${item.en && item.en !== item.ru ? ` · ${esc(item.en)}` : ""}</option>`).join("")}`;
-    if (craftTreeRoot) select.value = craftTreeRoot;
-    select.dataset.ready = "1";
+    grid.innerHTML = options.length
+      ? options.map(craftChoiceCardHTML).join("")
+      : `<div class="craft-tree-choice-placeholder">Рецептов для выбора пока не найдено</div>`;
+    grid.dataset.ready = "1";
+    if (craftTreeRoot) {
+      const active = [...grid.querySelectorAll("[data-choice-name]")].find((card) => normalizeArtName(card.dataset.choiceName) === normalizeArtName(craftTreeRoot));
+      if (active) selectCraftChoice(section, active);
+    }
+  }
+
+  function selectCraftChoice(section, card) {
+    if (!section || !card) return;
+    const grid = section.querySelector("#craft-tree-choice-grid");
+    if (grid) grid.querySelectorAll(".craft-choice-card.selected").forEach((other) => {
+      other.classList.remove("selected");
+      other.setAttribute("aria-pressed", "false");
+    });
+    card.classList.add("selected");
+    card.setAttribute("aria-pressed", "true");
+    section.dataset.selectedChoice = card.dataset.choiceName || "";
+    const status = section.querySelector("#craft-tree-choice-status");
+    if (status) status.innerHTML = `Выбран предмет: <b>${esc(card.querySelector(".craft-choice-copy b")?.textContent || card.dataset.choiceName || "")}</b>`;
   }
 
   function refreshInlineCraftTree(section) {
@@ -2538,7 +2580,7 @@
     const picker = section.querySelector("#craft-tree-picker");
     const add = section.querySelector("#craft-tree-add");
     const search = section.querySelector("#craft-tree-picker-search");
-    const select = section.querySelector("#craft-tree-select");
+    const grid = section.querySelector("#craft-tree-choice-grid");
     const build = section.querySelector("#craft-tree-build");
     const clear = section.querySelector("#craft-tree-clear");
     const setPicker = (open) => {
@@ -2547,19 +2589,24 @@
       add.setAttribute("aria-expanded", String(open));
       if (open) {
         populateCraftTreePicker(section);
-        requestAnimationFrame(() => (search || select)?.focus());
+        requestAnimationFrame(() => search?.focus());
       }
     };
     if (add) add.onclick = () => setPicker(picker.hidden);
     if (search) search.oninput = () => {
       const q = search.value.trim().toLocaleLowerCase("ru");
-      [...(select?.options || [])].forEach((option, index) => {
-        if (!index) { option.hidden = false; return; }
-        option.hidden = !!q && !option.textContent.toLocaleLowerCase("ru").includes(q);
+      const cards = [...(grid?.querySelectorAll(".craft-choice-card") || [])];
+      let visible = 0;
+      cards.forEach((card) => {
+        const match = !q || String(card.dataset.choiceSearch || "").includes(q);
+        card.hidden = !match;
+        if (match) visible += 1;
       });
+      const status = section.querySelector("#craft-tree-choice-status");
+      if (status && !section.dataset.selectedChoice) status.textContent = `Найдено карточек: ${visible}`;
     };
     if (build) build.onclick = () => {
-      const chosen = select && select.value;
+      const chosen = section.dataset.selectedChoice || "";
       const info = chosen ? ingredientInfo(chosen) : null;
       if (!chosen || !info || !info.recipe) {
         toast("Сначала выбери предмет с рецептом", "+");
@@ -2575,12 +2622,23 @@
     if (clear) clear.onclick = () => {
       craftTreeRoot = "";
       store.set({ craftTreeRoot });
-      if (select) select.value = "";
+      delete section.dataset.selectedChoice;
+      grid?.querySelectorAll(".craft-choice-card.selected").forEach((card) => {
+        card.classList.remove("selected");
+        card.setAttribute("aria-pressed", "false");
+      });
+      const status = section.querySelector("#craft-tree-choice-status");
+      if (status) status.textContent = "Нажми на карточку предмета";
       refreshInlineCraftTree(section);
       setPicker(false);
       toast("Ветка крафта очищена", "×");
     };
     section.addEventListener("click", (e) => {
+      const choice = e.target.closest(".craft-choice-card[data-choice-name]");
+      if (choice) {
+        selectCraftChoice(section, choice);
+        return;
+      }
       const expand = e.target.closest("[data-inline-tree-expand]");
       if (expand) { setTreeNodes(section.querySelector("[data-tree-surface='inline']"), true); return; }
       const collapse = e.target.closest("[data-inline-tree-collapse]");
