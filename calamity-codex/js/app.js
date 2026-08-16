@@ -1604,11 +1604,11 @@
     (sources.npcs || []).forEach((d) => {
       const chance = d.chance ? `<em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
       const cond = d.cond ? ` <i>(${esc(d.cond)})</i>` : "";
-      parts.push(`<span class="src-drop">${chance}<b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${cond}</span>`);
+      parts.push(`<span class="src-drop">${chance}<i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${cond}</span>`);
     });
     if (!short) {
-      if ((sources.tiles || []).length) parts.push(`<span class="src-drop">выбивается: ${esc(sources.tiles.join(", "))}</span>`);
-      if ((sources.chests || []).length) parts.push(`<span class="src-drop">в: ${esc(sources.chests.join(", "))}</span>`);
+      if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i>выбивается: ${esc(sources.tiles.join(", "))}</span>`);
+      if ((sources.chests || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">▤</i>в: ${esc(sources.chests.join(", "))}</span>`);
     }
     return parts.join("");
   }

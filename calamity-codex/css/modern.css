@@ -1574,6 +1574,12 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
   font-weight: 700;
   letter-spacing: .03em;
 }
+.src-ico {
+  color: var(--gold);
+  font-style: normal;
+  margin-right: 5px;
+  font-size: 10px;
+}
 .src-drop i {
   color: #77838f;
   font-size: 10.5px;
@@ -2172,9 +2178,10 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
 .tip-card-tree .tkids::before { left: 10px; }
 .tip-card-tree .tkids .tnode-card::before { left: -18px; width: 18px; }
 .tip-card-tree .tnode-card .ttoggle { right: -19px; width: 20px; height: 20px; font-size: 9px; }
-.tip-card-tree /* источники предмета прямо в узле дерева */
+/* источники предмета прямо в узле дерева */
 .tnode-src {
   grid-column: 1 / -1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -2187,6 +2194,8 @@ body[data-view="favorites"] .ph-screen .art { background-position: center 55%; }
   font-size: 9.5px;
   line-height: 1.45;
   color: #a9b4bf;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .tnode-src .src-drop em { font-size: 9px; }
 .tnode-src .src-drop i { font-size: 9.5px; }
