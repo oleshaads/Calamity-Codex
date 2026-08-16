@@ -35,6 +35,7 @@ check(indexHtml.includes("js/ru-names.js"), "Russian catalog name layer is not l
 check(indexHtml.includes("js/npc-art.js"), "NPC art layer is not loaded by index.html");
 check(app.includes("ruItemName"), "Catalog cards are not using the Russian display-name layer");
 check(app.includes("npcSourceArt"), "Craft source rows are not rendering enemy art");
+check(app.includes("EXTRA_RECIPE_DEFS") && app.includes("Copper Shortsword") && app.includes("Zenith"), "Vanilla Zenith recipe override is missing");
 check(app.includes("item.description || purpose") && app.includes("ruText(item.description || purpose)"), "Catalog cards are not rendering the Russian description field");
 const npcArtContext = { window: {} };
 vm.createContext(npcArtContext);

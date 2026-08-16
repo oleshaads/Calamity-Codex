@@ -104,7 +104,16 @@
     "blighted gel": "порченный гель",
     "bloodstone": "кровавый камень",
     "corroded fossil": "корродированное ископаемое",
-    "cryonic bar": "крионический слиток"
+    "cryonic bar": "крионический слиток",
+    "zenith": "Зенит",
+    "copper shortsword": "медный короткий меч",
+    "enchanted sword": "зачарованный меч",
+    "starfury": "Звёздная ярость",
+    "bee keeper": "Пчеловод",
+    "seedler": "Сеятель",
+    "terra blade": "Терра-клинок",
+    "meowmere": "Мяумур",
+    "star wrath": "Звёздный гнев"
   };
   const PHRASES = Object.assign({}, EXTRA_PHRASES, {
     "a-pls": "А-ПЛС", "abyssal diving": "бездна · ныряние", "auric tesla": "аурик-тесла", "cosmic anvil": "космическая наковальня",

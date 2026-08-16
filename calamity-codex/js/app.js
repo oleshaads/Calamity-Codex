@@ -1513,6 +1513,10 @@
       const enText = detail && detail.rec ? detail.rec : (c.r || c.ings || "");
       add(t, enText, c.station || "");
     }));
+    Object.entries(EXTRA_RECIPE_DEFS).forEach(([name, recipe]) => {
+      const key = normalizeArtName(name);
+      if (key && !recipeIndex.has(key)) recipeIndex.set(key, recipe);
+    });
     return recipeIndex;
   }
 
@@ -1545,6 +1549,32 @@
     }
     return null;
   }
+  const EXTRA_RECIPE_DEFS = {
+    Zenith: {
+      ings: [
+        { name: "Copper Shortsword", count: "1" },
+        { name: "Enchanted Sword", count: "1" },
+        { name: "Starfury", count: "1" },
+        { name: "Bee Keeper", count: "1" },
+        { name: "Seedler", count: "1" },
+        { name: "Terra Blade", count: "1" },
+        { name: "Meowmere", count: "1" },
+        { name: "Star Wrath", count: "1" }
+      ],
+      station: "Мифриловая или орихалковая наковальня"
+    }
+  };
+  const EXTRA_ITEM_INFO = {
+    Zenith: {
+      ru: "Зенит",
+      en: "Zenith",
+      kind: "weapon",
+      desc: "Финальный меч ванильной Terraria. Выпускает клинки из собранного оружия и закрывает главную ванильную ветку крафта.",
+      obtain: "Скрафтить из: Copper Shortsword + Enchanted Sword + Starfury + Bee Keeper + Seedler + Terra Blade + Meowmere + Star Wrath · у мифриловой или орихалковой наковальни.",
+      used: "Главное оружие финала ванильной Terraria; особенно полезен после победы над Лунным лордом.",
+      when: "После Лунного лорда, когда собраны все восемь мечей."
+    }
+  };
   const VANILLA_LOCAL_ART = {
     "fallen star": "assets/lex/vanilla/fallen-star.png",
     acorn: "assets/lex/vanilla/acorn.png",
@@ -1619,8 +1649,12 @@
     const guide = GUIDE_BY_NORM.get(key)
       || (lex && (GUIDE_BY_NORM.get(normalizeArtName(lex.en)) || GUIDE_BY_NORM.get(normalizeArtName(lex.ru))))
       || null;
-    let ru = (guide && guide.nameRu) || (lex && lex.ru) || (cat ? ruItemName(name, cat) : ruItemName(name)) || name;
+    const extra = EXTRA_ITEM_INFO[name]
+      || (lex && EXTRA_ITEM_INFO[lex.en])
+      || null;
+    let ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || (cat ? ruItemName(name, cat) : ruItemName(name)) || name;
     let en = (lex && lex.en && String(lex.en).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) ? lex.en : "";
+    if (!en && extra && extra.en) en = extra.en;
     if (!en && cat && cat.name.toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = cat.name;
     if (!en && guide && /[A-Za-z]/.test(String(guide.name)) && String(guide.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = guide.name;
     let art = cat
@@ -1632,8 +1666,8 @@
       if (vanilla && vanilla.local) art = vanilla.local;
       else if (vanilla && vanilla.remote) remoteArt = vanilla.remote;
     }
-    const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || "";
-    const obtainRaw = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || "";
+    const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || (extra && extra.desc) || "";
+    const obtainRaw = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || (extra && extra.obtain) || "";
     const obtain = ruText(obtainRaw);
     const recipe = getRecipeIndex().get(key)
       || (cat && getRecipeIndex().get(normalizeArtName(cat.name)))
@@ -1643,11 +1677,12 @@
     // Карточка дерева должна быть полезной даже для записи из полного
     // каталога, у которой нет отдельной строки в словаре: назначение и этап
     // берём из тех же русских правил, что используются в каталоге.
-    const used = (cat && catalogPurpose(cat)) || (guide && (guide.why || guide.use || "")) || (lex && lex.used) || "";
+    const used = (cat && catalogPurpose(cat)) || (guide && (guide.why || guide.use || "")) || (lex && lex.used) || (extra && extra.used) || "";
     const when = (cat && CATALOG_STAGE[Math.min(Math.max(cat.stage, 0), CATALOG_STAGE.length - 1)])
       || (guide && guide.when)
+      || (extra && extra.when)
       || "";
-    return { name, ru, en, art, desc, obtain, recipe, used, when, kind: cat ? cat.kind : "mat", catName: cat ? cat.name : "", remoteArt };
+    return { name, ru, en, art, desc, obtain, recipe, used, when, kind: cat ? cat.kind : (extra && extra.kind) || "mat", catName: cat ? cat.name : "", remoteArt };
   }
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
@@ -2551,21 +2586,24 @@
       // слот, а не рисуются несколькими копиями одного предмета.
       const cat = catalogByName(raw);
       const canonical = cat ? cat.name : raw;
+      const extra = EXTRA_ITEM_INFO[canonical] || EXTRA_ITEM_INFO[raw] || null;
       const key = cat ? `catalog:${cat.id}` : `name:${normalizeArtName(canonical)}`;
       const recipe = treeRecipeForName(canonical) || treeRecipeForName(raw);
       if (!key || choices.has(key) || !recipe || !recipe.ings.length) return;
       const lex = exactLexLookup(canonical) || exactLexLookup(raw);
       const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
-      const ru = (guide && guide.nameRu) || (lex && lex.ru) || ruItemName(canonical, cat) || canonical;
-      const en = (lex && lex.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
+      const ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || ruItemName(canonical, cat) || canonical;
+      const en = (lex && lex.en) || (extra && extra.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
+      const rootInfo = ingredientInfo(canonical);
       const art = cat
         ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
-        : (resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe.station));
-      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : "misc", ingredients: recipe.ings.length });
+        : (rootInfo.art || rootInfo.remoteArt || resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe.station));
+      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || "misc", ingredients: recipe.ings.length });
     };
     indexedItems().forEach((item) => add(item.name));
     (CODEX.items || []).forEach((item) => add(item.name));
     (CODEX.crafts || []).forEach((item) => add(item.name || item.t));
+    Object.keys(EXTRA_RECIPE_DEFS).forEach((name) => add(name));
     craftTreeChoicesCache = [...choices.values()].sort((a, b) => a.ru.localeCompare(b.ru, "ru") || a.name.localeCompare(b.name, "en"));
     return craftTreeChoicesCache;
   }
