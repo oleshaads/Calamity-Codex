@@ -1,0 +1,14 @@
+{
+  "name": "calamity-codex",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:runtime": "node scripts/build-runtime.mjs",
+    "audit": "node scripts/audit-release.mjs && node scripts/audit-craft-art.cjs"
+  },
+  "devDependencies": {
+    "clean-css": "5.3.3",
+    "jsdom": "26.1.0",
+    "terser": "5.43.1"
+  }
+}

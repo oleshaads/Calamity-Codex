@@ -26,6 +26,9 @@
   };
   let lastView = "";
   let lastScrollKey = "";
+  const routeScrollPositions = new Map();
+  let restoreScrollOnNextRoute = false;
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   // Ключ «содержания» страницы: если он изменился, возвращаемся наверх.
   // Параметры поиска и limit не трогают позицию прокрутки.
   function scrollKey(view, params) {
@@ -34,17 +37,17 @@
     if (view === "bosses") return `bosses:${params.era || "all"}`;
     if (view === "items") return `items:${params.mode || "catalog"}:${params.cls || "all"}:${params.kind || "all"}:${params.q || "all"}:${params.fav || ""}`;
     if (view === "lex") return `lex:${params.type || "all"}`;
-    if (view === "crafts") return `crafts:${params.q || "all"}`;
+    if (view === "crafts") return `crafts:${params.q || "all"}:${params.item || ""}`;
     return view;
   }
   const SECTION_THEMES = {
-    wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/mushroom.jpg",  accent: "#8ebbe0", fx: "dust" },
-    bosses:    { eyebrow: "Бестиарий Каламити", mark: "☠", no: "II",  cover: "assets/headers/bosses.webp",    bg: "assets/themes/brimstone.jpg", accent: "#f06c73", fx: "fire" },
-    items:     { eyebrow: "Арсенал героя",      mark: "◆", no: "III", cover: "assets/headers/items.webp",     bg: "assets/themes/desert.jpg",    accent: "#68d8c9", fx: "sparks" },
-    favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "IV",  cover: "assets/headers/favorites.webp", bg: "assets/themes/dungeon.jpg",   accent: "#efc66e", fx: "stars" },
-    lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "V",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.jpg",       accent: "#c997e8", fx: "spores" },
-    crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VI",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.jpg",      accent: "#eea85b", fx: "embers" },
-    biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.jpg",    accent: "#91d47f", fx: "leaves" }
+    wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/mushroom.webp",  accent: "#8ebbe0", fx: "dust" },
+    bosses:    { eyebrow: "Бестиарий Каламити", mark: "☠", no: "II",  cover: "assets/headers/bosses.webp",    bg: "assets/themes/brimstone.webp", accent: "#f06c73", fx: "fire" },
+    items:     { eyebrow: "Арсенал героя",      mark: "◆", no: "III", cover: "assets/headers/items.webp",     bg: "assets/themes/desert.webp",    accent: "#68d8c9", fx: "sparks" },
+    favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "IV",  cover: "assets/headers/favorites.webp", bg: "assets/themes/dungeon.webp",   accent: "#efc66e", fx: "stars" },
+    lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "V",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.webp",       accent: "#c997e8", fx: "spores" },
+    crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VI",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",      accent: "#eea85b", fx: "embers" },
+    biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",    accent: "#91d47f", fx: "leaves" }
   };
   const KIND_RU = {
     weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
@@ -55,20 +58,59 @@
   const ITEM_GROUPS = new Map((ITEM_INDEX.groups || []).map(([id, label, kind, cls, count]) => [id, { id, label, kind, cls, count }]));
   const ITEM_KIND_MARK = { weapon: "⚔", armor: "◈", acc: "◇", ammo: "➶", tool: "⚒", mat: "◆", summon: "✦", potion: "⚗", misc: "▦" };
   const CATALOG_PAGE_SIZE = 96;
+  const GUIDE_PAGE_SIZE = 48;
   let indexedItemsCache = null;
   let detailedNameCache = null;
 
   function indexedItems() {
     if (indexedItemsCache) return indexedItemsCache;
-    indexedItemsCache = (ITEM_INDEX.items || []).map(([name, groupId, id, tooltip, image, obtain, stage, description]) => {
+    const compact = ITEM_INDEX.format === 2;
+    indexedItemsCache = (ITEM_INDEX.items || []).map((row) => {
+      const [name, groupId, id, tooltip, image, obtain, stage, description] = compact
+        ? [row[0], row[1], row[2], "", 1, row[3], row[4], row[5]]
+        : row;
       const group = ITEM_GROUPS.get(groupId) || { label: "Предмет", kind: "misc", cls: "all" };
       return {
         name, id, groupId, group: group.label, kind: group.kind, cls: group.cls,
         tooltip: tooltip || "", description: description || "", image: Boolean(image),
-        obtain: obtain || "", stage: Number(stage || 0)
+        obtain: obtain || "", stage: Number(stage || 0), searchBlob: ""
       };
     });
+    applyCatalogTooltips();
     return indexedItemsCache;
+  }
+
+  let catalogTooltipPromise = null;
+  let catalogTooltipsApplied = false;
+  function applyCatalogTooltips() {
+    const payload = window.CALAMITY_CATALOG_TOOLTIPS;
+    if (!payload || catalogTooltipsApplied || !indexedItemsCache) return false;
+    if (Array.isArray(payload.tooltips)) {
+      payload.tooltips.forEach((tooltip, index) => {
+        if (tooltip && indexedItemsCache[index]) indexedItemsCache[index].tooltip = tooltip;
+      });
+    } else {
+      (payload.rows || []).forEach(([index, tooltip]) => {
+        if (indexedItemsCache[index]) indexedItemsCache[index].tooltip = tooltip || "";
+      });
+    }
+    indexedItemsCache.forEach((item) => { item.searchBlob = ""; });
+    catalogTooltipsApplied = true;
+    globalCatalogSearchRows = null;
+    return true;
+  }
+  function loadCatalogTooltips() {
+    if (catalogTooltipsApplied || applyCatalogTooltips()) return Promise.resolve(false);
+    if (catalogTooltipPromise) return catalogTooltipPromise;
+    catalogTooltipPromise = new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = new URL("js/catalog-tooltips.js?v=20260817-core24", document.baseURI).href;
+      script.async = true;
+      script.onload = () => resolve(applyCatalogTooltips());
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    });
+    return catalogTooltipPromise;
   }
 
   function detailedNameMap() {
@@ -144,7 +186,8 @@
   const fillIngTT = (info) => {
     if (!tt || !info) return;
     const ingIcons = (info.recipe ? info.recipe.ings : []).map((ing) => {
-      const child = ingredientInfo(ing.name);
+      const ingredientKey = ing.key || ing.name;
+      const child = ingredientInfo(ingredientKey);
       const hit = child.art || child.remoteArt || resolveArt(ing.name);
       const remote = child.remoteArt && !child.art ? " remote" : "";
       return hit
@@ -152,9 +195,9 @@
         : `<i aria-hidden="true">${esc(ing.count || "?")}</i>`;
     }).join("");
     const craftLine = info.recipe
-      ? `${info.recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(ruItemName(i.name))}` : esc(ruItemName(i.name)))).join(" + ")}${info.recipe.station ? ` · у ${esc(ruText(info.recipe.station))}` : ""}`
+      ? `${info.recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(ingredientInfo(i.key || i.name).ru)}` : esc(ingredientInfo(i.key || i.name).ru))).join(" + ")}${info.recipe.station ? ` · ${esc(craftStationInline(info.recipe.station))}` : ""}`
       : "";
-    const obtainLine = (!info.recipe || !/^Скрафтить/i.test(info.obtain || "")) ? info.obtain : "";
+    const obtainLine = (info.recipe && !/^Скрафтить/i.test(info.obtain || "")) ? info.obtain : "";
     tt.innerHTML = `
       <div class="tt-type">Ингредиент · ${esc(KIND_RU[info.kind] || "Предмет")}</div>
       <div class="tt-ru">${esc(info.ru)}</div>
@@ -163,7 +206,7 @@
       ${obtainLine ? `<p><b>Где взять</b> — ${esc(ruText(obtainLine))}</p>` : ""}
       ${craftLine
         ? `<p><b>Рецепт</b> — ${craftLine}</p><div class="tt-ings">${ingIcons}</div>`
-        : `<p><b>Рецепт</b> — предмет не крафтится: добывается или находится в мире.</p>`}
+        : `<p><b>Получение</b> — ${esc(ruText(info.obtain))}</p>`}
       <p class="tt-hint">Клик по ингредиенту — дерево крафта</p>
     `;
   };
@@ -200,6 +243,7 @@
 
   function hideTipCard() {
     if (!tipCard) return;
+    clearTimeout(tipCardHideTimer);
     tipCard.hidden = true;
     tipCardAnchor = null;
     tipCardPinned = false;
@@ -207,7 +251,7 @@
   function hideTipCardSoon() {
     if (!tipCard || tipCardPinned) return;
     clearTimeout(tipCardHideTimer);
-    tipCardHideTimer = setTimeout(hideTipCard, 420);
+    hideTipCard();
   }
   function placeTipCard(el) {
     if (!tipCard || !el) return;
@@ -219,9 +263,11 @@
     const h = Math.min(tipCard.offsetHeight || 480, maxH);
     let x = Math.min(r.left, innerWidth - w - 8);
     if (x < 8) x = 8;
-    let y = r.bottom + 10;
+    // Карточка касается элемента-якоря без мёртвого зазора: курсор может
+    // перейти с предмета прямо на карточку, не закрывая её между пикселями.
+    let y = r.bottom;
     if (y + h > innerHeight - 8) {
-      y = r.top - h - 10;
+      y = r.top - h;
       if (y < 8) y = 8;
     }
     tipCard.style.left = x + "px";
@@ -241,7 +287,7 @@
     const when = info.when || "";
     const type = (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
     const craftLine = recipe
-      ? recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(ruItemName(i.name))}` : esc(ruItemName(i.name)))).join(" + ") + (recipe.station ? ` · у ${esc(ruText(recipe.station))}` : "")
+      ? recipe.ings.map((i) => (i.count ? `${esc(i.count)} × ${esc(ingredientInfo(i.key || i.name).ru)}` : esc(ingredientInfo(i.key || i.name).ru))).join(" + ") + (recipe.station ? ` · ${esc(craftStationInline(recipe.station))}` : "")
       : ruText((lex && lex.craft) || "");
     const treeHTML = recipe
       ? `<div class="tip-card-tree">${treeNodeHTML(name, 0, new Set())}</div>`
@@ -263,11 +309,11 @@
       <div class="tip-card-body">
         ${desc ? `<p class="tip-card-desc">${esc(desc)}</p>` : ""}
         <div class="tip-card-facts">
-          ${(obtain || tipSources) ? `<div class="fact"><span>Где взять</span>${npcSourceLines(tipSources) ? `<div class="src-list">${npcSourceLines(tipSources)}</div>` : `<p>${esc(obtain || "Точный источник указан на официальной wiki.")}</p>`}</div>` : ""}
+          ${(obtain || tipSources) ? `<div class="fact source-fact"><span>Где взять</span>${npcSourceLines(tipSources) ? `<div class="src-list">${npcSourceLines(tipSources)}</div>` : `<p>${esc(obtain)}</p>`}</div>` : ""}
           ${used ? `<div class="fact"><span>Зачем</span><p>${esc(used)}</p></div>` : ""}
           ${when ? `<div class="fact"><span>Когда</span><p>${esc(when)}</p></div>` : ""}
           ${recipe
-            ? `<div class="fact recipe-fact"><span>Рецепт</span><div class="craft-chips">${recipe.ings.map((i) => ingChipHTML(i.name, i.count)).join("")}${stationChipHTML(recipe.station)}</div></div>`
+            ? `<div class="fact recipe-fact"><span>Рецепт</span><div class="craft-chips">${recipe.ings.map((i) => ingChipHTML(i.key || i.name, i.count)).join("")}${stationChipHTML(recipe.station)}</div></div>`
             : (craftLine ? `<div class="fact"><span>Крафт</span><p>${craftLine}</p></div>` : "")}
         </div>
         ${treeHTML}
@@ -315,21 +361,21 @@
     const desc = ruText((boss && boss.tip) || NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || ""));
     const facts = [];
     if (boss) {
-      if (boss.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(ruText(boss.where))}</p></div>`);
-      if (boss.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(ruText(boss.when))}</p></div>`);
-      if (boss.summon) facts.push(`<div class="fact"><span>Как призвать</span><p>${esc(ruText(boss.summon))}</p></div>`);
-      if (boss.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(ruText(boss.drops))}</p></div>`);
+      if (boss.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(bossFactText(boss, "where"))}</p></div>`);
+      if (boss.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(bossFactText(boss, "when"))}</p></div>`);
+      if (boss.summon) facts.push(`<div class="fact"><span>Как призвать</span><p>${esc(bossFactText(boss, "summon"))}</p></div>`);
+      if (boss.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(bossFactText(boss, "drops"))}</p></div>`);
     } else if (mini) {
       if (mini.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(ruText(mini.where))}</p></div>`);
       if (mini.when) facts.push(`<div class="fact"><span>Когда идти</span><p>${esc(ruText(mini.when))}</p></div>`);
       if (mini.drops) facts.push(`<div class="fact"><span>Что даст победа</span><p>${esc(ruText(mini.drops))}</p></div>`);
     } else {
-      facts.push(`<div class="fact"><span>Где</span><p>${esc(npcWhereForName(npcName))}</p></div>`);
+      const npcWhere = npcWhereForName(npcName);
+      if (npcWhere) facts.push(`<div class="fact"><span>Где</span><p>${esc(npcWhere)}</p></div>`);
       if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(ruText(info.time))}</p></div>`);
       if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(ruText(info.req))}</p></div>`);
       if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(ruText(info.source))}</p></div>`);
     }
-    if (!facts.length) facts.push(`<div class="fact"><span>Где</span><p>Враг встречается в мире Каламити; условие источника указано рядом с дропом.</p></div>`);
     const drops = [];
     Object.keys(NPC_SOURCES).forEach((itemKey) => {
       const src = NPC_SOURCES[itemKey];
@@ -346,7 +392,7 @@
       <div class="tip-card-head">
         <span class="slot tip-card-slot npc-slot"${localArt ? "" : ` title="Спрайт — на официальной wiki"`}>${artHTML}</span>
         <span class="tip-card-title">
-          <small>${esc(type)} · Calamity</small>
+          <small>${esc(type)} · Каламити</small>
           <b>${esc(ru)}</b>
           <i>в игре: ${esc(npcName)}</i>
         </span>
@@ -452,8 +498,6 @@
     if (!el || !tipCard) return;
     if (e.relatedTarget && el.contains(e.relatedTarget)) return;
     if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
-    // переход на другое слово/ингредиент не должен мигать карточкой
-    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .npc-tip, .ing")) return;
     hideTipCardSoon();
   });
   /* Remote-спрайты (wiki): при недоступности сети картинка заменяется
@@ -510,7 +554,6 @@
     if (!el || !tipCard) return;
     if (e.relatedTarget && el.contains(e.relatedTarget)) return;
     if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
-    if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".tip, .npc-tip, .ing")) return;
     hideTipCardSoon();
   });
   document.addEventListener("click", (e) => {
@@ -531,6 +574,10 @@
     get() { try { return JSON.parse(localStorage.getItem("calamity-codex") || "{}"); } catch { return {}; } },
     set(p) {
       try { localStorage.setItem("calamity-codex", JSON.stringify({ ...store.get(), ...p })); }
+      catch { /* The guide still works when private storage is unavailable. */ }
+    },
+    replace(value) {
+      try { localStorage.setItem("calamity-codex", JSON.stringify(value && typeof value === "object" ? value : {})); }
       catch { /* The guide still works when private storage is unavailable. */ }
     }
   };
@@ -821,6 +868,17 @@
   }
   function enhanceCards(root) {
     if (!root) return;
+    root.querySelectorAll("button.chip").forEach((button) => button.setAttribute("aria-pressed", String(button.classList.contains("active"))));
+    root.querySelectorAll(".catalog-mode").forEach((link) => {
+      if (link.classList.contains("active")) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    if (innerWidth <= 760) requestAnimationFrame(() => {
+      root.querySelectorAll(".chips").forEach((row) => {
+        const active = row.querySelector(".chip.active");
+        if (active && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2);
+      });
+    });
     root.querySelectorAll(".item-grid .card, .craft-grid .card").forEach((card) => {
       // ВАЖНО: маркер карточки НЕ должен совпадать с атрибутом кнопки —
       // иначе e.target.closest() найдёт карточку и сворачивание сработает
@@ -895,7 +953,8 @@
     if (!c) return { set() {} };
     const ctx = c.getContext("2d");
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (!ctx || reduceMotion) return { set() {} };
+    const saveData = navigator.connection?.saveData === true;
+    if (!ctx || reduceMotion || saveData) return { set() {} };
     let w, h, dots = [], mode = "embers";
     const pal = {
       embers:  ["232,120,60", "255,80,40"],
@@ -933,35 +992,48 @@
     };
     resize();
     addEventListener("resize", resize);
-    const tick = () => {
-      ctx.clearRect(0, 0, w, h);
-      dots.forEach((d) => {
-        d.t += 0.02;
-        if (mode === "bubbles") { d.y -= d.s; d.x += Math.sin(d.t) * 0.4; }
-        else if (mode === "snow" || mode === "spores" || mode === "pollen" || mode === "leaves") {
-          d.y += d.s * 0.55; d.x += Math.sin(d.t) * 0.8 + d.vx;
-        } else if (mode === "sand") { d.y += d.s * 0.3; d.x += d.s * 1.4; }
-        else if (mode === "drip" || mode === "acid") { d.y += d.s * 1.4; }
-        else if (mode === "warp") { d.x += d.vx * 4; d.y += Math.sin(d.t) * 0.4; }
-        else { d.y -= d.s; d.x += Math.sin(d.y * 0.01) * 0.25; }
-        if (d.y < -8) d.y = h + 8;
-        if (d.y > h + 8) d.y = -8;
-        if (d.x < -8) d.x = w + 8;
-        if (d.x > w + 8) d.x = -8;
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(${d.c},${d.a})`;
-        if (mode === "warp") {
-          ctx.fillRect(d.x, d.y, 10 + d.s * 8, 1);
-        } else if (mode === "leaves") {
-          ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.t);
-          ctx.fillRect(-d.r, -d.r / 2, d.r * 2, d.r); ctx.restore();
-        } else {
-          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
-        }
-      });
-      requestAnimationFrame(tick);
+    let animationFrame = 0;
+    let lastFrameAt = 0;
+    const tick = (now) => {
+      if (document.hidden) { animationFrame = 0; return; }
+      // На 120/144 Гц старый цикл рисовал частицы столько же раз в секунду.
+      // Для фонового эффекта достаточно 30 FPS — визуально он тот же, а CPU/GPU
+      // и расход батареи заметно ниже.
+      if (!lastFrameAt || now - lastFrameAt >= 33) {
+        lastFrameAt = now;
+        ctx.clearRect(0, 0, w, h);
+        dots.forEach((d) => {
+          d.t += 0.02;
+          if (mode === "bubbles") { d.y -= d.s; d.x += Math.sin(d.t) * 0.4; }
+          else if (mode === "snow" || mode === "spores" || mode === "pollen" || mode === "leaves") {
+            d.y += d.s * 0.55; d.x += Math.sin(d.t) * 0.8 + d.vx;
+          } else if (mode === "sand") { d.y += d.s * 0.3; d.x += d.s * 1.4; }
+          else if (mode === "drip" || mode === "acid") { d.y += d.s * 1.4; }
+          else if (mode === "warp") { d.x += d.vx * 4; d.y += Math.sin(d.t) * 0.4; }
+          else { d.y -= d.s; d.x += Math.sin(d.y * 0.01) * 0.25; }
+          if (d.y < -8) d.y = h + 8;
+          if (d.y > h + 8) d.y = -8;
+          if (d.x < -8) d.x = w + 8;
+          if (d.x > w + 8) d.x = -8;
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(${d.c},${d.a})`;
+          if (mode === "warp") {
+            ctx.fillRect(d.x, d.y, 10 + d.s * 8, 1);
+          } else if (mode === "leaves") {
+            ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.t);
+            ctx.fillRect(-d.r, -d.r / 2, d.r * 2, d.r); ctx.restore();
+          } else {
+            ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+          }
+        });
+      }
+      animationFrame = requestAnimationFrame(tick);
     };
-    tick();
+    const startAnimation = () => {
+      if (!animationFrame && !document.hidden) animationFrame = requestAnimationFrame(tick);
+    };
+    document.addEventListener("visibilitychange", startAnimation);
+    startAnimation();
     return {
       set(name) {
         mode = name || "embers";
@@ -1009,6 +1081,7 @@
   }
 
   function route() {
+    app?.removeAttribute("aria-busy");
     const focusedId = document.activeElement && document.activeElement.id;
     const hash = location.hash.replace(/^#/, "") || "/";
     const [path, q] = hash.split("?");
@@ -1038,28 +1111,42 @@
     if (scrim) scrim.hidden = true;
     searchPanel.classList.add("hidden");
     hideTipCard();
+    if (view !== "biomes" && lazyBackgroundObserver) {
+      lazyBackgroundObserver.disconnect();
+      lazyBackgroundObserver = null;
+    }
     const tm = document.getElementById("tree-modal");
     if (tm && !tm.hidden) {
       tm.hidden = true;
       document.body.classList.remove("tree-open");
     }
 
-    if (view === "home") { applyTheme(null); renderHome(); }
-    else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
-    else if (view === "wiki") { applyTheme(null); renderWiki(params); }
-    else if (view === "bosses") { applyTheme(null); renderBosses(params); }
-    else if (view === "crafts") { applyTheme(null); renderCrafts(params.q || ""); }
-    else if (view === "items") { applyTheme(null); renderItems(params); }
-    else if (view === "favorites") { applyTheme(null); renderFavorites(); }
-    else if (view === "lex") { applyTheme(null); renderLex(params); }
-    else if (view === "biomes") { applyTheme(null); renderBiomes(); }
-
-    enhanceCards(app);
+    try {
+      if (view === "home") { applyTheme(null); renderHome(); }
+      else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
+      else if (view === "wiki") { applySectionTheme(view); renderWiki(params); }
+      else if (view === "bosses") { applySectionTheme(view); renderBosses(params); }
+      else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || "", params.item || ""); }
+      else if (view === "items") { applySectionTheme(view); renderItems(params); }
+      else if (view === "favorites") { applySectionTheme(view); renderFavorites(); }
+      else if (view === "lex") { applySectionTheme(view); renderLex(params); }
+      else if (view === "biomes") { applySectionTheme(view); renderBiomes(); }
+      enhanceCards(app);
+    } catch (error) {
+      console.error("Calamity Codex route failed", error);
+      fillRail("");
+      app.innerHTML = `<div class="page"><div class="empty-state route-error"><span>!</span><b>Раздел не удалось открыть</b><p>${esc(error?.message || "Неизвестная ошибка интерфейса")}</p><div><a class="btn" href="#/">На главную</a><button class="btn ghost" type="button" id="route-reload">Перезагрузить</button></div></div></div>`;
+      document.getElementById("route-reload")?.addEventListener("click", () => location.reload());
+      return;
+    }
 
     if (view === "bosses" && viewChanged) { SND.play("roar"); shakeStage(); }
 
     const contentKey = scrollKey(view, params);
     const contentChanged = contentKey !== lastScrollKey;
+    const shouldRestoreScroll = restoreScrollOnNextRoute && routeScrollPositions.has(contentKey);
+    const restoredScrollY = shouldRestoreScroll ? routeScrollPositions.get(contentKey) : 0;
+    restoreScrollOnNextRoute = false;
     lastScrollKey = contentKey;
 
     if (viewChanged) {
@@ -1069,10 +1156,10 @@
         void app.offsetWidth;
         app.classList.add("enter");
         app.addEventListener("animationend", () => app.classList.remove("enter"), { once: true });
-        window.scrollTo({ top: 0, behavior: "auto" });
+        window.scrollTo({ top: restoredScrollY, behavior: "auto" });
       });
-    } else if (contentChanged) {
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+    } else if (contentChanged || shouldRestoreScroll) {
+      requestAnimationFrame(() => window.scrollTo({ top: restoredScrollY, behavior: "auto" }));
     }
 
     if (!viewChanged && focusedId) {
@@ -1092,7 +1179,9 @@
     const { done, total, percent, current } = updateJourneyProgress();
     const favorites = getFavorites();
     const favTotal = favorites.item.size + favorites.boss.size + favorites.craft.size;
-    const itemCount = indexedItems().length.toLocaleString("ru-RU");
+    // На главной нужен только счётчик: не разворачиваем 2535 компактных строк
+    // каталога в объекты до первого открытия каталога или поиска.
+    const itemCount = (ITEM_INDEX.items || []).length.toLocaleString("ru-RU");
     const jumps = [
       ["#/novice?q=1", "assets/sprites/Wooden_Sword.png", "Путь новичка", `${CODEX.quests.length} квестов`],
       ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
@@ -1107,7 +1196,7 @@
       <section class="hero">
         <div class="hero-bg"></div>
         <div class="hero-inner">
-          <div class="kicker">Terraria · Calamity ${CODEX.version} · офлайн-справочник</div>
+          <div class="kicker">Terraria · Каламити ${CODEX.version} · офлайн-справочник</div>
           <h1>Каламити<span>Кодекс</span></h1>
           <p class="lede">Терминал прохождения: 30 квестов от первого дома до Верховной ведьмы, ${itemCount} предметов с настоящими спрайтами, боссы, крафты и биомы. Наведи мышь на ингредиент — увидишь, где взять и из чего собрать.</p>
           <div class="hero-actions">
@@ -1141,13 +1230,13 @@
           <p>Все данные уже внутри страницы: спрайты, рецепты и описания работают без сети.</p>
         </div>
         <div class="jump-grid">
-          ${jumps.map(([href, img, label, sub]) => `<a class="jump" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+          ${jumps.map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
         </div>
         <div class="home-section-head">
           <div><small>Эпохи мира</small><h2>С чего начать</h2></div>
           <p>Каждая эпоха — свой набор противников и снаряжения. Маршрут ведёт по порядку.</p>
         </div>
-        <div class="era-grid">${CODEX.eras.map((e) => `<article class="era-card panel"><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol><a class="era-link" href="#/bosses?era=${escAttr(e.id)}">Боссы эпохи →</a></article>`).join("")}</div>
+        <div class="era-grid">${CODEX.eras.map((e, index) => `<article class="era-card panel" data-era="${escAttr(e.id)}"><span class="era-no" aria-hidden="true">0${index + 1}</span><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol><a class="era-link" href="#/bosses?era=${escAttr(e.id)}">Боссы эпохи →</a></article>`).join("")}</div>
       </section>
     `;
   }
@@ -1178,6 +1267,7 @@
     return false;
   }
   const RU_NAMES = window.CALAMITY_RU_NAMES || { byId: {}, byName: {}, translate: (name) => name, text: (text) => text };
+  const VANILLA_RU_BY_ID = (window.CALAMITY_VANILLA_RU && (window.CALAMITY_VANILLA_RU.names || window.CALAMITY_VANILLA_RU.byId)) || [];
   const EXACT_RU_NAMES = new Map();
   Object.values(CODEX.lex || {}).forEach((entry) => {
     [entry.en, entry.ru, ...(entry.aliases || [])].filter(Boolean).forEach((name) => EXACT_RU_NAMES.set(String(name).toLocaleLowerCase("ru"), entry.ru));
@@ -1186,9 +1276,13 @@
     const raw = typeof value === "object" ? (value.name || "") : String(value || "");
     const item = typeof value === "object" ? value : record;
     if (item && item.nameRu) return item.nameRu;
+    if (item && item.vanilla && VANILLA_RU_BY_ID[String(item.id)]) return VANILLA_RU_BY_ID[String(item.id)];
     const exact = EXACT_RU_NAMES.get(raw.toLocaleLowerCase("ru"));
     if (exact && /[А-Яа-яЁё]/.test(exact)) return exact;
     if (item && item.id && RU_NAMES.byId[item.id]) return RU_NAMES.byId[item.id];
+    ensureVanillaIndexes();
+    const vanillaName = VANILLA_RU_BY_NAME.get(normalizeArtName(raw));
+    if (vanillaName) return vanillaName;
     if (RU_NAMES.byName[raw]) return RU_NAMES.byName[raw];
     return RU_NAMES.translate(raw);
   }
@@ -1198,6 +1292,12 @@
     const en = /[A-Za-z]/.test(String(name)) && String(name) !== ru ? String(name) : "";
     return { ru, en };
   };
+  function catalogItemSearchBlob(item) {
+    if (item.searchBlob) return item.searchBlob;
+    const npcNames = (NPC_SOURCES[item.id]?.npcs || []).map((drop) => `${drop.npc} ${npcRuName(drop.npc)}`).join(" ");
+    item.searchBlob = `${item.name} ${ruItemName(item)} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${item.obtain || ""} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${npcNames}`.toLocaleLowerCase("ru");
+    return item.searchBlob;
+  }
   function ruRecipePart(value) {
     const raw = String(value || "").trim();
     const match = raw.match(/^(\d+(?:[.,]\d+)?\s*[×x]?\s*)(.+)$/);
@@ -1263,6 +1363,38 @@
     "Материя чуда → экзо-оружие": "assets/sprites/Exoblade.png",
     "Остатки рецептов тенеспека": "assets/sprites/ShadowspecBar.png"
   };
+  const STATION_DISPLAY_RU = {
+    "Sawmill": "лесопилка",
+    "Demon Altar": "алтарь зла",
+    "Crimson Altar": "багряный алтарь",
+    "Work Bench": "верстак",
+    "Furnace": "печь",
+    "Hellforge": "адская печь",
+    "Iron Anvil": "железная наковальня",
+    "Lead Anvil": "свинцовая наковальня",
+    "Mythril Anvil": "мифриловая наковальня",
+    "Orichalcum Anvil": "орихалковая наковальня",
+    "Adamantite Forge": "адамантитовая кузня",
+    "Titanium Forge": "титановая кузня",
+    "Alchemy Table": "алхимический стол",
+    "Placed Bottle": "поставленная бутылка",
+    "Tinkerer's Workshop": "мастерская изобретателя",
+    "Ancient Manipulator": "древний манипулятор",
+    "Crystal Ball": "хрустальный шар",
+    "Imbuing Station": "станция наполнения",
+    "Sky Mill": "небесная мельница",
+    "Living Loom": "живой ткацкий станок",
+    "Glass Kiln": "стеклоплавильная печь",
+    "Ashen Altar": "пепельный алтарь",
+    "S Cal Altar": "алтарь проклятых",
+    "Kegs": "бочонок",
+    "Plague Infuser": "чумной инфузор",
+    "Profaned Crucible": "осквернённый тигель"
+  };
+  function stationDisplayName(station) {
+    const raw = String(station || "").trim();
+    return STATION_DISPLAY_RU[raw] || ruText(raw);
+  }
   function craftStationSprite(station) {
     const s = String(station || "").toLocaleLowerCase("ru");
     if (s.includes("алхим") || s.includes("alchemy")) return "assets/sprites/Alchemy_Table.png";
@@ -1319,7 +1451,7 @@
         ${favoriteButton("craft", src.name, ru)}
       </div>
       <div class="card-body">
-        ${station ? `<span class="station-tag"><img src="${escAttr(craftStationSprite(station))}" alt="" /><span>${esc(ruText(station))}</span></span>` : ""}
+        ${station ? `<span class="station-tag"><img src="${escAttr(craftStationSprite(station))}" alt="" loading="lazy" decoding="async" /><span>${esc(stationDisplayName(station))}</span></span>` : ""}
         <div class="card-title">${esc(ru)}${en ? `<span class="en-sub">оригинал: ${esc(en)}</span>` : ""}</div>
         ${ings.length ? `<ul class="ings-list">${ings.map((x, i) => {
       const enName = enIngs[i] ? cleanIng(enIngs[i]) : "";
@@ -1341,7 +1473,7 @@
     const d = String(b.danger || "");
     const lvl = b.dangerLvl || (/смерт/i.test(d) ? "dead" : /высок/i.test(d) ? "high" : /средн/i.test(d) ? "mid" : "low");
     return `<article class="card biome-card">
-      <div class="biome-shot" style="background-image:url('${b.img || "assets/hero.jpg"}');filter:${b.filter || "none"}">
+      <div class="biome-shot lazy-bg" data-bg="${escAttr(b.img || "assets/hero.webp")}" style="filter:${b.filter || "none"}">
         <span class="danger-pill ${lvl}">${esc(d)}</span>
       </div>
       <div class="body">
@@ -1359,6 +1491,29 @@
     </article>`;
   }
 
+  let lazyBackgroundObserver = null;
+  function bindLazyBackgrounds(root) {
+    if (lazyBackgroundObserver) lazyBackgroundObserver.disconnect();
+    const nodes = [...(root || document).querySelectorAll(".lazy-bg[data-bg]")];
+    const reveal = (node) => {
+      if (!node || !node.dataset.bg) return;
+      node.style.backgroundImage = `url("${node.dataset.bg.replace(/"/g, "%22")}")`;
+      node.classList.add("loaded");
+      delete node.dataset.bg;
+    };
+    if (!("IntersectionObserver" in window)) {
+      nodes.forEach(reveal);
+      return;
+    }
+    lazyBackgroundObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        reveal(entry.target);
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: "500px 0px" });
+    nodes.forEach((node) => lazyBackgroundObserver.observe(node));
+  }
 
   const SPRITE_FIX = {
     "Wooden Sword / Bow / Staff из мешка": "Wooden_Sword",
@@ -1418,6 +1573,7 @@
 
   /* ---------- граф рецептов: дерево крафта и подсказки ингредиентов ---------- */
   const CATALOG_BY_NORM = new Map();
+  const CATALOG_BY_ID = new Map();
   const GUIDE_BY_NORM = new Map();
   const CATALOG_LEX = new Map();
   function buildNameIndexes() {
@@ -1425,6 +1581,7 @@
     indexedItems().forEach((it) => {
       const k = normalizeArtName(it.name);
       if (k && !CATALOG_BY_NORM.has(k)) CATALOG_BY_NORM.set(k, it);
+      CATALOG_BY_ID.set(String(it.id), it);
     });
     (CODEX.items || []).forEach((it) => {
       [it.name, it.nameRu].forEach((n) => {
@@ -1455,10 +1612,12 @@
         return;
       }
       const pm = p.match(/^(\d+(?:[.,]\d+)?)\s*[×x]\s*(.+)$/);
+      const russianAmount = p.match(/^(\d+(?:[.,]\d+)?)\s+([А-Яа-яЁё].+)$/);
       if (pm) out.push({ count: pm[1].replace(",", "."), name: pm[2].replace(/[.,;:]$/, "").trim() });
+      else if (russianAmount) out.push({ count: russianAmount[1].replace(",", "."), name: russianAmount[2].replace(/[.,;:]$/, "").trim() });
       else out.push({ count: null, name: p.replace(/[.,;:]$/, "").trim() });
     });
-    return out.filter((i) => i.name);
+    return out.filter((i) => i.name && normalizeArtName(i.name) !== "recipe system");
   }
 
   function parseRecipeText(text, station) {
@@ -1491,9 +1650,93 @@
     return null;
   }
 
+  let recipeCycleCuts = new Set();
+  function recipeDependencyKey(ingredient) {
+    const forced = String(ingredient?.key || "").match(/^vanilla:(\d+)$/i);
+    if (forced) return normalizeArtName(VANILLA_BY_ID.get(String(forced[1]))?.name || ingredient.name);
+    return normalizeArtName(ingredient?.name || ingredient?.key || "");
+  }
+  function recipeDerivedScore(name) {
+    const low = normalizeArtName(name);
+    if (/\bplatform\b|\bплатформ/.test(low)) return 140;
+    if (/\bwall\b|\bстен/.test(low)) return 125;
+    if (/^(wet|lava|honey) (bomb|rocket)/.test(low)) return 110;
+    if (/^dry (bomb|rocket)/.test(low)) return 10;
+    if (/platinum coin|платинов.*монет/.test(low)) return 80;
+    if (/gold coin|золот.*монет/.test(low)) return 60;
+    if (/silver coin|серебр.*монет/.test(low)) return 40;
+    if (/copper coin|медн.*монет/.test(low)) return 20;
+    return 50;
+  }
+  function findRecipeCycles(index) {
+    let cursor = 0;
+    const stack = [];
+    const onStack = new Set();
+    const positions = new Map();
+    const lows = new Map();
+    const cycles = [];
+    const visit = (node) => {
+      positions.set(node, cursor);
+      lows.set(node, cursor);
+      cursor += 1;
+      stack.push(node);
+      onStack.add(node);
+      (index.get(node)?.ings || []).forEach((ingredient) => {
+        const next = recipeDependencyKey(ingredient);
+        if (!index.has(next)) return;
+        if (!positions.has(next)) {
+          visit(next);
+          lows.set(node, Math.min(lows.get(node), lows.get(next)));
+        } else if (onStack.has(next)) {
+          lows.set(node, Math.min(lows.get(node), positions.get(next)));
+        }
+      });
+      if (lows.get(node) !== positions.get(node)) return;
+      const component = [];
+      let current;
+      do {
+        current = stack.pop();
+        onStack.delete(current);
+        component.push(current);
+      } while (current !== node);
+      const selfCycle = component.length === 1 && (index.get(node)?.ings || []).some((ingredient) => recipeDependencyKey(ingredient) === node);
+      if (component.length > 1 || selfCycle) cycles.push(component);
+    };
+    index.forEach((_, node) => { if (!positions.has(node)) visit(node); });
+    return cycles;
+  }
+  function pruneRecipeCycles(index) {
+    recipeCycleCuts.clear();
+    const snapshot = new Map(index);
+    snapshot.forEach((recipe, result) => {
+      const resultScore = recipeDerivedScore(result);
+      const shouldCut = (recipe.ings || []).some((ingredient) => {
+        const dependency = recipeDependencyKey(ingredient);
+        const reverse = snapshot.get(dependency);
+        if (!reverse) return false;
+        const reciprocal = (reverse.ings || []).some((part) => recipeDependencyKey(part) === result);
+        return reciprocal && resultScore <= recipeDerivedScore(dependency);
+      });
+      if (shouldCut) recipeCycleCuts.add(result);
+    });
+    recipeCycleCuts.forEach((key) => index.delete(key));
+    // Защита от циклов длиннее двух узлов: каждый проход превращает самый
+    // базовый узел компоненты в лист. Повторяем, пока граф не станет DAG.
+    let cycles = findRecipeCycles(index);
+    while (cycles.length) {
+      cycles.forEach((component) => {
+        const cut = [...component].sort((a, b) => recipeDerivedScore(a) - recipeDerivedScore(b) || a.localeCompare(b, "en"))[0];
+        recipeCycleCuts.add(cut);
+        index.delete(cut);
+      });
+      cycles = findRecipeCycles(index);
+    }
+  }
+
   let recipeIndex = null;
   function getRecipeIndex() {
     if (recipeIndex) return recipeIndex;
+    ensureVanillaIndexes();
     buildNameIndexes();
     recipeIndex = new Map();
     const add = (name, text, station) => {
@@ -1522,22 +1765,30 @@
       const key = normalizeArtName(name);
       if (key && !recipeIndex.has(key)) recipeIndex.set(key, recipe);
     });
+    pruneRecipeCycles(recipeIndex);
     return recipeIndex;
   }
 
+  let exactLexIndex = null;
   function exactLexLookup(name) {
     if (!CODEX.lex) return null;
-    const low = String(name).toLocaleLowerCase("ru");
-    const exact = Object.values(CODEX.lex).find((e) =>
-      String(e.ru || "").toLocaleLowerCase("ru") === low
-      || String(e.en || "").toLocaleLowerCase("ru") === low
-      || (e.aliases || []).some((a) => String(a).toLocaleLowerCase("ru") === low));
+    if (!exactLexIndex) {
+      exactLexIndex = new Map();
+      Object.values(CODEX.lex).forEach((entry) => {
+        [entry.ru, entry.en, ...(entry.aliases || [])].filter(Boolean).forEach((value) => {
+          const key = String(value).toLocaleLowerCase("ru");
+          if (key && !exactLexIndex.has(key)) exactLexIndex.set(key, entry);
+        });
+      });
+    }
     // Не используем нечёткий lookup: «Guide Voodoo Doll» не должен
     // превращаться в карточку обычного «Guide».
-    return exact || null;
+    return exactLexIndex.get(String(name || "").toLocaleLowerCase("ru")) || null;
   }
   function catalogByName(name) {
     buildNameIndexes();
+    const forced = String(name || "").match(/^catalog:(.+)$/i);
+    if (forced) return CATALOG_BY_ID.get(String(forced[1])) || null;
     const k = normalizeArtName(name);
     let hit = CATALOG_BY_NORM.get(k);
     if (hit) return hit;
@@ -1583,19 +1834,87 @@
     }
   };
   const VANILLA_TREE_INDEX = window.CALAMITY_VANILLA_TREE_INDEX || { items: [], recipes: [], stations: [] };
-  const VANILLA_BY_ID = new Map((VANILLA_TREE_INDEX.items || []).map(([id, name, type, sprite]) => [String(id), { id: Number(id), name, type, sprite: sprite || "" }]));
+  const VANILLA_COMPACT = VANILLA_TREE_INDEX.format === 2;
+  const VANILLA_MISSING_SPRITES = new Set(VANILLA_TREE_INDEX.coverage?.missingSpriteIds || []);
+  // Пятитысячный ванильный индекс и 3502 рецепта не нужны на главной.
+  // Оставляем компактные массивы как есть и разворачиваем карты только при
+  // первом поиске предмета, открытии каталога или дерева крафта.
+  const VANILLA_BY_ID = new Map();
   const VANILLA_BY_NAME = new Map();
-  VANILLA_BY_ID.forEach((item) => {
-    const key = normalizeArtName(item.name);
-    if (key && !VANILLA_BY_NAME.has(key)) VANILLA_BY_NAME.set(key, item);
-    const noSuffix = normalizeArtName(String(item.name).replace(/\s*\(item\)$/i, ""));
-    if (noSuffix && !VANILLA_BY_NAME.has(noSuffix)) VANILLA_BY_NAME.set(noSuffix, item);
-  });
+  const VANILLA_RU_BY_NAME = new Map();
+  const VANILLA_RECIPE_OPTIONS_BY_ID = new Map();
+  const VANILLA_RECIPE_EDGES = new Map();
   const VANILLA_RECIPE_BY_ID = new Map();
-  (VANILLA_TREE_INDEX.recipes || []).forEach(([resultId, resultQuantity, tableId, ings]) => {
-    if (!VANILLA_RECIPE_BY_ID.has(String(resultId))) VANILLA_RECIPE_BY_ID.set(String(resultId), { ings: (ings || []).map(([id, count]) => ({ name: VANILLA_BY_ID.get(String(id))?.name || `Предмет Terraria #${id}`, count: String(count) })), station: String(tableId) });
-  });
-  const VANILLA_STATIONS = new Map((VANILLA_TREE_INDEX.stations || []).map(([id, name]) => [String(id), name]));
+  const VANILLA_RECIPE_CUT_IDS = new Set();
+  const VANILLA_STATIONS = new Map();
+  let vanillaIndexesReady = false;
+
+  function vanillaDerivedScore(item) {
+    if (!item) return 0;
+    const name = String(item.name || "");
+    if (/platform/i.test(name)) return 140;
+    if (/wall/i.test(name)) return 125;
+    if (/coin$/i.test(name)) return ({ "Copper Coin": 20, "Silver Coin": 40, "Gold Coin": 60, "Platinum Coin": 80 })[name] || 30;
+    if (/^(Wet|Lava|Honey) (Bomb|Rocket)/i.test(name)) return 110;
+    if (/^Dry (Bomb|Rocket)/i.test(name)) return 10;
+    const byType = { Background: 115, Furniture: 90, Mechanism: 80, Accessory: 70, Weapon: 65, Armor: 65, Ammunition: 50, Consumable: 50, "Crafting material": 40, Brick: 30, Block: 25, Ore: 20 };
+    return byType[item.type] || 45;
+  }
+
+  function ensureVanillaIndexes() {
+    if (vanillaIndexesReady) return;
+    vanillaIndexesReady = true;
+    (VANILLA_TREE_INDEX.items || []).forEach((row, index) => {
+      const id = VANILLA_COMPACT ? Number(VANILLA_TREE_INDEX.firstItemId || 1) + index : Number(row[0]);
+      const name = VANILLA_COMPACT ? row[0] : row[1];
+      const type = VANILLA_COMPACT ? VANILLA_TREE_INDEX.types?.[row[1]] || "Item" : row[2];
+      const sprite = VANILLA_COMPACT
+        ? (VANILLA_MISSING_SPRITES.has(id) ? "" : `assets/vanilla-sprites/${id}.png`)
+        : (row[3] || "");
+      VANILLA_BY_ID.set(String(id), { id, name, type, sprite, vanilla: true });
+    });
+    VANILLA_BY_ID.forEach((item) => {
+      const key = normalizeArtName(item.name);
+      if (key && !VANILLA_BY_NAME.has(key)) VANILLA_BY_NAME.set(key, item);
+      const noSuffix = normalizeArtName(String(item.name).replace(/\s*\(item\)$/i, ""));
+      if (noSuffix && !VANILLA_BY_NAME.has(noSuffix)) VANILLA_BY_NAME.set(noSuffix, item);
+      const officialRu = VANILLA_RU_BY_ID[String(item.id)];
+      if (officialRu && key && !VANILLA_RU_BY_NAME.has(key)) VANILLA_RU_BY_NAME.set(key, officialRu);
+      if (officialRu && noSuffix && !VANILLA_RU_BY_NAME.has(noSuffix)) VANILLA_RU_BY_NAME.set(noSuffix, officialRu);
+    });
+    (VANILLA_TREE_INDEX.recipes || []).forEach((row) => {
+      const [resultId, tableId, ings] = VANILLA_COMPACT ? row : [row[0], row[2], row[3]];
+      const resultKey = String(resultId);
+      const ingredientIds = (ings || []).map(([id]) => String(id));
+      if (!VANILLA_RECIPE_OPTIONS_BY_ID.has(resultKey)) VANILLA_RECIPE_OPTIONS_BY_ID.set(resultKey, []);
+      VANILLA_RECIPE_OPTIONS_BY_ID.get(resultKey).push({
+        ingredientIds,
+        ings: (ings || []).map(([id, count]) => ({
+          name: VANILLA_BY_ID.get(String(id))?.name || `Предмет Terraria #${id}`,
+          key: VANILLA_BY_ID.has(String(id)) ? `vanilla:${id}` : "",
+          count: String(count)
+        })),
+        station: String(tableId)
+      });
+      if (!VANILLA_RECIPE_EDGES.has(resultKey)) VANILLA_RECIPE_EDGES.set(resultKey, new Set());
+      ingredientIds.forEach((id) => VANILLA_RECIPE_EDGES.get(resultKey).add(id));
+    });
+    VANILLA_RECIPE_OPTIONS_BY_ID.forEach((options, resultId) => {
+      const resultScore = vanillaDerivedScore(VANILLA_BY_ID.get(resultId));
+      const selected = options.find((recipe) => {
+        if (recipe.ingredientIds.includes(resultId)) return false;
+        return !recipe.ingredientIds.some((ingredientId) => {
+          const reciprocal = VANILLA_RECIPE_EDGES.get(ingredientId)?.has(resultId);
+          return reciprocal && resultScore <= vanillaDerivedScore(VANILLA_BY_ID.get(ingredientId));
+        });
+      });
+      // Если все варианты являются обратными преобразованиями равного или
+      // более производного предмета, результат остаётся базовым ресурсом.
+      if (selected) VANILLA_RECIPE_BY_ID.set(resultId, selected);
+      else VANILLA_RECIPE_CUT_IDS.add(resultId);
+    });
+    (VANILLA_TREE_INDEX.stations || []).forEach(([id, name]) => VANILLA_STATIONS.set(String(id), name));
+  }
   const VANILLA_STATION_RU = {
     "by hand": "в инвентаре",
     "work bench": "у верстака",
@@ -1635,6 +1954,9 @@
     "lihzahrd furnace": "у печи ящеров"
   };
   function vanillaItemForName(name) {
+    ensureVanillaIndexes();
+    const forced = String(name || "").match(/^vanilla:(\d+)$/i);
+    if (forced) return VANILLA_BY_ID.get(String(forced[1])) || null;
     return VANILLA_BY_NAME.get(normalizeArtName(name)) || null;
   }
   function vanillaRecipeForName(name) {
@@ -1642,6 +1964,7 @@
     return item ? (VANILLA_RECIPE_BY_ID.get(String(item.id)) || null) : null;
   }
   function vanillaStationName(id) {
+    ensureVanillaIndexes();
     const name = VANILLA_STATIONS.get(String(id)) || String(id || "");
     return VANILLA_STATION_RU[name.toLocaleLowerCase("ru")] || ruText(name);
   }
@@ -1655,6 +1978,233 @@
     if (low.includes("material") || low.includes("ore") || low.includes("gem") || low.includes("ammunition")) return "mat";
     return "misc";
   }
+
+  function craftStationSentence(recipe) {
+    if (!recipe || !recipe.ings || !recipe.ings.length) return "";
+    const station = stationDisplayName(recipe.station || "").trim().replace(/[.;]+$/, "");
+    if (!station) return "Скрафтить из ингредиентов, перечисленных в рецепте.";
+    if (/^(?:у|на|в|возле|около)\s/i.test(station)) return `Скрафтить ${station}.`;
+    return `Скрафтить; станция — ${station}.`;
+  }
+
+  function craftStationInline(station) {
+    const value = stationDisplayName(station || "").trim().replace(/[.;]+$/, "");
+    if (!value) return "";
+    return /^(?:у|на|в|возле|около)\s/i.test(value) ? value : `станция: ${value}`;
+  }
+
+  function vanillaStationTiming(station) {
+    const low = normalizeArtName(station);
+    if (!low) return "Как только собраны ингредиенты: отдельная станция для рецепта не указана.";
+    if (/ancient manipulator|древн.*манипулятор/.test(low)) return "После победы над Лунатиком-культистом, когда получен Древний манипулятор.";
+    if (/adamantite forge|titanium forge|адамантит|титан.*кузн/.test(low)) return "Хардмод: после открытия адамантитовой или титановой руды и создания улучшенной кузни.";
+    if (/mythril anvil|orichalcum anvil|мифрил|орихалк/.test(low)) return "Хардмод: после добычи мифрила или орихалка и создания хардмодной наковальни.";
+    if (/autohammer|автокузн/.test(low)) return "После Плантеры: Автокузницу продаёт Трюфель, когда он живёт в подходящем грибном биоме.";
+    if (/lihzahrd furnace|печ.*ящер/.test(low)) return "Поздний хардмод: после доступа в храм ящеров и получения Печи ящеров.";
+    if (/steampunk boiler|blend o matic|стимпанк|смешивател/.test(low)) return "Хардмод после механического босса: станцию продаёт Стимпанкер.";
+    if (/crystal ball|хрустальн.*шар/.test(low)) return "Хардмод: после спасения Волшебника и покупки у него Хрустального шара.";
+    if (/tinkerer|мастерск.*инженер|мастерск.*гоблин/.test(low)) return "После спасения Гоблина-инженера в пещерах и покупки у него Мастерской инженера.";
+    if (/alchemy table|алхимическ.*стол/.test(low)) return "После Скелетрона: Алхимический стол находится в Данже.";
+    if (/hellforge|адск.*печ|адск.*кузн/.test(low)) return "Поздний прехардмод: после спуска в Преисподнюю и получения Адской кузни.";
+    if (/demon altar|crimson altar|алтар.*зла|демонич.*алтар|кримзон.*алтар/.test(low)) return "Прехардмод: после добычи материалов Порчи или Багрянца; крафт выполняется у алтаря зла.";
+    if (/bookcase|книжн.*шкаф/.test(low)) return "После доступа к книгам и книжному шкафу; обычно — после открытия Данжа.";
+    if (/solidifier|отвердител/.test(low)) return "После получения Отвердителя с Короля слизней либо покупки у Стимпанкера в хардмоде.";
+    if (/flesh cloning|decay chamber|meat grinder|клонирован|разложен|мясоруб/.test(low)) return "Хардмод: после получения тематической станции Багрянца, Порчи или Кладбища.";
+    if (/imbuing station|станц.*наполнен/.test(low)) return "После заселения Знахаря и покупки у него Станции наполнения.";
+    if (/dye vat|красильн.*чан/.test(low)) return "После заселения Красильщика и покупки у него Красильного чана.";
+    if (/hell|lava|лав/.test(low)) return "После безопасного доступа к лаве или Преисподней; победа над Стеной плоти не требуется.";
+    if (/work bench|furnace|iron anvil|lead anvil|placed bottle|sink|sawmill|loom|table and chair|cooking pot|cauldron|heavy work bench|keg|teapot|living wood|bone welder|glass kiln|honey dispenser|ice machine|living loom|sky mill|water|honey|верстак|печ|наковаль|бутыл|раковин|лесопил|ткац|кот[её]л|боч|чайник|стекл|м[её]д|небесн.*мельниц|вод/.test(low)) return "Прехардмод: как только собраны ингредиенты и получена указанная станция; обязательный босс не требуется.";
+    return `После получения станции «${stationDisplayName(station)}» и всех перечисленных ингредиентов.`;
+  }
+
+  let recipeUseCounts = null;
+  function recipeUseCount(name) {
+    if (!recipeUseCounts) {
+      recipeUseCounts = new Map();
+      getRecipeIndex().forEach((recipe) => (recipe.ings || []).forEach((ingredient) => {
+        const key = normalizeArtName(ingredient.name);
+        if (key) recipeUseCounts.set(key, (recipeUseCounts.get(key) || 0) + 1);
+      }));
+    }
+    return recipeUseCounts.get(normalizeArtName(name)) || 0;
+  }
+
+  function recipeCountText(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const word = mod10 === 1 && mod100 !== 11 ? "рецепте" : "рецептах";
+    return `${count} ${word}`;
+  }
+
+  const VANILLA_TYPE_RU = {
+    "Furniture": "предмет мебели", "Weapon": "оружие", "Accessory": "аксессуар", "Vanity": "декоративная экипировка",
+    "Enemy banner": "знамя врага", "Light source": "источник света", "Armor": "броня", "Background": "фоновая стена",
+    "Tool": "инструмент", "Block": "строительный блок", "Dye": "краситель", "Crafting material": "материал для крафта",
+    "Potion": "зелье", "Painting": "картина", "Storage": "хранилище", "Mechanism": "механизм", "Ammunition": "боеприпас",
+    "Miscellaneous": "особый предмет", "Pet summon": "предмет призыва питомца", "Grab bag": "контейнер с добычей",
+    "Consumable": "расходуемый предмет", "Mount summon": "предмет призыва маунта", "Bait": "наживка", "Brick": "строительный кирпич",
+    "Critter": "животное", "Quest fish": "квестовая рыба", "Seeds": "семена", "Food": "еда", "Fishing catches": "рыболовная добыча",
+    "Hook": "крюк", "Ore": "руда", "Boss summon": "предмет призыва босса", "Key": "ключ", "Light pet": "светящийся питомец",
+    "Pylon": "пилон", "Shield": "щит", "Event summon": "предмет запуска события", "Gem": "самоцвет", "n/a": "предмет"
+  };
+  const vanillaTypeName = (type) => VANILLA_TYPE_RU[String(type || "")] || "предмет";
+  const isInternalVanillaName = (name) => /^n\/a\s*\(/i.test(String(name || "")) || /^format\s*:\s*[a-z]$/i.test(String(name || "").trim());
+
+  function vanillaPurpose(item) {
+    if (!item) return "";
+    const type = String(item.type || "n/a");
+    const low = normalizeArtName(item.name);
+    const uses = recipeUseCount(item.name);
+    if (/\bkite\b/.test(low)) return "Воздушный змей: возьми в руку во время сильного ветра и запусти как декоративный объект; для боевой прогрессии не требуется.";
+    if (/binocular/.test(low)) return "Бинокль: держи в руке, чтобы отдалить камеру и осматривать пространство впереди персонажа.";
+    if (/water gun|slime gun|confetti gun/.test(low)) return "Игрушечное оружие без боевого урона: используй ради визуального эффекта, окрашивания или развлечения.";
+    if (/golf club/.test(low)) return "Клюшка для гольфа: используй на поле вместе с мячом; тип клюшки определяет дальность и траекторию удара.";
+    const usedIn = uses ? ` В локальном дереве участвует в ${recipeCountText(uses)}.` : "";
+    const byType = {
+      "Weapon": "Оружие: держи в панели быстрого доступа и используй для нанесения урона.",
+      "Accessory": "Аксессуар: экипируй в свободный слот ради его пассивного эффекта.",
+      "Shield": "Щит или защитный аксессуар: экипируй ради защиты и дополнительной механики.",
+      "Armor": "Броня: экипируй в соответствующий слот; полный комплект может давать отдельный бонус.",
+      "Vanity": "Декоративная экипировка: меняет внешний вид и не даёт боевых характеристик.",
+      "Tool": "Инструмент для добычи, строительства, перемещения или исследования мира.",
+      "Hook": "Крюк: экипируй и используй для быстрого перемещения и страховки в пещерах.",
+      "Crafting material": "Материал для крафта: сохраняй для оружия, брони, инструментов и следующих компонентов.",
+      "Ore": "Руда: переплавляй в слитки или используй напрямую в рецептах.",
+      "Gem": "Самоцвет: нужен для крюков, посохов, витражей и других рецептов.",
+      "Ammunition": "Боеприпас: расходуется подходящим стрелковым оружием.",
+      "Potion": "Зелье: выпей для лечения, восстановления маны или временного эффекта.",
+      "Consumable": "Расходуемый предмет: применяется один раз и тратится при использовании.",
+      "Food": "Еда: даёт персонажу временный бонус сытости.",
+      "Furniture": "Мебель: размещается в мире и используется для базы, жилья NPC или оформления.",
+      "Storage": "Хранилище: размещается на базе и позволяет складывать предметы.",
+      "Light source": "Источник света: размещается для освещения базы, арены или маршрута исследования.",
+      "Mechanism": "Механизм: подключается проводами либо используется в автоматических постройках.",
+      "Background": "Фоновая стена: размещается за блоками для жилья и оформления помещений.",
+      "Block": "Строительный блок: используется для платформ, стен, арен и декоративных построек.",
+      "Brick": "Строительный кирпич: нужен для прочных и декоративных построек.",
+      "Painting": "Картина: размещается на стене как декоративный объект.",
+      "Dye": "Краситель: помещается в слот красителя и меняет внешний вид экипировки.",
+      "Enemy banner": "Знамя врага: размести рядом, чтобы получить бонус против этого типа противников.",
+      "Boss summon": "Предмет призыва босса: используй только после подготовки арены и зелий.",
+      "Event summon": "Предмет запуска события: активируй после подготовки площадки для боя и фарма.",
+      "Pet summon": "Призывает декоративного питомца; на боевые характеристики не влияет.",
+      "Light pet": "Призывает светящегося питомца, который помогает освещать путь.",
+      "Mount summon": "Призывает маунта с собственной скоростью и способом передвижения.",
+      "Grab bag": "Контейнер с добычей: открой в инвентаре, чтобы получить его содержимое.",
+      "Bait": "Наживка: положи в инвентарь вместе с удочкой для рыбалки.",
+      "Fishing catches": "Рыболовная добыча: используется как материал, еда или коллекционный предмет.",
+      "Quest fish": "Квестовая рыба: отдай Рыбаку, когда он просит именно этот вид.",
+      "Critter": "Животное: поймай сачком; можно использовать как наживку, питомца или декор.",
+      "Seeds": "Семена: посади на подходящий блок, чтобы вырастить растение или распространить биом.",
+      "Key": "Ключ: открывает соответствующий сундук, дверь или контейнер.",
+      "Pylon": "Пилон: размещается в подходящем биоме для телепортации между поселениями NPC.",
+      "Miscellaneous": "Особый предмет: используй или размести его, чтобы активировать указанную в описании вспомогательную, декоративную либо исследовательскую механику.",
+      "n/a": "Служебный или особый предмет без стандартной категории; практическое действие указано в описании и способе получения."
+    };
+    const purpose = byType[type] || "Особый предмет: назначение определяется его описанием, способом использования и связанным игровым событием.";
+    return `${purpose}${usedIn}`.trim();
+  }
+  const completeSentence = (value) => {
+    const text = String(value || "").trim();
+    return text && !/[.!?]$/.test(text) ? `${text}.` : text;
+  };
+  function purposeByKind(kind) {
+    const purposes = {
+      weapon: "Оружие: используй как источник урона, если его класс и характеристики подходят текущей сборке.",
+      armor: "Броня: экипируй соответствующие части; полный комплект обычно раскрывает основной бонус набора.",
+      acc: "Аксессуар: помести в свободный слот ради пассивного эффекта или используй как ступень дальнейшего улучшения.",
+      ammo: "Боеприпас: положи в инвентарь вместе с подходящим стрелковым оружием; он расходуется при выстреле.",
+      tool: "Инструмент: используй для добычи, строительства, рыбалки, перемещения или исследования мира.",
+      mat: "Материал: сохраняй для следующих рецептов оружия, брони, аксессуаров и прогрессионных компонентов.",
+      summon: "Предмет призыва: активирует босса, событие, питомца или маунта при выполнении условий использования.",
+      potion: "Расходник: применяй перед боем или исследованием ради лечения, усиления либо полезного временного эффекта.",
+      misc: "Специализированный предмет: назначение раскрывается через связанный источник, событие, размещение или дальнейший рецепт."
+    };
+    return purposes[kind] || purposes.misc;
+  }
+
+  function vanillaDescription(item) {
+    if (!item) return "";
+    const ru = ruItemName(item.name, item);
+    const uses = recipeUseCount(item.name);
+    const type = vanillaTypeName(item.type);
+    return `${ru} — ${type} из ванильной Террарии.${uses ? ` Индекс подтверждает использование в ${recipeCountText(uses)}.` : ""}`;
+  }
+
+  function vanillaObtain(item, recipe) {
+    if (recipe && recipe.ings && recipe.ings.length) return craftStationSentence(recipe);
+    if (!item) return "";
+    const low = normalizeArtName(item.name);
+    if (low === "hellstone") return "Добывается киркой в Преисподней; руда обжигает персонажа и после разрушения оставляет лаву.";
+    if (low === "obsidian") return "Образуется при соприкосновении воды с лавой и затем добывается киркой.";
+    if (/^(solar|vortex|nebula|stardust) fragment$/.test(low)) return "Выпадает с соответствующей небесной башни перед Лунным лордом.";
+    const type = String(item.type || "");
+    if (type === "Enemy banner") return "Автоматически выдаётся после каждых 50 убийств соответствующего врага.";
+    if (type === "Quest fish") return "Ловится в указанном для рыбы биоме, когда Рыбак выдаёт соответствующее задание.";
+    if (type === "Critter" || type === "Bait") return "Ловится сачком в подходящем биоме; после поимки хранится в инвентаре.";
+    if (type === "Ore") return "Добывается киркой из залежей этой руды в мире Террарии.";
+    if (type === "Gem") return "Добывается в подземных слоях либо извлекается из подходящих блоков и самоцветных деревьев.";
+    if (type === "Pylon") return "Покупается у довольных NPC в соответствующем биоме и размещается в поселении.";
+    const byType = {
+      "Weapon": "Получается без крафта: выпадает с противника, находится в сундуке либо выдаётся за событие или задание.",
+      "Accessory": "Получается без крафта: ищи в сундуках, дропе противников, наградах заданий или ассортименте NPC.",
+      "Shield": "Получается без крафта как добыча, находка или покупка у NPC.",
+      "Armor": "Получается без крафта: выпадает, покупается либо находится в специальном контейнере или структуре.",
+      "Vanity": "Декоративный предмет без рецепта: выпадает, покупается или находится в мире и подарочных контейнерах.",
+      "Tool": "Инструмент без рецепта: получается из сундука, дропа, задания, рыбалки или магазина NPC.",
+      "Hook": "Крюк без рецепта: выпадает с противников, находится в контейнерах или выдаётся как награда.",
+      "Crafting material": "Материал без рецепта: добывается в мире, выпадает с противников, вылавливается или открывается из контейнеров.",
+      "Ammunition": "Боеприпас без рецепта: покупается, выпадает или находится в контейнерах и наградах событий.",
+      "Potion": "Зелье без рецепта: находится в сундуках, горшках, ящиках либо покупается у NPC.",
+      "Consumable": "Расходник без рецепта: находится, покупается, вылавливается или выпадает с противников.",
+      "Food": "Еда без рецепта: собирается, покупается, вылавливается или выпадает в подходящем биоме.",
+      "Furniture": "Предмет мебели без рецепта: находится в структурах, покупается у NPC либо выпадает как награда.",
+      "Storage": "Хранилище без рецепта: находится в мире или структурах либо покупается у NPC.",
+      "Light source": "Источник света без рецепта: находится, покупается или выпадает в соответствующем событии.",
+      "Mechanism": "Механизм без рецепта: покупается у механических NPC или находится в ловушках и структурах мира.",
+      "Background": "Фоновая стена без основного рецепта: добывается в мире или получается обратным преобразованием, скрытым для защиты дерева от цикла.",
+      "Block": "Базовый блок: добывается киркой, собирается в мире или создаётся окружением; обратный декоративный рецепт не считается источником.",
+      "Brick": "Строительный материал без основного рецепта: добывается в структуре или получается как базовый блок мира.",
+      "Painting": "Картина без рецепта: находится в подземных домах, структурах или выдаётся за особую активность.",
+      "Dye": "Краситель без рецепта: выдаётся Красильщиком, покупается либо получается из необычного растения или противника.",
+      "Boss summon": "Предмет призыва без рецепта: находится, покупается или повторно получается после связанного события.",
+      "Event summon": "Предмет запуска события без рецепта: выпадает, находится или покупается после нужного этапа прогрессии.",
+      "Pet summon": "Предмет питомца без рецепта: выпадает, находится, покупается или выдаётся за достижение.",
+      "Light pet": "Светящийся питомец без рецепта: находится, покупается или выпадает из особого источника.",
+      "Mount summon": "Предмет маунта без рецепта: выпадает, покупается, вылавливается или открывается из контейнера.",
+      "Grab bag": "Контейнер без рецепта: выпадает с босса или события либо выдаётся как награда.",
+      "Fishing catches": "Получается рыбалкой в подходящем биоме и при нужных условиях.",
+      "Seeds": "Собирается с растений, травы или объектов соответствующего биома.",
+      "Key": "Ключ без рецепта: выпадает, находится или создаётся автоматически после выполнения условия мира.",
+      "Miscellaneous": "Получается без крафта: как находка, дроп, покупка, рыболовная добыча или награда события."
+    };
+    return byType[type] || `${vanillaTypeName(type)}: получается без крафта из игрового источника, указанного на официальной странице предмета.`;
+  }
+
+  function vanillaWhen(item, recipe) {
+    if (recipe && recipe.ings && recipe.ings.length) return vanillaStationTiming(recipe.station);
+    if (!item) return "";
+    const low = normalizeArtName(item.name);
+    const type = String(item.type || "");
+    if (/luminite|solar fragment|vortex fragment|nebula fragment|stardust fragment/.test(low)) return "Финал ванильной прогрессии: после небесных башен или победы над Лунным лордом.";
+    if (/shroomite|spectre|ectoplasm|beetle husk/.test(low)) return "Поздний хардмод: после Плантеры и открытия соответствующего источника материала.";
+    if (/chlorophyte|life fruit/.test(low)) return "Хардмод после победы над всеми тремя механическими боссами: источник появляется в подземных джунглях.";
+    if (/hallowed|soul of|crystal shard|ichor|cursed flame|adamantite|titanium|mythril|orichalcum|palladium|cobalt/.test(low)) return "Хардмод: после Стены плоти и открытия соответствующего ресурса или противника.";
+    if (/hellstone|obsidian/.test(low)) return "Поздний прехардмод: после безопасного доступа к лаве и Преисподней.";
+    if (type === "Enemy banner") return "После 50 убийств соответствующего врага; ставь перед его дальнейшим фармом.";
+    if (type === "Boss summon") return "Перед соответствующим боссом, когда построена арена и подготовлены зелья.";
+    if (type === "Event summon") return "Когда готова площадка для события и персонаж способен пережить его волну врагов.";
+    if (type === "Quest fish") return "Только в день, когда Рыбак просит эту рыбу; на следующий день задание сменится.";
+    if (["Furniture", "Storage", "Light source", "Background", "Block", "Brick", "Painting", "Dye", "Vanity"].includes(type)) return "После получения: это строительный или декоративный предмет, не ограничивающий боевую прогрессию.";
+    if (["Pet summon", "Light pet", "Mount summon"].includes(type)) return "После получения; предмет необязателен для победы над боссами.";
+    if (["Weapon", "Armor", "Accessory", "Shield", "Tool", "Hook"].includes(type)) return "Сразу после получения, если характеристики улучшают текущую экипировку; перед следующим боссом сравни урон, защиту и мобильность с уже надетыми предметами.";
+    if (["Potion", "Consumable", "Food"].includes(type)) return "Перед подходящим боем или исследованием: положи в быстрый доступ и используй до начала опасного этапа либо по необходимости.";
+    if (["Crafting material", "Ore", "Gem", "Ammunition"].includes(type)) return "Сохраняй после получения и используй, когда предмет появится в ингредиентах нужного оружия, брони, инструмента или боеприпаса.";
+    if (["Bait", "Fishing catches", "Quest fish"].includes(type)) return "Во время рыбалки в нужном биоме; для квестовой рыбы — только в день соответствующего задания Рыбака.";
+    if (["Critter", "Seeds"].includes(type)) return "После нахождения подходящего биома: поймай сачком или посади на совместимый блок, в зависимости от типа предмета.";
+    return "После получения: отдельная обязательная точка прогрессии не подтверждена, поэтому ориентируйся на назначение и источник предмета.";
+  }
+
   const VANILLA_LOCAL_ART = {
     "fallen star": "assets/lex/vanilla/fallen-star.png",
     acorn: "assets/lex/vanilla/acorn.png",
@@ -1688,10 +2238,62 @@
     "pearlstone block": "assets/lex/vanilla/pearlstone-block.png",
     "любой песок": "assets/lex/vanilla/sand-block.png"
   };
+  const VANILLA_ART_ALIASES = {
+    "lunar bar": "Luminite Bar",
+    sand: "Sand Block",
+    "empress flight booster": "Soaring Insignia",
+    "shadow flame bow": "Shadowflame Bow",
+    "shadow flame hex doll": "Shadowflame Hex Doll",
+    granite: "Granite Block",
+    "boss2 material": "Bone",
+    "blood moon starter": "Bloody Tear",
+    vertebrae: "Vertebra",
+    "cursed flame ichor": "Cursed Flame",
+    "hardmode anvil": "Mythril Anvil",
+    sundial: "Enchanted Sundial",
+    "lunar pickaxe": "Solar Flare Pickaxe",
+    "fossil ore": "Desert Fossil",
+    "lunar tablet fragment": "Solar Tablet Fragment",
+    "any evil water": "Unholy Water",
+    "evil water": "Unholy Water",
+    "aerial tracker": "Fledgling Wings",
+    "fairy queen trophy": "Empress of Light Trophy",
+    "sparkle guitar": "Stellar Tune",
+    "wings vortex": "Vortex Booster",
+    "ancient battle armor material": "Forbidden Fragment",
+    "dd2 pet dragon": "Dragon Egg",
+    "moonlord bullet": "Luminite Bullet",
+    "lunar hamaxe": "Solar Flare Hamaxe",
+    "food platter": "Seafood Dinner",
+    smolstar: "Blade Staff",
+    "piercing starlight": "Starlight",
+    marble: "Marble Block",
+    "horseshoe bundle": "Bundle of Balloons",
+    "recipe system": "Work Bench",
+    "trapsight potion": "Dangersense Potion",
+    "ancient cultist trophy": "Lunatic Cultist Trophy",
+    celeb2: "Celebration Mk2",
+    "antlion claw": "Antlion Mandible",
+    sdmg: "S.D.M.G.",
+    "eo c shield": "Shield of Cthulhu",
+    "painter paintball gun": "Paintball Gun",
+    "portable stool": "Step Stool",
+    starfruit: "Star Fruit",
+    "super star cannon": "Super Star Shooter",
+    "thunder staff": "Thunder Zapper",
+    "lunar flare book": "Lunar Flare"
+  };
+  const VANILLA_EXTRA_ART = {
+    "ash wood": "assets/vanilla-extra/ash-wood.png",
+    "wand of frosting": "assets/vanilla-extra/wand-of-frosting.png",
+    "fishing bobber": "assets/vanilla-sprites/2374.png",
+    "shimmer block": "assets/vanilla-sprites/3234.png",
+    "spicy pepper": "assets/vanilla-sprites/4297.png"
+  };
   const VANILLA_EN_MAP = {
     "золотой или платиновый слиток": "Gold Bar",
     "демонитовый или кримтановый слиток": "Demonite Bar",
-    "любой колчан": "Quiver",
+    "любой колчан": "Magic Quiver",
     "любой песок": "Sand Block",
     "любой камень": "Stone Block",
     "любое дерево": "Wood",
@@ -1702,6 +2304,7 @@
   function fixVanillaName(en) {
     // Данные каталога пишут «Soulof Light», «Rodof Discord» без пробелов
     return String(en)
+      .replace(/^([A-Za-z]+)of\s+(?=[A-Z])/, "$1 of ")
       .replace(/^([A-Za-z]+)of([A-Z][a-z]*)/, "$1 of $2")
       .replace(/^([A-Za-z]+)ofthe\s+/, "$1 of the ")
       .replace(/^Fragment (Solar|Vortex|Nebula|Stardust)$/i, "$1 Fragment")
@@ -1718,59 +2321,246 @@
       if (!/[A-Za-z]/.test(en)) return null;
     }
     en = fixVanillaName(en);
-    return { remote: `https://terraria.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(en)}.png` };
+    const normalized = normalizeArtName(en);
+    const extra = VANILLA_EXTRA_ART[normalized];
+    if (extra) return { local: extra, representative: !["ash wood", "wand of frosting"].includes(normalized) };
+    const canonical = VANILLA_ART_ALIASES[normalized] || en;
+    const vanilla = vanillaItemForName(canonical);
+    if (vanilla && vanilla.sprite) return { local: vanilla.sprite, representative: canonical !== en };
+    return { remote: `https://terraria.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(canonical)}.png` };
+  }
+
+  const INGREDIENT_NAME_ALIASES = [
+    [/вульфрум.*лом/i, "Wulfrum Metal Scrap"],
+    [/люб.*пес/i, "Sand Block"],
+    [/челюст.*муравьин/i, "Antlion Mandible"],
+    [/челюст.*шторм/i, "Stormlion Mandible"],
+    [/остан(к|ок|ка|ков)|морск.*остан/i, "Sea Remains"],
+    [/порчен.*гел/i, "Blighted Gel"],
+    [/эбонит|кримкамен/i, "Ebonstone Block"],
+    [/адск.*кам/i, "Hellstone"],
+    [/^л[её]д$/i, "Ice Block"],
+    [/нечестив.*ядер/i, "Unholy Core"],
+    [/эссенц.*хаос/i, "Essence of Havoc"],
+    [/душ.*ноч/i, "Soul of Night"],
+    [/адск.*слит/i, "Hellstone Bar"],
+    [/эктоплазм/i, "Ectoplasm"],
+    [/крионит.*слит/i, "Cryonic Bar"],
+    [/многолет.*слит/i, "Perennial Bar"],
+    [/скори.*слит/i, "Scoria Bar"],
+    [/чумн.*банк/i, "Plague Cell Canister"],
+    [/лунн.*фрагмент/i, "Solar Fragment"],
+    [/гибельн.*душ/i, "Ruinous Soul"],
+    [/зуб.*жнец/i, "Reaper Tooth"],
+    [/галактическ.*сингуляр/i, "Solar Fragment"],
+    [/осколк.*т[её]мн.*солн/i, "Darksun Fragment"],
+    [/эндотерм/i, "Endothermic Energy"],
+    [/ауриков.*слит/i, "Auric Bar"],
+    [/куск.*таррагон/i, "Tarragon Breastplate"],
+    [/кровав.*вспыш/i, "Bloodflare Body Armor"],
+    [/богоубийц/i, "God Slayer Chestplate"],
+    [/сильв/i, "Silva Armor"],
+    [/хардмод.*кузн/i, "Adamantite Forge"],
+    [/^фрагменты$/i, "Solar Fragment"],
+    [/жемчужн.*оскол/i, "Pearl Shard"],
+    [/корал/i, "Coral"],
+    [/морск.*зв[её]зд/i, "Starfish"],
+    [/ракуш/i, "Seashell"],
+    [/сомнительн.*обшив/i, "Dubious Plating"],
+    [/загадочн.*схем/i, "Mysterious Circuitry"],
+    [/люб.*желез/i, "Iron Bar"],
+    [/инфернальн.*суевит/i, "Infernal Suevite"],
+    [/ш[её]лк/i, "Silk"],
+    [/дерев.*верстак|^дерев[ао]$/i, "Wood"],
+    [/ядро.*наковальн/i, "Energy Core"],
+    [/новые детали/i, "Dubious Plating"],
+    [/золот.*платинов.*корон/i, "Gold Crown"],
+    [/гел.*алтар/i, "Gel"],
+    [/провод/i, "Wire"],
+    [/обшивка.*схем/i, "Dubious Plating"],
+    [/кровав.*сфер/i, "Blood Orb"],
+    [/мифрил.*орихалк/i, "Mythril Bar"],
+    [/детал.*дрейдон/i, "Mysterious Circuitry"],
+    [/арктическ.*костюм.*ныр/i, "Arctic Diving Gear"],
+    [/материал.*бездн/i, "Depth Cells"],
+    [/схем.*плането[ий]д/i, "Starblight Soot"],
+    [/^банки$/i, "Plague Cell Canister"],
+    [/крутящ.*эфир/i, "Twisting Nether"],
+    [/материал.*событ/i, "Nightmare Fuel"],
+    [/^материалы$/i, "Life Alloy"],
+    [/^компьютер$/i, "Codebreaker Base"],
+    [/лучш.*оружие.*ветк/i, "Exoblade"],
+    [/^материя$/i, "Miracle Matter"]
+  ];
+  function ingredientAliasName(value) {
+    const raw = String(value || "").trim();
+    const alias = INGREDIENT_NAME_ALIASES.find(([pattern]) => pattern.test(raw));
+    return alias ? alias[1] : raw;
   }
 
   function ingredientInfo(name) {
     buildNameIndexes();
-    const key = normalizeArtName(name);
-    const cat = catalogByName(name);
-    const lex = exactLexLookup(name);
+    const requestedName = String(name || "");
+    const aliasedName = ingredientAliasName(requestedName);
+    const forcedVanilla = /^vanilla:\d+$/i.test(requestedName);
+    const forcedCatalog = /^catalog:.+$/i.test(requestedName);
+    const directVanilla = vanillaItemForName(aliasedName);
+    const directCatalog = forcedCatalog ? catalogByName(requestedName) : null;
+    const lookupName = directCatalog ? directCatalog.name : directVanilla ? directVanilla.name : aliasedName;
+    const key = normalizeArtName(lookupName);
+    const cat = directCatalog || (forcedVanilla ? null : catalogByName(lookupName));
+    const lex = exactLexLookup(lookupName);
     const guide = GUIDE_BY_NORM.get(key)
       || (lex && (GUIDE_BY_NORM.get(normalizeArtName(lex.en)) || GUIDE_BY_NORM.get(normalizeArtName(lex.ru))))
       || null;
-    const extra = EXTRA_ITEM_INFO[name]
+    const extra = EXTRA_ITEM_INFO[lookupName]
       || (lex && EXTRA_ITEM_INFO[lex.en])
       || null;
-    const vanilla = vanillaItemForName(name) || (lex && vanillaItemForName(lex.en)) || null;
-    let ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || (cat ? ruItemName(name, cat) : ruItemName(name)) || (vanilla && ruItemName(vanilla.name)) || name;
-    let en = (lex && lex.en && String(lex.en).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) ? lex.en : "";
+    const vanilla = directVanilla || (lex && vanillaItemForName(lex.en)) || null;
+    const preferVanilla = !!vanilla && (forcedVanilla || !cat);
+    const preferCatalog = Boolean(directCatalog);
+    // Для записи ванильного индекса официальный ItemName по числовому ID
+    // важнее старых алиасов словаря: иначе разные наковальни, ботинки и руды
+    // ошибочно получали одно обобщённое имя.
+    let ru = (preferVanilla && ruItemName(lookupName, vanilla))
+      || (preferCatalog && ruItemName(lookupName, directCatalog))
+      || (guide && guide.nameRu)
+      || (lex && lex.ru)
+      || (extra && extra.ru)
+      || (cat ? ruItemName(lookupName, cat) : ruItemName(lookupName))
+      || lookupName;
+    let en = preferVanilla && String(vanilla.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru") ? vanilla.name : "";
+    if (!en && preferCatalog && directCatalog.name.toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = directCatalog.name;
+    if (!en && !preferCatalog && lex && lex.en && String(lex.en).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = lex.en;
     if (!en && extra && extra.en) en = extra.en;
-    if (!en && vanilla && String(vanilla.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = vanilla.name;
     if (!en && cat && cat.name.toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = cat.name;
     if (!en && guide && /[A-Za-z]/.test(String(guide.name)) && String(guide.name).toLocaleLowerCase("ru") !== String(ru).toLocaleLowerCase("ru")) en = guide.name;
     let art = cat
       ? `assets/item-sprites/${encodeURIComponent(cat.id)}.png`
-      : ((vanilla && vanilla.sprite) || (extra && extra.art) || resolveArt(name) || (lex && resolveArt(lex.en)) || (guide ? spriteOfFixed(guide) : ""));
+      : ((vanilla && vanilla.sprite) || (extra && extra.art) || resolveArt(lookupName) || (lex && resolveArt(lex.en)) || (guide ? spriteOfFixed(guide) : ""));
     let remoteArt = "";
     if (!art) {
-      const vanilla = vanillaIngredientArt(name);
+      const vanilla = vanillaIngredientArt(lookupName);
       if (vanilla && vanilla.local) art = vanilla.local;
       else if (vanilla && vanilla.remote) remoteArt = vanilla.remote;
     }
-    const vanillaRecipe = vanilla && getRecipeIndex().get(normalizeArtName(vanilla.name));
-    const desc = (cat && cat.description) || (lex && lex.desc) || (guide && (guide.desc || "")) || (extra && extra.desc)
-      || (vanilla && `Предмет обычной Terraria: ${ruText(vanilla.type || "игровой предмет")}.`)
-      || "";
-    const obtainRaw = (cat && cat.obtain) || (guide && guide.get) || (lex && lex.where) || (extra && extra.obtain)
-      || (vanillaRecipe ? `Скрафтить у ${vanillaRecipe.station}.` : vanilla ? "Ванильный предмет Terraria; источник зависит от предмета и мира." : "");
-    const obtain = ruText(obtainRaw);
-    const recipe = getRecipeIndex().get(key)
-      || (cat && getRecipeIndex().get(normalizeArtName(cat.name)))
-      || (lex && getRecipeIndex().get(normalizeArtName(lex.en)))
-      || (guide && getRecipeIndex().get(normalizeArtName(guide.name)))
+    const vanillaRecipeRaw = vanilla && VANILLA_RECIPE_BY_ID.get(String(vanilla.id));
+    const vanillaRecipe = vanillaRecipeRaw
+      ? { ings: vanillaRecipeRaw.ings, station: vanillaStationName(vanillaRecipeRaw.station) }
+      : null;
+    const recipes = getRecipeIndex();
+    let recipe = null;
+    if (forcedVanilla) recipe = vanillaRecipe;
+    else if (cat) recipe = recipes.get(normalizeArtName(cat.name)) || null;
+    else recipe = recipes.get(key)
+      || (lex && recipes.get(normalizeArtName(lex.en)))
+      || (guide && recipes.get(normalizeArtName(guide.name)))
       || vanillaRecipe
       || null;
+    const cycleCut = Boolean(vanilla && VANILLA_RECIPE_CUT_IDS.has(String(vanilla.id)))
+      || [key, cat && normalizeArtName(cat.name), lex && normalizeArtName(lex.en), guide && normalizeArtName(guide.name)].filter(Boolean).some((candidate) => recipeCycleCuts.has(candidate));
+    const resolvedKind = preferVanilla ? vanillaKind(vanilla.type) : cat ? cat.kind : (extra && extra.kind) || (guide && guide.kind) || "mat";
+    let desc = preferVanilla
+      ? vanillaDescription(vanilla)
+      : (cat && cat.description)
+        || (lex && lex.desc)
+        || (guide && (guide.desc || ""))
+        || (extra && extra.desc)
+        || "";
+    if (desc.length < 60) desc = `${completeSentence(desc)} ${purposeByKind(resolvedKind)}`.trim();
+    const obtainRaw = preferVanilla
+      ? vanillaObtain(vanilla, recipe)
+      : (cycleCut ? "Базовый ресурс обратного преобразования: декоративный рецепт скрыт, чтобы дерево не замыкалось само на себя." : "")
+        || (cat && cat.obtain)
+        || (guide && guide.get)
+        || (lex && lex.where)
+        || (extra && extra.obtain)
+        || craftStationSentence(recipe);
+    const compositeCraft = !recipe && /^Крафт\.?$/i.test(String(obtainRaw || "").trim());
+    let obtain = compositeCraft
+      ? "Это составной комплект: шлем, нагрудник и поножи создаются по отдельным рецептам. Выбери конкретную часть комплекта или открой справочную страницу, чтобы увидеть её ингредиенты."
+      : ruText(obtainRaw);
+    if (recipe && obtain.length < 45) obtain = `${completeSentence(obtain === "Крафт" ? craftStationSentence(recipe) : obtain)} Полный состав и количество показаны в рецепте ниже.`;
     // Карточка дерева должна быть полезной даже для записи из полного
     // каталога, у которой нет отдельной строки в словаре: назначение и этап
     // берём из тех же русских правил, что используются в каталоге.
-    const used = (cat && catalogPurpose(cat)) || (guide && (guide.why || guide.use || "")) || (lex && lex.used) || (extra && extra.used) || "";
-    const when = (cat && CATALOG_STAGE[Math.min(Math.max(cat.stage, 0), CATALOG_STAGE.length - 1)])
-      || (guide && guide.when)
-      || (extra && extra.when)
-      || "";
-    const vanillaUsed = vanilla && `Используется как предмет Terraria типа «${ruText(vanilla.type || "игровой предмет")}».`;
-    return { name, ru, en, art, desc, obtain, recipe, used: used || (extra && extra.used) || vanillaUsed || "", when, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "mat", catName: cat ? cat.name : "", remoteArt, vanilla };
+    let used = preferVanilla
+      ? vanillaPurpose(vanilla)
+      : (cat && catalogPurpose(cat))
+        || (guide && (guide.why || guide.use || ""))
+        || (lex && lex.used)
+        || (extra && extra.used)
+        || purposeByKind(resolvedKind);
+    if (used.length < 50) used = `${completeSentence(used)} ${purposeByKind(resolvedKind)}`;
+    let when = preferVanilla
+      ? vanillaWhen(vanilla, recipe)
+      : (cat && CATALOG_STAGE[Math.min(Math.max(cat.stage, 0), CATALOG_STAGE.length - 1)])
+        || (guide && guide.when)
+        || (extra && extra.when)
+        || (guide && guide.q ? `Глава ${guide.q} «${CODEX.quests.find((quest) => quest.id === Number(guide.q))?.title || "Маршрут"}»: используй на этом этапе перед переходом к следующей главе.` : "")
+        || "После получения: используй на этапе, указанном источником и назначением предмета.";
+    if (when.length < 70) when = `${completeSentence(when)} Перед переходом дальше проверь, доступен ли указанный источник и улучшает ли предмет текущую сборку.`;
+    return { name: lookupName, key: requestedName, ru, en, art, desc, obtain, recipe, cycleCut, compositeCraft, used, when, kind: resolvedKind, catName: cat ? cat.name : "", remoteArt, vanilla };
+  }
+  const isTreeEntry = (info) => Boolean(info && (info.recipe || info.vanilla || info.catName));
+
+  const WIKI_SOURCE_CACHE_KEY = "calamity-codex-wiki-sources-v3";
+  let wikiSourceCache = null;
+  function getWikiSourceCache() {
+    if (wikiSourceCache) return wikiSourceCache;
+    try { wikiSourceCache = JSON.parse(localStorage.getItem(WIKI_SOURCE_CACHE_KEY) || "{}"); }
+    catch { wikiSourceCache = {}; }
+    return wikiSourceCache;
+  }
+  function cacheWikiSource(key, value, language = "ru") {
+    const cache = getWikiSourceCache();
+    cache[key] = { text: value, language, savedAt: Date.now() };
+    const entries = Object.entries(cache).sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0)).slice(0, 120);
+    wikiSourceCache = Object.fromEntries(entries);
+    try { localStorage.setItem(WIKI_SOURCE_CACHE_KEY, JSON.stringify(wikiSourceCache)); } catch { /* optional cache */ }
+  }
+  async function enrichWikiSource(root, info) {
+    const box = root?.querySelector?.("[data-wiki-live]");
+    if (!box || !info?.vanilla || info.recipe) return;
+    const title = String(info.ru || "").trim();
+    if (!title) { box.hidden = true; return; }
+    const cacheKey = `terraria-ru:${title.toLocaleLowerCase("ru")}`;
+    const cached = getWikiSourceCache()[cacheKey];
+    const paragraph = box.querySelector("p");
+    const apply = (text, cachedResult = false, language = "ru") => {
+      if (!paragraph || !text) return;
+      paragraph.textContent = text;
+      box.classList.add("loaded");
+      if (!info.cycleCut) box.closest(".noncraft-source")?.classList.add("wiki-enriched");
+      const languageMark = language === "en" ? " · EN" : "";
+      box.querySelector("small").textContent = cachedResult ? `официальная Terraria Wiki${languageMark} · сохранённая копия` : `официальная Terraria Wiki${languageMark} · получено онлайн`;
+    };
+    if (cached?.text && Date.now() - Number(cached.savedAt || 0) < 30 * 864e5) {
+      apply(cached.text, true, cached.language || "ru");
+      return;
+    }
+    const requestExtract = async (apiUrl, pageTitle, language) => {
+      const api = new URL(apiUrl);
+      api.search = new URLSearchParams({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", redirects: "1", titles: pageTitle, format: "json", origin: "*" });
+      const response = await fetch(api, { mode: "cors", credentials: "omit" });
+      if (!response.ok) throw new Error(`wiki ${response.status}`);
+      const payload = await response.json();
+      const page = Object.values(payload?.query?.pages || {})[0];
+      const extract = String(page?.extract || "").trim();
+      if (!extract || page?.missing !== undefined || /содержимое на этой странице отсутствует/i.test(extract)) throw new Error("no wiki extract");
+      let text = extract.split(/\n\s*\n/)[0].replace(/\s+/g, " ").slice(0, 1200);
+      if (language === "ru") text = ruText(text.replace(/\(\s*англ\.\s*[^)]+\)/gi, "").replace(/\s+/g, " ").trim());
+      return { text, language };
+    };
+    try {
+      const result = await requestExtract("https://terraria.wiki.gg/ru/api.php", title, "ru");
+      cacheWikiSource(cacheKey, result.text, "ru");
+      apply(result.text, false, "ru");
+    } catch {
+      // Основная локальная карточка остаётся доступной офлайн; не показываем
+      // пользователю ещё одну бесполезную ошибку сети.
+      box.hidden = true;
+    }
   }
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
@@ -1797,7 +2587,7 @@
     "Radiator": "Сернистое море во время кислотного дождя. Появляется над зелёной водой; не стой в кислотных лужах.",
     "Skyfin": "Небо над Сернистым морем во время кислотного дождя. Летает стаями, поэтому удобны пронзающие снаряды.",
     "Sulphurous Skater": "Сернистое море и его поверхность во время кислотного дождя. Быстро скользит по воде — арена над океаном заметно упрощает фарм.",
-    "Mauler": "Сернистое море во время кислотного дождя. Редкая акула выходит на охоту после соответствующего прогресса; не сражайся в воде без мобильности.",
+    "Mauler": "Сернистое море во время кислотного дождя. Редкая акула выходит к берегу во время события; не сражайся в воде без мобильности.",
     "Nuclear Terror": "Сернистое море во время сильной фазы кислотного дождя. Появляется в опасной зоне события и требует открытой арены.",
     "Orthocera": "Сернистое море во время кислотного дождя. Встречается над водой после продвижения по событию; хорошо фармится с высоты.",
     "Astral Slime": "Астральная инфекция, поверхность и подземные участки. Появляется после открытия астральной ветки; собирай руду и материалы ночью, если нужен редкий дроп.",
@@ -1813,14 +2603,14 @@
     "Wulfrum Gyrator": "Поверхность днём в начале прохождения. Держись на расстоянии от вращающейся атаки и фарми рядом с домом.",
     "Wulfrum Hovercraft": "Поверхность днём до первых боссов. Летает над землёй и стреляет, поэтому для фарма лучше открытая площадка.",
     "Wulfrum Amplifier": "Поверхность днём в начале игры, рядом с другими вульфрумовыми машинами. Опаснее обычного дрона из-за усиленной атаки.",
-    "Pestilent Slime": "Джунгли и небо во время чумной ветки. Появляется после открытия соответствующего события и приносит чумные материалы.",
+    "Pestilent Slime": "Джунгли и их подземная часть после Голема. Появляется среди чумных противников и служит источником материалов чумной ветки.",
     "Plague Charger": "Джунгли во время чумного события. Быстро атакует по горизонтали; открытая арена над кронами безопаснее пещер.",
     "Cragmaw Mire": "Серный кратер и кислотный дождь. Ищи в опасной фазе события; огнестойкость и длинная платформа обязательны.",
     "Soul Slurper": "Серный кратер и связанные с ним подземные участки. Появляется среди огненных врагов после открытия кратера.",
     "Heat Spirit": "Серный кратер, открытые горячие участки. Уязвимее на длинной арене, чем в узких лавовых тоннелях.",
     "Infernal Congealment": "Серный кратер, глубинные горячие пещеры. Ищи рядом с лавой и заранее приготовь огнестойкость.",
     "Flak Crab": "Сернистое море во время позднего кислотного дождя. Держись выше воды: осколочные атаки опасны в узких местах.",
-    "Scorn Eater": "Поверхность и пещеры после открытия соответствующей ветки Каламити. Появляется в заражённых участках и преследует игрока.",
+    "Scorn Eater": "После Лунного лорда: Святые земли или Преисподняя. Рывками прыгает к игроку и служит источником нечестивой эссенции.",
     "Stormlion": "Пустыня днём. Ищи в песках до Пустынного бича; его челюсть нужна для Пустынного медальона.",
     "Crabulon": "Подземный грибной биом. Враг охраняет грибные пещеры и появляется рядом со светящимися грибами.",
     "Clam": "Затонувшее море под пустыней. Обычный моллюск живёт в воде и у морского дна, освобождая материалы для ранних рецептов."
@@ -1858,12 +2648,12 @@
     if (info.biome || info.source) return [info.biome, info.source].filter(Boolean).map(ruText).join(". ");
     const low = String(name || "").toLocaleLowerCase("ru");
     if (/wulfrum|вульфрум/.test(low)) return "Поверхность днём в начале игры, рядом с базой и первыми пещерами.";
-    if (/plague|чум/.test(low)) return "Джунгли и небо во время чумной ветки после открытия соответствующего события.";
+    if (/plague|чум/.test(low)) return "Джунгли и подземные джунгли после Голема, среди противников чумной ветки.";
     if (/astral|астрал|nova|mantis|atlas/.test(low)) return "Астральная инфекция: заражённая поверхность, небо и связанные пещеры.";
     if (/abyss|wyrm|eel|squid|fish|corvina|shark|cuttle|jelly|bloat|bobbit|luminous/.test(low)) return "Бездна: ищи в подводных слоях, глубина зависит от этапа прохождения.";
     if (/sulph|acid|nuclear|mauler|radiator|orthocera|skater|crab/.test(low)) return "Сернистое море и кислотный дождь: фарми над зелёной водой на открытой платформе.";
     if (/brimstone|infernal|heat|soul|crag/.test(low)) return "Серный кратер и его горячие подземные участки; пригодится огнестойкость.";
-    return "Враг встречается в мире Каламити после открытия связанной ветки. Условие источника указано рядом с его дропом.";
+    return "";
   }
   function npcSourceForItem(it) {
     if (!it) return null;
@@ -1904,17 +2694,58 @@
       ? `<span class="npc-source-art"><img src="${escAttr(art)}" alt="" loading="lazy" decoding="async" /></span>`
       : `<span class="npc-source-art npc-source-art-empty" aria-hidden="true">☠</span>`;
   }
+  const WORLD_SOURCE_ART = Object.freeze({
+    "турель лаборатории Дрейдона": "assets/item-sprites/HostileLabTurret.png",
+    "огненная турель": "assets/item-sprites/HostileFireTurret.png",
+    "ледяная турель": "assets/item-sprites/HostileIceTurret.png",
+    "лазерная турель": "assets/item-sprites/HostileLaserTurret.png",
+    "ониксовая турель": "assets/item-sprites/HostileOnyxTurret.png",
+    "чумная турель": "assets/item-sprites/HostilePlagueTurret.png",
+    "водяная турель": "assets/item-sprites/HostileWaterTurret.png",
+    AbyssalPots: "assets/source-sprites/abyssal-pot.png",
+    SulphurousPots: "assets/source-sprites/sulphurous-pot.png",
+    SpineTree: "assets/item-sprites/SpineSapling.png",
+    "сундуки лабораторий Дрейдона": "assets/item-sprites/SecurityChest.png",
+    "сундуки серного кратера": "assets/item-sprites/AshenChest.png",
+    "весенний перевал": "assets/item-sprites/BotanicChest.png",
+    "аэролитовая руда": "assets/item-sprites/AerialiteOre.png",
+    "руда улиблюма": "assets/item-sprites/UelibloomOre.png",
+    "ауриковая руда": "assets/item-sprites/AuricOre.png",
+    "крионитовая руда": "assets/item-sprites/CryonicOre.png",
+    "многолетняя руда": "assets/item-sprites/PerennialOre.png",
+    "скориевая руда": "assets/item-sprites/ScoriaOre.png",
+    "кластер экзодиума": "assets/item-sprites/ExodiumCluster.png",
+    "обугленная руда": "assets/item-sprites/BrimstoneSlag.png",
+    "астральная руда": "assets/item-sprites/AstralOre.png",
+    "морская призма": "assets/item-sprites/SeaPrism.png",
+    "лабораторная турель": "assets/item-sprites/LabTurret.png",
+    "кузня Дрейдона": "assets/item-sprites/DraedonsForge.png",
+    "адская руда": "assets/item-sprites/BrimstoneSlag.png",
+    "серный шлак": "assets/item-sprites/BrimstoneSlag.png"
+  });
+  function worldSourceRecord(value) {
+    const raw = typeof value === "object" && value ? String(value.name || value.label || "") : String(value || "");
+    const name = ruText(raw);
+    const art = (typeof value === "object" && value && value.art) || WORLD_SOURCE_ART[raw] || WORLD_SOURCE_ART[name] || resolveArt(raw) || "";
+    return { raw, name, art };
+  }
+  function worldSourceChip(value) {
+    const source = worldSourceRecord(value);
+    return `<span class="world-source-chip" title="${escAttr(source.name)}">${source.art
+      ? `<span class="world-source-art"><img src="${escAttr(source.art)}" alt="" loading="lazy" decoding="async" /></span>`
+      : `<span class="world-source-art world-source-art-empty" aria-hidden="true">⌖</span>`}<b>${esc(source.name)}</b></span>`;
+  }
   function npcSourceLines(sources, short) {
     if (!sources) return "";
     const parts = [];
     (sources.npcs || []).forEach((d) => {
-      const chance = d.chance ? ` — <em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
-      const cond = d.cond ? ` <i>· ${esc(d.cond)}</i>` : "";
-      parts.push(`<span class="src-drop npc-source-drop">${npcSourceArt(d.npc)}<i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b>${chance}${cond}</span>`);
+      const chance = d.chance ? `<em>${esc(d.chance)}${d.qty ? ` · ${esc(d.qty)}` : ""}</em>` : "";
+      const cond = d.cond ? `<i>${esc(d.cond)}</i>` : "";
+      parts.push(`<span class="src-drop npc-source-drop">${npcSourceArt(d.npc)}<span class="npc-source-copy"><span class="npc-source-name"><i class="src-ico" aria-hidden="true">☠</i><b class="npc-tip" data-npc="${escAttr(d.npc)}" role="button" tabindex="0">${esc(npcRuName(d.npc))}</b></span>${chance || cond ? `<span class="src-drop-meta">${chance}${cond}</span>` : ""}</span></span>`);
     });
     if (!short) {
-      if ((sources.tiles || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">⌖</i><span>Выбивается из: ${esc(ruText(sources.tiles.join(", ")))}</span></span>`);
-      if ((sources.chests || []).length) parts.push(`<span class="src-drop"><i class="src-ico" aria-hidden="true">▤</i><span>Лежит в: ${esc(ruText(sources.chests.join(", ")))}</span></span>`);
+      if ((sources.tiles || []).length) parts.push(`<span class="src-drop world-source-group"><span class="world-source-label"><i class="src-ico" aria-hidden="true">⌖</i>Выбивается из</span><span class="world-source-grid">${sources.tiles.map(worldSourceChip).join("")}</span></span>`);
+      if ((sources.chests || []).length) parts.push(`<span class="src-drop world-source-group"><span class="world-source-label"><i class="src-ico" aria-hidden="true">▤</i>Лежит в</span><span class="world-source-grid">${sources.chests.map(worldSourceChip).join("")}</span></span>`);
     }
     return parts.join("");
   }
@@ -1931,7 +2762,8 @@
   }
   function stationChipHTML(station) {
     if (!station) return "";
-    return `<span class="craft-chip station-chip" title="${escAttr(station)}"><img class="ings-icon" src="${escAttr(craftStationSprite(station))}" alt="" loading="lazy" decoding="async" /><b>${esc(station)}</b></span>`;
+    const label = stationDisplayName(station);
+    return `<span class="craft-chip station-chip" title="${escAttr(label)}"><img class="ings-icon" src="${escAttr(craftStationSprite(station))}" alt="" loading="lazy" decoding="async" /><b>${esc(label)}</b></span>`;
   }
   function craftChipsHTML(name) {
     const rec = getRecipeIndex().get(normalizeArtName(name));
@@ -2207,7 +3039,7 @@
     });
   }
   const CATALOG_STAGE = [
-    "По мере открытия соответствующего контента; проверь условие источника.",
+    "Необязательный этап: предмет не привязан к отдельному боссу; используй его сразу после получения, если он подходит текущей задаче.",
     "Прехардмод: бери до Стены плоти, как только станет доступен источник.",
     "Хардмод: после Стены плоти, когда доступны указанные ингредиенты или противник.",
     "Поздний хардмод: после механических боссов и ближе к Лунному лорду.",
@@ -2262,12 +3094,17 @@
         <div class="card-title">${esc(title)}<span class="en-sub">оригинал: ${esc(item.name)}</span></div>
         <p class="desc">${esc(ruText(item.description || purpose))}</p>
         <div class="facts">
-          ${isCraft ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(ruText(item.obtain))}</p>`}</div>` : `<div class="fact"><span>Где</span>${npcSourceLines(itemSources) ? `<div class="src-list">${npcSourceLines(itemSources)}</div>` : `<p>${esc(ruText(item.obtain || "Точный источник указан на официальной wiki."))}</p>`}</div>`}
+          ${isCraft
+            ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(ruText(item.obtain))}</p>`}</div>`
+            : npcSourceLines(itemSources)
+              ? `<div class="fact source-fact"><span>Где</span><div class="src-list">${npcSourceLines(itemSources)}</div></div>`
+              : item.obtain ? `<div class="fact"><span>Где</span><p>${esc(ruText(item.obtain))}</p></div>` : ""}
           <div class="fact"><span>Зачем</span><p>${esc(purpose)}</p></div>
           <div class="fact"><span>Когда</span><p>${esc(useWhen)}</p></div>
         </div>
         <div class="card-links">
-          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Рецепт и шансы на wiki ↗</a>
+          <button class="tree-btn" type="button" data-tree="${escAttr(`catalog:${item.id}`)}">${isCraft ? "Дерево крафта" : "Способ получения"}</button>
+          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">${isCraft ? "Рецепт" : "Источник"} и шансы на wiki ↗</a>
           ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть практическую рекомендацию ${escAttr(detailName)}">Рекомендация кодекса →</a>` : ""}
         </div>
       </div>
@@ -2307,8 +3144,8 @@
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
         <div class="facts">
           ${showGet ? `<div class="fact"><span>Где</span><p>${esc(getPlain)}</p></div>` : ""}
-          ${npcSourceLines(itemSources) ? `<div class="fact"><span>Дроп</span><div class="src-list">${npcSourceLines(itemSources)}</div></div>` : ""}
-          ${rec ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(rec)}</p>`}</div>` : ""}
+          ${npcSourceLines(itemSources) ? `<div class="fact source-fact"><span>Дроп</span><div class="src-list">${npcSourceLines(itemSources)}</div></div>` : ""}
+          ${rec ? `<div class="fact recipe-fact"><span>Крафт</span><div class="craft-chips">${craftChips}</div>${craftChips ? "" : `<p>${esc(ruText(rec))}</p>`}</div>` : ""}
           ${showWhy ? `<div class="fact"><span>Зачем</span><p>${esc(why)}</p></div>` : ""}
         </div>
       </div>
@@ -2370,7 +3207,7 @@
           </aside>
           <article class="quest">
             <div class="quest-hero">
-              <div class="pic" style="background-image:url('${q.bg || "assets/hero.jpg"}');filter:${q.filter || "none"}"></div>
+              <div class="pic" style="background-image:url('${q.bg || "assets/hero.webp"}');filter:${q.filter || "none"}"></div>
               <div class="hero-glow"></div>
               <div class="inner">
                 <div class="rune-row">
@@ -2378,7 +3215,7 @@
                   <span class="rune">Квест ${String(q.id).padStart(2, "0")} из ${quests.length}</span>
                 </div>
                 <h2>${q.title}</h2>
-                <p class="mood">${q.mood || q.subtitle}</p>
+                <p class="mood">${esc(ruText(q.mood || q.subtitle))}</p>
               </div>
             </div>
             <div class="quest-pad">
@@ -2394,7 +3231,7 @@
               const on = !!(tasks[key]);
               return `<label class="task ${on ? "checked" : ""}"><input type="checkbox" data-task="${key}" ${on ? "checked" : ""} /><span>${T(t)}</span></label>`;
             }).join("")}</div>`)}
-            ${shelf("Советы", "", `<div class="tips">${q.tips.map((t) => `<div class="hint">${T(t)}</div>`).join("")}</div><div class="class-note"><b>${CLS_RU[cls]}:</b> ${T(q.classTips[cls])}</div>`)}
+            ${shelf("Советы", "", `<div class="tips">${q.tips.map((t) => `<div class="hint">${T(t)}</div>`).join("")}</div><div class="class-note ${escAttr(cls)}"><b>${CLS_RU[cls]}:</b> ${T(q.classTips[cls])}</div>`)}
             </div>
             <div class="quest-nav">
               <button class="btn ghost" data-go="${q.id - 1}" ${q.id === 1 ? "disabled" : ""}>← Назад</button>
@@ -2554,8 +3391,8 @@
       </div>
       <div class="card-body">
         <div class="card-title">${esc(title)}${en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
-        ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
-        <div class="facts">${rows.map(([k, v]) => v ? `<div class="fact"><span>${esc(k)}</span><p>${esc(v)}</p></div>` : "").join("")}</div>
+        ${desc ? `<p class="desc">${esc(ruText(desc))}</p>` : ""}
+        <div class="facts">${rows.map(([k, v]) => v ? `<div class="fact"><span>${esc(k)}</span><p>${esc(ruText(v))}</p></div>` : "").join("")}</div>
         ${options.noWiki ? "" : `<div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>`}
       </div>
     </article>`;
@@ -2570,10 +3407,10 @@
       </div>
       <div class="card-body">
         <div class="card-title">${esc(q.title)}<span class="en-sub">${esc(q.subtitle || "Этап прохождения")}</span></div>
-        <p class="desc">${esc(q.mood || q.story || q.subtitle || "Практический этап маршрута прохождения.")}</p>
+        <p class="desc">${esc(ruText(q.mood || q.story || q.subtitle || "Практический этап маршрута прохождения."))}</p>
         <div class="facts">
-          ${q.objective ? `<div class="fact"><span>Цель</span><p>${esc(q.objective)}</p></div>` : ""}
-          <div class="fact"><span>Когда</span><p>${esc(q.subtitle || "По порядку маршрута")}</p></div>
+          ${q.objective ? `<div class="fact"><span>Цель</span><p>${esc(ruText(q.objective))}</p></div>` : ""}
+          <div class="fact"><span>Когда</span><p>${esc(ruText(q.subtitle || "По порядку маршрута"))}</p></div>
           <div class="fact"><span>Дальше</span><p>Открой главу: внутри шаги, предметы, крафты, противники и чеклист.</p></div>
         </div>
         <div class="card-links"><a href="#/novice?q=${q.id}">Открыть полный маршрут →</a></div>
@@ -2650,6 +3487,7 @@
   /* ---------- отдельный экран дерева крафта ---------- */
   let craftTreeRoot = store.get().craftTreeRoot || "";
   let craftTreeChoicesCache = null;
+  let craftTreeChoiceLookupCache = null;
   const CRAFT_PICKER_PAGE_SIZE = 120;
   const CRAFT_RECENT_LIMIT = 8;
 
@@ -2668,6 +3506,10 @@
   function treeRecipeForName(name) {
     if (!name) return null;
     const index = getRecipeIndex();
+    const cat = catalogByName(name);
+    // Точная запись каталога никогда не заимствует рецепт словарного алиаса:
+    // Prism Shard не должен получать рецепт Sea Prism и становиться сам себе ингредиентом.
+    if (cat) return index.get(normalizeArtName(cat.name)) || null;
     const direct = index.get(normalizeArtName(name));
     if (direct) return direct;
     const lex = exactLexLookup(name);
@@ -2678,28 +3520,41 @@
 
   function craftTreeChoices() {
     if (craftTreeChoicesCache) return craftTreeChoicesCache;
+    ensureVanillaIndexes();
     buildNameIndexes();
     const choices = new Map();
-    const add = (name, vanillaRecord = null) => {
-      const raw = String(name || "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
+    const add = (name, vanillaRecord = null, catalogRecord = null) => {
+      // Скобочная часть ванильного имени различает реальные Item ID
+      // (варианты клюшек, датчиков, логических вентилей и т. п.). Удалять её
+      // можно только у рекомендаций кодекса, но не у записей Terraria.
+      const sourceName = String(name || "").trim();
+      if (vanillaRecord && isInternalVanillaName(sourceName)) return;
+      const raw = vanillaRecord ? sourceName : sourceName.replace(/\s*\([^)]*\)\s*/g, " ").trim();
       if (!raw) return;
       // Сначала приводим всё к имени записи каталога. Рекомендация маршрута,
       // английское имя и запись из CODEX.crafts тогда занимают один и тот же
       // слот, а не рисуются несколькими копиями одного предмета.
-      const cat = vanillaRecord ? null : catalogByName(raw);
+      const cat = vanillaRecord ? null : (catalogRecord || catalogByName(raw));
       const canonical = cat ? cat.name : raw;
-      const extra = EXTRA_ITEM_INFO[canonical] || EXTRA_ITEM_INFO[raw] || null;
-      const vanilla = vanillaRecord || vanillaItemForName(canonical) || vanillaItemForName(raw);
-      const vanillaRecipe = vanillaRecord && VANILLA_RECIPE_BY_ID.get(String(vanillaRecord.id))
-        ? { ...VANILLA_RECIPE_BY_ID.get(String(vanillaRecord.id)), station: vanillaStationName(VANILLA_RECIPE_BY_ID.get(String(vanillaRecord.id)).station) }
+      const vanilla = vanillaRecord || (!cat ? (vanillaItemForName(canonical) || (canonical !== raw ? vanillaItemForName(raw) : null)) : null);
+      const extra = vanilla ? null : (EXTRA_ITEM_INFO[canonical] || EXTRA_ITEM_INFO[raw] || null);
+      const vanillaRecipeRaw = vanilla && VANILLA_RECIPE_BY_ID.get(String(vanilla.id));
+      const vanillaRecipe = vanillaRecipeRaw
+        ? { ings: vanillaRecipeRaw.ings, station: vanillaStationName(vanillaRecipeRaw.station) }
         : null;
       const key = cat ? `catalog:${cat.id}` : vanilla ? `vanilla:${vanilla.id}` : `name:${normalizeArtName(canonical)}`;
-      const recipe = vanillaRecipe || treeRecipeForName(canonical) || treeRecipeForName(raw);
-      if (!key || choices.has(key) || ((!recipe || !recipe.ings.length) && !vanilla)) return;
-      const lex = exactLexLookup(canonical) || exactLexLookup(raw);
-      const guide = (CODEX.items || []).find((item) => normalizeArtName(item.name) === normalizeArtName(raw) || normalizeArtName(item.name) === normalizeArtName(canonical));
-      const ru = (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || ruItemName(canonical, cat) || canonical;
-      const en = (lex && lex.en) || (extra && extra.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
+      const recipe = vanilla
+        ? vanillaRecipe
+        : treeRecipeForName(canonical) || (canonical !== raw ? treeRecipeForName(raw) : null);
+      const cycleResource = !recipe && recipeCycleCuts.has(normalizeArtName(canonical));
+      const catalogResource = Boolean(cat);
+      if (!key || choices.has(key) || ((!recipe || !recipe.ings.length) && !vanilla && !cycleResource && !catalogResource)) return;
+      const lex = vanilla ? null : (exactLexLookup(canonical) || (canonical !== raw ? exactLexLookup(raw) : null));
+      const guide = vanilla ? null : (GUIDE_BY_NORM.get(normalizeArtName(raw)) || GUIDE_BY_NORM.get(normalizeArtName(canonical)) || null);
+      const ru = vanilla
+        ? ruItemName(canonical, vanilla)
+        : (guide && guide.nameRu) || (lex && lex.ru) || (extra && extra.ru) || ruItemName(canonical, cat) || canonical;
+      const en = vanilla ? canonical : (lex && lex.en) || (extra && extra.en) || (cat && cat.name) || (/[A-Za-z]/.test(canonical) ? canonical : "");
       const vanillaArtInfo = vanilla && vanillaIngredientArt(canonical);
       const vanillaArt = vanilla && (vanilla.sprite || vanillaArtInfo?.local || vanillaArtInfo?.remote);
       const rootInfo = cat || vanilla ? null : ingredientInfo(canonical);
@@ -2708,9 +3563,17 @@
         : vanilla
           ? (vanillaArt || craftStationSprite(recipe?.station))
           : (rootInfo.art || rootInfo.remoteArt || resolveArt(canonical) || resolveArt(raw) || CRAFT_ART[canonical] || craftStationSprite(recipe?.station));
-      choices.set(key, { name: canonical, ru, en, art, kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "misc", ingredients: recipe ? recipe.ings.length : 0, source: cat ? "calamity" : vanilla ? "vanilla" : "guide" });
+      choices.set(key, {
+        name: canonical,
+        lookup: cat ? `catalog:${cat.id}` : vanilla ? key : canonical,
+        ru, en, art,
+        search: `${ru} ${en} ${canonical}`.toLocaleLowerCase("ru"),
+        kind: cat ? cat.kind : (extra && extra.kind) || (vanilla && vanillaKind(vanilla.type)) || "misc",
+        ingredients: recipe ? recipe.ings.length : 0,
+        source: cat ? "calamity" : vanilla ? "vanilla" : "guide"
+      });
     };
-    indexedItems().forEach((item) => add(item.name));
+    indexedItems().forEach((item) => add(item.name, null, item));
     (CODEX.items || []).forEach((item) => add(item.name));
     (CODEX.crafts || []).forEach((item) => add(item.name || item.t));
     Object.keys(EXTRA_RECIPE_DEFS).forEach((name) => add(name));
@@ -2719,21 +3582,41 @@
     return craftTreeChoicesCache;
   }
 
+  function craftTreeChoiceLookup() {
+    if (craftTreeChoiceLookupCache) return craftTreeChoiceLookupCache;
+    craftTreeChoiceLookupCache = new Map();
+    craftTreeChoices().forEach((item) => {
+      craftTreeChoiceLookupCache.set(normalizeArtName(item.lookup || item.name), item);
+      const nameKey = normalizeArtName(item.name);
+      if (!craftTreeChoiceLookupCache.has(nameKey)) craftTreeChoiceLookupCache.set(nameKey, item);
+    });
+    return craftTreeChoiceLookupCache;
+  }
+
   function craftChoiceCardHTML(item) {
     const art = item.art
       ? `<img src="${escAttr(item.art)}" alt="" loading="lazy" decoding="async" />`
       : unavailableArt(item.kind || "misc");
-    const search = `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru");
-    return `<button class="craft-choice-card" type="button" data-choice-name="${escAttr(item.name)}" data-choice-search="${escAttr(search)}" aria-pressed="false">
+    return `<button class="craft-choice-card" type="button" data-choice-name="${escAttr(item.lookup || item.name)}" data-choice-search="${escAttr(item.search || `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru"))}" aria-pressed="false">
       <span class="slot craft-choice-art">${art}</span>
       <span class="craft-choice-copy"><b>${esc(item.ru)}</b>${item.en && item.en !== item.ru ? `<small>${esc(item.en)}</small>` : ""}<em>${item.ingredients ? `${item.ingredients} ингредиент${item.ingredients === 1 ? "" : item.ingredients < 5 ? "а" : "ов"}` : "ресурс / добывается"}</em></span>
       <span class="craft-choice-mark" aria-hidden="true">◆</span>
     </button>`;
   }
 
+  // Карточки создаются заново при каждом поиске и переключении фильтра.
+  // Прямой обработчик надёжнее делегирования на весь граф: выбор предмета
+  // не зависит от служебных data-атрибутов родительской секции.
+  function bindCraftChoiceCards(section, scope) {
+    if (!section || !scope) return;
+    scope.querySelectorAll(".craft-choice-card[data-choice-name]").forEach((card) => {
+      card.onclick = () => selectCraftChoice(section, card);
+    });
+  }
+
   function craftTreeBranchHTML(root) {
     const info = root ? ingredientInfo(root) : null;
-    const activeRoot = info && (info.recipe || info.vanilla) ? root : "";
+    const activeRoot = isTreeEntry(info) ? root : "";
     const activeInfo = activeRoot ? info : null;
     return `
       <section class="craft-tree-branch panel" id="craft-tree-branch" aria-labelledby="craft-tree-title">
@@ -2754,7 +3637,7 @@
         <div class="craft-tree-picker" id="craft-tree-picker" hidden>
           <div class="craft-tree-picker-copy">
             <b>Какой предмет разобрать?</b>
-            <span>Выбирай любой предмет Calamity или ванильной Terraria — в индексе есть 5087 ванильных предметов и их рецепты.</span>
+            <span>Выбирай любой предмет Каламити или ванильной Terraria — в индексе есть 5087 ванильных предметов и их рецепты.</span>
           </div>
           <div class="craft-tree-picker-controls">
             <label class="craft-tree-search">
@@ -2769,7 +3652,7 @@
               <button type="button" class="active" data-choice-filter="all" aria-pressed="true">Все</button>
               <button type="button" data-choice-filter="craftable" aria-pressed="false">С рецептом</button>
               <button type="button" data-choice-filter="vanilla" aria-pressed="false">Terraria</button>
-              <button type="button" data-choice-filter="calamity" aria-pressed="false">Calamity</button>
+              <button type="button" data-choice-filter="calamity" aria-pressed="false">Каламити</button>
             </div>
             <p class="craft-tree-choice-status" id="craft-tree-choice-status" aria-live="polite">Нажми на карточку предмета</p>
             <div class="craft-tree-choice-grid" id="craft-tree-choice-grid" role="listbox" aria-label="Предмет для дерева крафта">
@@ -2783,7 +3666,7 @@
         </div>
         <div class="craft-tree-active" data-tree-active>${activeInfo ? `<span>корень ветки</span><b>${esc(activeInfo.ru)}</b><i>${activeInfo.en ? `в игре: ${esc(activeInfo.en)}` : ""}</i>` : `<span>корень ветки</span><b>Предмет ещё не выбран</b><i>Нажми на плюсик справа</i>`}</div>
         <div class="craft-tree-inline-wrap">
-          <div class="craft-tree-inline-tools"><span>▸ ингредиенты и их ингредиенты</span><div class="craft-tree-zoom-controls" role="group" aria-label="Масштаб дерева"><button type="button" data-tree-zoom="out" aria-label="Уменьшить дерево">−</button><output data-tree-zoom-label>100%</output><button type="button" data-tree-zoom="in" aria-label="Увеличить дерево">+</button><button type="button" data-tree-zoom="reset" aria-label="Сбросить масштаб">↺</button></div><button type="button" data-inline-tree-expand>⊞ Развернуть всё</button><button type="button" data-inline-tree-collapse>⊟ Свернуть всё</button></div>
+          <div class="craft-tree-inline-tools"><span>✥ зажми ЛКМ и тяни карту · ▸ раскрывает ветку</span><div class="craft-tree-zoom-controls" role="group" aria-label="Масштаб дерева"><button type="button" data-tree-zoom="out" aria-label="Уменьшить дерево">−</button><output data-tree-zoom-label>100%</output><button type="button" data-tree-zoom="in" aria-label="Увеличить дерево">+</button><button type="button" data-tree-zoom="reset" aria-label="Сбросить масштаб">↺</button></div><button type="button" data-inline-tree-expand>⊞ Развернуть всё</button><button type="button" data-inline-tree-collapse>⊟ Свернуть всё</button><button type="button" data-copy-tree-link ${activeInfo ? "" : "disabled"}>⧉ Ссылка</button></div>
           <div class="tree-body craft-tree-inline-body" id="craft-tree-inline-body" data-tree-surface="inline">${activeInfo
             ? treeNodeHTML(activeRoot, 0, new Set())
             : `<div class="craft-tree-empty"><span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p></div>`}</div>
@@ -2791,7 +3674,7 @@
         <section class="craft-tree-inspector" id="craft-tree-inspector" hidden aria-live="polite" aria-labelledby="craft-tree-inspector-title">
           <div id="craft-tree-inspector-content"></div>
         </section>
-        <p class="craft-tree-help"><b>Подсказка:</b> стрелка на узле раскрывает ингредиенты, клик по предмету показывает полную карточку прямо под картой — без перехода на другую страницу.</p>
+        <p class="craft-tree-help"><b>Подсказка:</b> зажми левую кнопку мыши и тяни карту в любую сторону; стрелка раскрывает ингредиенты, обычный клик по предмету показывает полную карточку.</p>
       </section>`;
   }
 
@@ -2800,15 +3683,16 @@
     const grid = section.querySelector("#craft-tree-recent-grid");
     if (!wrap || !grid) return;
     const q = String(query || "").trim().toLocaleLowerCase("ru");
-    const choiceMap = new Map(craftTreeChoices().map((item) => [normalizeArtName(item.name), item]));
+    const choiceMap = craftTreeChoiceLookup();
     const items = recentCraftRoots().map((name) => choiceMap.get(normalizeArtName(name))).filter(Boolean)
-      .filter((item) => !q || `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru").includes(q));
+      .filter((item) => !q || item.search.includes(q));
     wrap.hidden = !items.length || !!q;
     if (!items.length || q) {
       grid.innerHTML = "";
       return;
     }
     grid.innerHTML = items.map(craftChoiceCardHTML).join("");
+    bindCraftChoiceCards(section, grid);
   }
 
   function renderCraftChoiceWindow(section, query = "") {
@@ -2816,10 +3700,10 @@
     const status = section.querySelector("#craft-tree-choice-status");
     if (!grid) return;
     const all = craftTreeChoices();
-    const filter = section.dataset.choiceFilter || "all";
+    const filter = section.dataset.choiceSource || "all";
     const pool = filter === "craftable" ? all.filter((item) => item.ingredients > 0) : filter === "all" ? all : all.filter((item) => item.source === filter);
     const q = String(query || "").trim().toLocaleLowerCase("ru");
-    const matches = q ? pool.filter((item) => `${item.ru} ${item.en} ${item.name}`.toLocaleLowerCase("ru").includes(q)) : pool;
+    const matches = q ? pool.filter((item) => item.search.includes(q)) : pool;
     const limit = Math.max(CRAFT_PICKER_PAGE_SIZE, Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE));
     const visible = matches.slice(0, limit);
     grid.innerHTML = visible.length
@@ -2828,6 +3712,12 @@
     if (visible.length < matches.length) {
       grid.insertAdjacentHTML("beforeend", `<button class="craft-choice-more" type="button" data-choice-more>Показать ещё ${Math.min(CRAFT_PICKER_PAGE_SIZE, matches.length - visible.length)} из ${matches.length}</button>`);
     }
+    bindCraftChoiceCards(section, grid);
+    const more = grid.querySelector("button[data-choice-more]");
+    if (more) more.onclick = () => {
+      section.dataset.choiceLimit = String(Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE) + CRAFT_PICKER_PAGE_SIZE);
+      renderCraftChoiceWindow(section, q);
+    };
     grid.dataset.ready = "1";
     renderCraftTreeRecent(section, q);
     if (status && !section.dataset.selectedChoice) status.textContent = q
@@ -2884,7 +3774,7 @@
       nextPath.add(key);
       recipe.ings.forEach((ingredient) => {
         const amount = Number.parseFloat(String(ingredient.count || "1").replace(",", "."));
-        walk(ingredient.name, multiplier * (Number.isFinite(amount) && amount > 0 ? amount : 1), nextPath);
+        walk(ingredient.key || ingredient.name, multiplier * (Number.isFinite(amount) && amount > 0 ? amount : 1), nextPath);
       });
     };
     walk(name, 1, new Set());
@@ -2920,13 +3810,23 @@
     const artHTML = art
       ? `<img class="craft-tree-inspector-art${info.remoteArt && !info.art ? " remote" : ""}" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />`
       : `<span class="craft-tree-inspector-art-fallback" aria-hidden="true">◆</span>`;
-    const where = sourceHTML || info.obtain || "Точный источник указан в соответствующем биоме или событии Terraria / Calamity.";
-    const recipeText = info.recipe && info.recipe.ings.length
-      ? `${info.recipe.ings.map((item) => `${item.count ? `${item.count} × ` : ""}${ruItemName(item.name)}`).join(" + ")}${info.recipe.station ? ` · ${ruText(info.recipe.station)}` : ""}`
-      : "Предмет добывается или находится в мире; рецепта нет.";
-    const recipeHTML = info.recipe && info.recipe.ings.length
-      ? `<div class="craft-chips">${info.recipe.ings.map((item) => ingChipHTML(item.name, item.count)).join("")}${stationChipHTML(info.recipe.station)}</div>`
-      : `<p>Не крафтится напрямую: добывается, находится в мире или выпадает из указанного источника.</p>`;
+    const where = info.obtain || "";
+    const description = info.desc || (info.recipe && info.recipe.ings.length
+      ? `${info.ru} — результат этой ветки из ${info.recipe.ings.length} типов ингредиентов.`
+      : "");
+    const hasRecipe = Boolean(info.recipe && info.recipe.ings.length);
+    const recipeText = hasRecipe
+      ? `${info.recipe.ings.map((item) => `${item.count ? `${item.count} × ` : ""}${ingredientInfo(item.key || item.name).ru}`).join(" + ")}${info.recipe.station ? ` · ${craftStationInline(info.recipe.station)}` : ""}`
+      : `${info.compositeCraft ? "Создание комплекта" : "Получение без крафта"}: ${where || "официальный игровой источник"}`;
+    const acquisitionSource = sourceHTML
+      ? `<div class="src-list">${sourceHTML}</div>`
+      : `<p>${esc(ruText(where || "Предмет получается без крафта; точный источник доступен по справочной ссылке ниже."))}</p>`;
+    const wikiLiveHTML = !hasRecipe && info.vanilla
+      ? `<section class="wiki-source-live" data-wiki-live><small>официальная Terraria Wiki · уточняем онлайн…</small><p>Проверяем конкретный источник, противника, шанс выпадения и условия получения.</p></section>`
+      : "";
+    const recipeHTML = hasRecipe
+      ? `<div class="craft-chips">${info.recipe.ings.map((item) => ingChipHTML(item.key || item.name, item.count)).join("")}${stationChipHTML(info.recipe.station)}</div>`
+      : `<div class="noncraft-source"><b>${info.compositeCraft ? "Несколько рецептов" : info.cycleCut ? "Базовый ресурс" : "Без крафта"}</b>${acquisitionSource}${wikiLiveHTML}${info.cycleCut ? `<p class="cycle-note">Обратное преобразование скрыто: предмет считается исходным ресурсом, поэтому ветка не требует его же для собственного получения.</p>` : ""}</div>`;
     const materials = info.recipe && info.recipe.ings.length ? craftTreeMaterialSummary(name) : [];
     const materialsText = materials.map((item) => `${item.count} × ${item.info.ru}`).join("\n");
     const collectedMaterials = craftMaterialState(name);
@@ -2941,7 +3841,7 @@
         }).join("")}</div></section>`
       : "";
     const wiki = info.vanilla
-      ? `https://terraria.wiki.gg/wiki/${encodeURIComponent(info.en || name).replace(/%20/g, "_")}`
+      ? `https://terraria.wiki.gg/ru/wiki/${encodeURIComponent(info.ru || info.en || name).replace(/%20/g, "_")}`
       : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(info.en || info.catName || name)}`;
     return `
       <div class="craft-tree-inspector-head">
@@ -2954,29 +3854,29 @@
         <span class="craft-tree-inspector-badge">выбранный узел</span>
       </div>
       <nav class="craft-tree-breadcrumb" data-tree-breadcrumb aria-label="Путь ингредиента"></nav>
-      <p class="craft-tree-inspector-desc">${esc(ruText(info.desc || "Подробное описание для этого предмета ещё не добавлено."))}</p>
+      ${description ? `<p class="craft-tree-inspector-desc">${esc(ruText(description))}</p>` : ""}
       <div class="craft-tree-inspector-facts">
-        <div class="fact"><span>Где</span><div class="craft-tree-inspector-where">${sourceHTML ? `<div class="src-list">${sourceHTML}</div>` : `<p>${esc(ruText(where))}</p>`}</div></div>
-        <div class="fact"><span>Зачем</span><p>${esc(ruText(info.used || "Используется как часть прогрессии, экипировки или следующего рецепта."))}</p></div>
-        <div class="fact"><span>Когда</span><p>${esc(ruText(info.when || "По мере открытия соответствующей ветки Terraria / Calamity."))}</p></div>
-        <div class="fact recipe-fact"><span>Полный рецепт</span>${recipeHTML}</div>
+        ${hasRecipe && (sourceHTML || where) ? `<div class="fact source-fact"><span>Где</span><div class="craft-tree-inspector-where">${sourceHTML ? `<div class="src-list">${sourceHTML}</div>` : `<p>${esc(ruText(where))}</p>`}</div></div>` : ""}
+        ${info.used ? `<div class="fact"><span>Зачем</span><p>${esc(ruText(info.used))}</p></div>` : ""}
+        ${info.when ? `<div class="fact"><span>Когда</span><p>${esc(ruText(info.when))}</p></div>` : ""}
+        <div class="fact recipe-fact"><span>${hasRecipe ? "Полный рецепт" : info.compositeCraft ? "Как создать" : "Получение"}</span>${recipeHTML}</div>
       </div>
       ${materialsHTML}
       <div class="craft-tree-inspector-actions">
-        <button class="tree-btn inspector-copy" type="button" data-copy-recipe="${escAttr(recipeText)}">⧉ Скопировать рецепт</button>
+        <button class="tree-btn inspector-copy" type="button" data-copy-recipe="${escAttr(recipeText)}">⧉ ${hasRecipe ? "Скопировать рецепт" : info.compositeCraft ? "Скопировать создание" : "Скопировать получение"}</button>
         <a class="craft-catalog-link" href="${escAttr(wiki)}" target="_blank" rel="noopener noreferrer">Открыть справочную страницу ↗</a>
       </div>`;
   }
 
-  async function copyCraftRecipe(text) {
-    const value = String(text || "");
-    if (!value) return;
+  async function copyText(value, successMessage) {
+    const text = String(value || "");
+    if (!text) return false;
     try {
       if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        await navigator.clipboard.writeText(value);
+        await navigator.clipboard.writeText(text);
       } else {
         const area = document.createElement("textarea");
-        area.value = value;
+        area.value = text;
         area.setAttribute("readonly", "");
         area.style.position = "fixed";
         area.style.opacity = "0";
@@ -2985,10 +3885,26 @@
         document.execCommand("copy");
         area.remove();
       }
-      toast("Рецепт скопирован", "⧉");
+      toast(successMessage, "⧉");
+      return true;
     } catch {
-      toast("Не удалось скопировать рецепт", "!");
+      toast("Не удалось скопировать", "!");
+      return false;
     }
+  }
+  const copyCraftRecipe = (text) => {
+    const value = String(text || "");
+    return copyText(value, /^Получение/i.test(value) ? "Способ получения скопирован" : /^Создание/i.test(value) ? "Способ создания скопирован" : "Рецепт скопирован");
+  };
+  function copyCraftTreeLink(root) {
+    if (!root) return;
+    const params = new URLSearchParams();
+    const current = new URLSearchParams((location.hash.split("?")[1] || ""));
+    if (current.get("q")) params.set("q", current.get("q"));
+    params.set("item", root);
+    const url = new URL(location.href);
+    url.hash = `/crafts?${params}`;
+    copyText(url.href, "Ссылка на дерево скопирована");
   }
 
   function markCraftTreeNode(section, name) {
@@ -3052,22 +3968,23 @@
     const path = craftTreeNodePath(section, name);
     if (breadcrumb) breadcrumb.innerHTML = (path.length ? path : [name]).map((item, index) => `${index ? `<i aria-hidden="true">›</i>` : ""}<b>${esc(ingredientInfo(item).ru)}</b>`).join("");
     bindSprites(content);
+    enrichWikiSource(content, ingredientInfo(name));
     if (scroll) requestAnimationFrame(() => panel.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
   function applyCraftTreeZoom(section) {
     const body = section?.querySelector("#craft-tree-inline-body");
     if (!body) return;
-    const scale = Number(section.dataset.treeZoom || "1");
+    const scale = Number(section.dataset.treeScale || "1");
     body.style.zoom = String(scale);
     const label = section.querySelector("[data-tree-zoom-label]");
     if (label) label.textContent = `${Math.round(scale * 100)}%`;
   }
 
   function adjustCraftTreeZoom(section, action) {
-    const current = Number(section.dataset.treeZoom || "1");
+    const current = Number(section.dataset.treeScale || "1");
     const next = action === "reset" ? 1 : Math.min(1.35, Math.max(.65, current + (action === "in" ? .1 : -.1)));
-    section.dataset.treeZoom = String(Number(next.toFixed(2)));
+    section.dataset.treeScale = String(Number(next.toFixed(2)));
     applyCraftTreeZoom(section);
   }
 
@@ -3076,8 +3993,8 @@
     const body = section.querySelector("#craft-tree-inline-body");
     const info = craftTreeRoot ? ingredientInfo(craftTreeRoot) : null;
     if (!body) return;
-    if (info && (info.recipe || info.vanilla)) {
-      body.className = "tree-body craft-tree-inline-body";
+    if (isTreeEntry(info)) {
+      body.className = "tree-body craft-tree-inline-body drag-pan";
       body.dataset.treeSurface = "inline";
       body.innerHTML = treeNodeHTML(craftTreeRoot, 0, new Set());
       bindSprites(body);
@@ -3087,60 +4004,114 @@
       body.innerHTML = `<span class="craft-tree-empty-mark">+</span><b>Здесь появится твоя ветка</b><p>Открой выбор предмета и начни с оружия, брони, аксессуара или призывалки.</p>`;
     }
     applyCraftTreeZoom(section);
-    renderCraftTreeInspector(section, info && (info.recipe || info.vanilla) ? craftTreeRoot : "");
+    renderCraftTreeInspector(section, isTreeEntry(info) ? craftTreeRoot : "");
     const active = section.querySelector("[data-tree-active]");
     if (active) {
-      active.innerHTML = info && (info.recipe || info.vanilla)
+      active.innerHTML = isTreeEntry(info)
         ? `<span>корень ветки</span><b>${esc(info.ru)}</b><i>${info.en ? `в игре: ${esc(info.en)}` : ""}</i>`
         : `<span>корень ветки</span><b>Предмет ещё не выбран</b><i>Нажми на плюсик справа</i>`;
     }
     const add = section.querySelector("#craft-tree-add span:last-child");
-    if (add) add.textContent = info && (info.recipe || info.vanilla) ? "Сменить предмет" : "Выбрать предмет";
+    if (add) add.textContent = isTreeEntry(info) ? "Сменить предмет" : "Выбрать предмет";
+    const share = section.querySelector("[data-copy-tree-link]");
+    if (share) share.disabled = !(isTreeEntry(info));
   }
 
-  function bindCraftTreeBranch(section) {
+  function bindCraftTreeBranch(section, pageFilter = "") {
     if (!section || section.dataset.bound) return;
     section.dataset.bound = "1";
-    section.dataset.treeZoom = section.dataset.treeZoom || "1";
+    // Масштаб хранится отдельно от data-tree-zoom на кнопках управления:
+    // иначе closest("[data-tree-zoom]") на любом дочернем клике находил саму
+    // секцию и перехватывал выбор предметов, фильтры и раскрытие узлов.
+    section.dataset.treeScale = section.dataset.treeScale || "1";
     const picker = section.querySelector("#craft-tree-picker");
     const add = section.querySelector("#craft-tree-add");
     const search = section.querySelector("#craft-tree-picker-search");
     const grid = section.querySelector("#craft-tree-choice-grid");
     const build = section.querySelector("#craft-tree-build");
     const clear = section.querySelector("#craft-tree-clear");
+    bindDragPan(section.querySelector("#craft-tree-inline-body"));
+    const syncCraftUrl = (root) => {
+      const params = new URLSearchParams();
+      if (pageFilter) params.set("q", pageFilter);
+      if (root) params.set("item", root);
+      history.replaceState(null, "", `#/crafts${params.toString() ? `?${params}` : ""}`);
+    };
+    let choiceSearchTimer = 0;
+    let pickerLoadTimer = 0;
+    const setPickerLoading = (loading) => {
+      if (!grid) return;
+      grid.setAttribute("aria-busy", String(loading));
+      section.querySelectorAll("button[data-choice-filter]").forEach((button) => { button.disabled = loading; });
+      if (search) search.disabled = loading;
+      if (build) build.disabled = loading;
+      if (loading) {
+        grid.innerHTML = `<div class="craft-tree-choice-placeholder is-loading"><span aria-hidden="true">◆</span><b>Подготавливаем индекс предметов…</b></div>`;
+      }
+    };
+    const loadPickerChoices = () => {
+      if (!grid || grid.dataset.ready || grid.dataset.loading) return;
+      grid.dataset.loading = "1";
+      setPickerLoading(true);
+      clearTimeout(pickerLoadTimer);
+      // Сначала браузер показывает открытую панель и индикатор, затем в
+      // отдельной задаче строится индекс. Клик больше не выглядит зависшим.
+      pickerLoadTimer = setTimeout(() => {
+        craftTreeChoices();
+        if (!section.isConnected) return;
+        populateCraftTreePicker(section);
+        delete grid.dataset.loading;
+        setPickerLoading(false);
+        search?.focus();
+      }, 0);
+    };
     const setPicker = (open) => {
       if (!picker || !add) return;
       picker.hidden = !open;
       add.setAttribute("aria-expanded", String(open));
-      if (open) {
-        populateCraftTreePicker(section);
-        // После закрытия открываем полный первый экран заново, а не оставляем
-        // старый фильтр и сотни скрытых карточек в DOM.
-        if (search && search.value) {
-          search.value = "";
-          section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
-          renderCraftChoiceWindow(section);
-        }
+      if (!open) return;
+      // После закрытия открываем полный первый экран заново, а не оставляем
+      // старый фильтр и сотни скрытых карточек в DOM.
+      if (search && search.value) {
+        search.value = "";
+        section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+      }
+      if (grid?.dataset.ready) {
+        renderCraftChoiceWindow(section);
         requestAnimationFrame(() => search?.focus());
+      } else {
+        requestAnimationFrame(loadPickerChoices);
       }
     };
-    let choiceSearchTimer = 0;
     if (add) add.onclick = () => setPicker(picker.hidden);
     if (search) search.oninput = () => {
       clearTimeout(choiceSearchTimer);
       section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
       choiceSearchTimer = setTimeout(() => renderCraftChoiceWindow(section, search.value), 100);
     };
+    section.querySelectorAll("button[data-choice-filter]").forEach((button) => {
+      button.onclick = () => {
+        section.dataset.choiceSource = button.dataset.choiceFilter || "all";
+        section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
+        section.querySelectorAll("button[data-choice-filter]").forEach((other) => {
+          const active = other === button;
+          other.classList.toggle("active", active);
+          other.setAttribute("aria-pressed", String(active));
+        });
+        renderCraftChoiceWindow(section, search?.value || "");
+      };
+    });
     if (build) build.onclick = () => {
       const chosen = section.dataset.selectedChoice || "";
       const info = chosen ? ingredientInfo(chosen) : null;
-      if (!chosen || !info || (!info.recipe && !info.vanilla)) {
+      if (!chosen || !info || !isTreeEntry(info)) {
         toast("Сначала выбери предмет из индекса Terraria или с рецептом", "+");
         return;
       }
       craftTreeRoot = chosen;
       rememberCraftRoot(chosen);
       store.set({ craftTreeRoot });
+      syncCraftUrl(chosen);
       refreshInlineCraftTree(section);
       setPicker(false);
       toast(`Ветка построена: ${info.ru}`, "◆");
@@ -3149,9 +4120,10 @@
     if (clear) clear.onclick = () => {
       craftTreeRoot = "";
       store.set({ craftTreeRoot });
+      syncCraftUrl("");
       delete section.dataset.selectedChoice;
       section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
-      section.dataset.choiceFilter = "all";
+      section.dataset.choiceSource = "all";
       if (search) search.value = "";
       section.querySelectorAll("[data-choice-filter]").forEach((button) => {
         const active = button.dataset.choiceFilter === "all";
@@ -3170,21 +4142,14 @@
       toast("Ветка крафта очищена", "×");
     };
     section.addEventListener("click", (e) => {
-      const zoom = e.target.closest("[data-tree-zoom]");
+      const zoom = e.target.closest("button[data-tree-zoom]");
       if (zoom) {
         adjustCraftTreeZoom(section, zoom.dataset.treeZoom || "reset");
         return;
       }
-      const filterButton = e.target.closest("[data-choice-filter]");
-      if (filterButton) {
-        section.dataset.choiceFilter = filterButton.dataset.choiceFilter || "all";
-        section.dataset.choiceLimit = String(CRAFT_PICKER_PAGE_SIZE);
-        section.querySelectorAll("[data-choice-filter]").forEach((button) => {
-          const active = button === filterButton;
-          button.classList.toggle("active", active);
-          button.setAttribute("aria-pressed", String(active));
-        });
-        renderCraftChoiceWindow(section, search?.value || "");
+      const shareTree = e.target.closest("[data-copy-tree-link]");
+      if (shareTree) {
+        copyCraftTreeLink(craftTreeRoot);
         return;
       }
       const clearMaterials = e.target.closest("[data-clear-materials]");
@@ -3209,17 +4174,6 @@
       const copy = e.target.closest("[data-copy-recipe], [data-copy-materials]");
       if (copy) {
         copyCraftRecipe(copy.dataset.copyRecipe || copy.dataset.copyMaterials || "");
-        return;
-      }
-      const more = e.target.closest("[data-choice-more]");
-      if (more) {
-        section.dataset.choiceLimit = String(Number(section.dataset.choiceLimit || CRAFT_PICKER_PAGE_SIZE) + CRAFT_PICKER_PAGE_SIZE);
-        renderCraftChoiceWindow(section, search?.value || "");
-        return;
-      }
-      const choice = e.target.closest(".craft-choice-card[data-choice-name]");
-      if (choice) {
-        selectCraftChoice(section, choice);
         return;
       }
       const expand = e.target.closest("[data-inline-tree-expand]");
@@ -3250,7 +4204,7 @@
     applyCraftTreeZoom(section);
     if (craftTreeRoot) {
       const rootInfo = ingredientInfo(craftTreeRoot);
-      if (rootInfo && (rootInfo.recipe || rootInfo.vanilla)) renderCraftTreeInspector(section, craftTreeRoot);
+      if (isTreeEntry(rootInfo)) renderCraftTreeInspector(section, craftTreeRoot);
     }
   }
 
@@ -3277,7 +4231,7 @@
       if (!searchActive) return true;
       const blob = mode === "guide"
         ? `${item.name} ${item.nameRu || ""} ${item.get || ""} ${item.why || ""} ${item.rec || ""} ${item.desc || ""}`
-        : `${item.name} ${ruItemName(item)} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${ruText(item.obtain)} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`;
+        : catalogItemSearchBlob(item);
       return matchesSearch(blob, search);
     });
     // Точное совпадение имени всегда первым: «dubious plating» не должен
@@ -3286,11 +4240,10 @@
       const exact = new Set(list.filter((x) => String(x.name).toLocaleLowerCase("ru") === search || ruItemName(x).toLocaleLowerCase("ru") === search).map((x) => x));
       if (exact.size) list.sort((a, b) => (exact.has(b) ? 1 : 0) - (exact.has(a) ? 1 : 0));
     }
+    const pageSize = mode === "catalog" ? CATALOG_PAGE_SIZE : GUIDE_PAGE_SIZE;
     const requestedLimit = Number.parseInt(params.limit, 10);
-    const limit = mode === "catalog" && Number.isFinite(requestedLimit)
-      ? Math.max(CATALOG_PAGE_SIZE, requestedLimit)
-      : CATALOG_PAGE_SIZE;
-    const visible = mode === "catalog" ? list.slice(0, limit) : list;
+    const limit = Number.isFinite(requestedLimit) ? Math.max(pageSize, requestedLimit) : pageSize;
+    const visible = list.slice(0, limit);
     const kindOptions = Object.entries(KIND_RU).filter(([id]) => pool.some((item) => item.kind === id));
     const indexCount = indexedItems().length;
     const sourceCommit = String(ITEM_INDEX.commit || "").slice(0, 7);
@@ -3300,7 +4253,7 @@
 
     app.innerHTML = `
       <div class="page items-page">
-        ${mast("Арсенал Calamity", "У каждого предмета есть изображение, источник, назначение и этап применения; отдельный режим сохраняет маршрут прохождения.")}
+        ${mast("Арсенал Каламити", "У каждого предмета есть изображение, источник, назначение и этап применения; отдельный режим сохраняет маршрут прохождения.")}
         <nav class="catalog-mode-switch" aria-label="Режим каталога предметов">
           <a class="catalog-mode ${mode === "catalog" ? "active" : ""}" href="#/items">
             <i aria-hidden="true">I</i>
@@ -3319,7 +4272,7 @@
             <div>
               <b>Полные карточки собраны из официальных исходников</b>
               <p>${fmt(indexCount)} подтверждённых предметов: локальные игровые спрайты, русские описания, рецепты и проверяемые источники. Записи без самостоятельного официального изображения не маскируются выдуманной иллюстрацией и не включены в каталог.</p>
-              <small>Calamity Mod ${esc(ITEM_INDEX.modVersion || CODEX.version)} · срез ${esc(sourceDate || "2026-08-15")} · ${esc(sourceCommit || "source")}</small>
+              <small>мод Каламити ${esc(ITEM_INDEX.modVersion || CODEX.version)} · срез ${esc(sourceDate || "2026-08-15")} · ${esc(sourceCommit || "источник")}</small>
             </div>
             <a href="https://github.com/CalamityTeam/CalamityModPublic" target="_blank" rel="noopener noreferrer">Исходные данные ↗</a>
           </section>
@@ -3361,7 +4314,7 @@
           </select>` : `<a class="official-wiki-link" href="https://calamitymod.wiki.gg/wiki/Items" target="_blank" rel="noopener noreferrer">Официальная wiki <span aria-hidden="true">↗</span></a>`}
         </div>
         <div class="catalog-found">
-          <p class="found">Найдено: <b>${fmt(list.length)}</b>${mode === "catalog" && visible.length < list.length ? ` · показано ${fmt(visible.length)}` : ""}</p>
+          <p class="found">${search && !searchActive ? "Для поиска введи минимум 2 символа" : `Найдено: <b>${fmt(list.length)}</b>${visible.length < list.length ? ` · показано ${fmt(visible.length)}` : ""}`}</p>
           <div class="card-controls">
             <button class="mini" type="button" id="cards-collapse" aria-label="Свернуть все карточки">⊟ Свернуть все</button>
             <button class="mini" type="button" id="cards-expand" aria-label="Развернуть все карточки">⊞ Развернуть все</button>
@@ -3369,10 +4322,8 @@
           </div>
         </div>
         ${visible.length
-          ? mode === "catalog"
-            ? `<div class="item-grid full-catalog-grid">${visible.map(indexedItemCard).join("")}</div>
-              ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(CATALOG_PAGE_SIZE, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
-            : `<div class="item-grid">${visible.map((item) => itemCard(item, cls, "all")).join("")}</div>`
+          ? `<div class="item-grid ${mode === "catalog" ? "full-catalog-grid" : "guide-item-grid"}">${mode === "catalog" ? visible.map(indexedItemCard).join("") : visible.map((item) => itemCard(item, cls, "all")).join("")}</div>
+             ${visible.length < list.length ? `<div class="catalog-more"><button class="btn ghost" type="button" id="catalog-more">Показать ещё ${fmt(Math.min(pageSize, list.length - visible.length))}<small>${fmt(visible.length)} из ${fmt(list.length)}</small></button></div>` : ""}`
           : `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Сбрось часть фильтров или попробуй официальное английское название.</p><a class="btn ghost" href="${mode === "guide" ? "#/items?mode=guide" : "#/items"}">Сбросить фильтры</a></div>`}
       </div>
     `;
@@ -3380,7 +4331,7 @@
     const build = (over = {}, replace = false) => {
       const next = { mode, cls, kind, q: qid, s: searchRaw, fav: favoriteOnly ? "1" : "all", limit, ...over };
       const changesFilter = Object.keys(over).some((key) => ["cls", "kind", "q", "s", "fav"].includes(key));
-      if (mode === "catalog" && changesFilter && over.limit == null) next.limit = CATALOG_PAGE_SIZE;
+      if (changesFilter && over.limit == null) next.limit = pageSize;
       const query = new URLSearchParams();
       if (next.mode === "guide") query.set("mode", "guide");
       if (next.cls && next.cls !== "all") query.set("cls", next.cls);
@@ -3388,7 +4339,7 @@
       if (next.mode === "guide" && next.q && next.q !== "all") query.set("q", next.q);
       if (next.s) query.set("s", next.s);
       if (next.fav === "1") query.set("fav", "1");
-      if (next.mode === "catalog" && next.limit > CATALOG_PAGE_SIZE) query.set("limit", String(next.limit));
+      if (next.limit > pageSize) query.set("limit", String(next.limit));
       const nextHash = "#/items" + (query.toString() ? `?${query}` : "");
       if (replace) {
         history.replaceState(null, "", nextHash);
@@ -3402,16 +4353,33 @@
     });
     const input = $("#item-s");
     let timer;
+    let tooltipRefreshPending = false;
+    const requestTooltipSearchData = () => {
+      if (mode !== "catalog" || catalogTooltipsApplied || tooltipRefreshPending || input.value.trim().length < 2 || !/[a-z]/i.test(input.value)) return;
+      tooltipRefreshPending = true;
+      const requested = input.value;
+      loadCatalogTooltips().then((changed) => {
+        tooltipRefreshPending = false;
+        if (!changed || document.body.dataset.view !== "items" || input.value !== requested) return;
+        clearTimeout(timer);
+        build({ s: input.value }, true);
+      });
+    };
     input.oninput = () => {
       clearTimeout(timer);
+      requestTooltipSearchData();
       timer = setTimeout(() => build({ s: input.value }, true), 220);
     };
+    if (searchActive) requestTooltipSearchData();
     const clearSearch = $("#item-search-clear");
-    if (clearSearch) clearSearch.onclick = () => build({ s: "" }, true);
+    if (clearSearch) clearSearch.onclick = () => {
+      build({ s: "" }, true);
+      requestAnimationFrame(() => document.getElementById("item-s")?.focus());
+    };
     const questSelect = $("#item-q");
     if (questSelect) questSelect.onchange = () => build({ q: questSelect.value });
     const more = $("#catalog-more");
-    if (more) more.onclick = () => build({ limit: visible.length + CATALOG_PAGE_SIZE }, true);
+    if (more) more.onclick = () => build({ limit: visible.length + pageSize }, true);
     const randomBtn = $("#item-random");
     if (randomBtn) randomBtn.onclick = () => {
       const poolList = indexedItems();
@@ -3434,6 +4402,76 @@
     if (expandAllBtn) expandAllBtn.onclick = () => applyAllCards(false);
     if (mode === "guide") bindSprites(app);
   }
+  const BOSS_FACT_OVERRIDES = {
+    8: {
+      summon: "Используй предмет «Оленья вещь» ночью в снежном биоме. Его создают у алтаря зла из меха флинкса, линзы и демонитовой или кримтановой руды."
+    },
+    14: {
+      summon: "Каждого механического босса можно вызвать его предметом ночью: Механическим глазом, Механическим червём или Механическим черепом. После разрушения алтарей они также могут прийти сами с вечерним предупреждением."
+    },
+    19: {
+      summon: "Найди ??? — необычную певицу, которая редко появляется в обычном синем океане. Атакуй её, чтобы вызвать Анахиту; Левиафан присоединится во время боя."
+    },
+    27: {
+      summon: "Используй Осквернённый осколок в Святых землях или Преисподней. Подготовь длинную арену: Стражи должны быть побеждены перед полноценным боем с Провиденс."
+    },
+    30: {
+      summon: "Используй Руну Коса после Провиденс. Место определяет противника: космос вызывает Ткача бурь, Данж — Неугасимую пустоту, Преисподняя — Сигнуса. Победи всех троих в любом порядке."
+    },
+    31: {
+      where: "Бой проходит внутри подземного Данжа. Заранее расчисти длинные коридоры и отдельную комнату-арену; на поверхности босс исчезает.",
+      when: "Иди после Провиденс и победы над всеми тремя Вестниками Пожирателя богов: Ткачом бурь, Неугасимой пустотой и Сигнусом. После Полтергаста открывается третий кислотный дождь и бой со Старым герцогом.",
+      summon: "Используй Некроплазменный маяк внутри Данжа. Альтернатива до первой победы: убей 30 Фантомных духов в Данже после Лунного лорда — Полтергаст появится автоматически.",
+      drops: "Полтергаст всегда даёт Гибельные души для Кровавой и Омега-синей брони, оружия и Фантомного сердца. В режиме Возмездия также выпадает Эктосердце — финальное постоянное улучшение Адреналина."
+    },
+    35: {
+      summon: "Полностью собери Взломостойку Дрейдона, расшифруй все схемы и активируй Охлаждающую ячейку. Затем выбери стартового экзо-меха в интерфейсе терминала."
+    },
+    36: {
+      summon: "Помести Пепел бедствия на Алтарь проклятых. Бой начинается у алтаря; заранее освободи вокруг него большую арену и оставь место для вертикальных уклонений."
+    }
+  };
+  const factSentence = (value) => {
+    const text = String(value || "").trim();
+    return text && !/[.!?]$/.test(text) ? `${text}.` : text;
+  };
+  function bossLocationAdvice(where) {
+    const low = String(where || "").toLocaleLowerCase("ru");
+    if (/данж|крепост/.test(low)) return "Расчисти коридоры, убери шипы и поставь несколько рядов платформ внутри биома.";
+    if (/пустын/.test(low)) return "Не выводи босса из пустыни: вне биома он обычно ускоряется или приходит в ярость.";
+    if (/джунг/.test(low)) return "Арена должна оставаться в джунглях; удобнее строить её над кронами или в большой очищенной пещере.";
+    if (/океан|мор/.test(low)) return "Построй платформы над водой и сохрани границы океанского биома на всей ширине боя.";
+    if (/снег|л[её]д/.test(low)) return "Не выходи из снежного биома и оставь достаточно места для горизонтальных рывков.";
+    if (/ад|преиспод|кратер/.test(low)) return "Возьми защиту от огня и лавы и не покидай горячий биом во время боя.";
+    if (/астрал/.test(low)) return "Расчисти заражённую поверхность и поставь длинные ряды платформ для уклонений.";
+    if (/свят/.test(low)) return "Сохрани фон и блоки Святых земель вокруг арены, чтобы босс не вышел из нужного биома.";
+    if (/храм/.test(low)) return "Освободи центральную комнату храма или подготовь безопасное пространство вокруг алтаря.";
+    if (/поверхност|поляна|открыт|арена/.test(low)) return "Нужна ровная площадка с несколькими рядами платформ, костром, сердечным фонарём и свободным небом.";
+    return "Перед призывом освободи пространство, поставь платформы и источники регенерации.";
+  }
+  function bossFactText(boss, field) {
+    const override = BOSS_FACT_OVERRIDES[boss.n]?.[field];
+    if (override) return override;
+    const base = factSentence(ruText(boss[field] || ""));
+    const previous = CODEX.bosses.find((item) => item.n === boss.n - 1);
+    const next = CODEX.bosses.find((item) => item.n === boss.n + 1);
+    if (field === "where") return `${base} ${bossLocationAdvice(boss.where)}`.trim();
+    if (field === "when") {
+      const order = [previous ? `после этапа «${previous.name}»` : "в начале боссовой прогрессии", next ? `перед этапом «${next.name}»` : "перед финальной зачисткой мира"].join(", ");
+      return `Рекомендуемый этап: ${base} По порядку кодекса — ${order}.`;
+    }
+    if (field === "summon") return `Как начать бой: ${base} Используй призыв только в месте и времени, указанных в карточке; до активации подготовь арену и зелья.`;
+    if (field === "drops") return `После победы: ${base} Не продавай новые материалы, пока не проверишь открывшиеся рецепты и следующий этап прогрессии.`;
+    return base;
+  }
+  function miniBossFactText(mini, field) {
+    const base = factSentence(ruText(mini[field] || ""));
+    if (field === "where") return `${base} ${bossLocationAdvice(mini.where)}`.trim();
+    if (field === "when") return `Рекомендуемый этап: ${base} Это дополнительный бой — сначала подготовь экипировку текущей главы и отдельную арену.`;
+    if (field === "drops") return `После победы: ${base} Проверь новые материалы и оружие перед продажей повторных наград.`;
+    return base;
+  }
+
   function renderBosses(params = {}) {
     fillRail("");
     const era = params.era || "all";
@@ -3498,10 +4536,10 @@
         <p class="desc">${esc(ruText(b.tip || "Ключевой противник маршрута: подготовь арену, мобильность и подходящее этапу снаряжение."))}</p>
         <div class="danger-row"><label>Опасность <b>${danger}%</b></label><div class="hpbar"><i style="width:${danger}%"></i></div></div>
         <div class="facts">
-          <div class="fact"><span>Где</span><p>${esc(ruText(b.where))}</p></div>
-          <div class="fact"><span>Когда</span><p>${esc(ruText(b.when))}</p></div>
-          <div class="fact"><span>Зови</span><p>${esc(ruText(b.summon))}</p></div>
-          <div class="fact"><span>Дроп</span><p>${esc(ruText(b.drops))}</p></div>
+          <div class="fact"><span>Где проходит бой</span><p>${esc(bossFactText(b, "where"))}</p></div>
+          <div class="fact"><span>Когда идти</span><p>${esc(bossFactText(b, "when"))}</p></div>
+          <div class="fact"><span>Как призвать</span><p>${esc(bossFactText(b, "summon"))}</p></div>
+          <div class="fact"><span>Что даст победа</span><p>${esc(bossFactText(b, "drops"))}</p></div>
         </div>
         <div class="card-links">
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Тактика и дроп на wiki ↗</a>
@@ -3527,9 +4565,9 @@
         <p class="desc">Опциональный сильный противник с полезными материалами и оружием.</p>
         <div class="danger-row"><label>Опасность <b>40%</b></label><div class="hpbar"><i style="width:40%"></i></div></div>
         <div class="facts">
-          <div class="fact"><span>Когда</span><p>${esc(ruText(m.when))}</p></div>
-          <div class="fact"><span>Где</span><p>${esc(ruText(m.where))}</p></div>
-          <div class="fact"><span>Дроп</span><p>${esc(ruText(m.drops))}</p></div>
+          <div class="fact"><span>Когда идти</span><p>${esc(miniBossFactText(m, "when"))}</p></div>
+          <div class="fact"><span>Где проходит бой</span><p>${esc(miniBossFactText(m, "where"))}</p></div>
+          <div class="fact"><span>Что даст победа</span><p>${esc(miniBossFactText(m, "drops"))}</p></div>
         </div>
         <div class="card-links"><a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">Подробнее на wiki ↗</a></div>
       </div>
@@ -3559,6 +4597,15 @@
           <a href="#/bosses"><span>☠</span><span><b>${bosses.length}</b><small>боссов</small></span></a>
           <a href="#/crafts"><span>⚒</span><span><b>${crafts.length}</b><small>рецептов</small></span></a>
         </div>
+        <section class="hero-save panel" aria-labelledby="hero-save-title">
+          <div class="hero-save-copy"><span aria-hidden="true">▣</span><div><small>локальное сохранение</small><b id="hero-save-title">Профиль героя</b><p>Перенеси квесты, класс, избранное и историю деревьев в другой браузер или сохрани резервную копию.</p></div></div>
+          <div class="hero-save-actions">
+            <button class="btn ghost" type="button" id="hero-export">↓ Экспорт</button>
+            <button class="btn ghost" type="button" id="hero-import">↑ Импорт</button>
+            <button class="btn ghost danger" type="button" id="hero-reset">Сбросить</button>
+            <input id="hero-import-file" type="file" accept="application/json,.json" hidden />
+          </div>
+        </section>
         ${total ? `
           ${items.length ? shelf("Предметы с рекомендациями", items.length, `<div class="item-grid">${items.map((item) => itemCard(item, "all", "all")).join("")}</div>`, true) : ""}
           ${indexedFavorites.length ? shelf("Предметы из полного индекса", indexedFavorites.length, `<div class="item-grid full-catalog-grid">${indexedFavorites.map(indexedItemCard).join("")}</div>`, true) : ""}
@@ -3569,9 +4616,66 @@
       </div>
     `;
     bindSprites(app);
+    const exportButton = $("#hero-export");
+    const importButton = $("#hero-import");
+    const importFile = $("#hero-import-file");
+    const resetButton = $("#hero-reset");
+    if (exportButton) exportButton.onclick = () => {
+      const payload = JSON.stringify({ app: "calamity-codex", format: 1, exportedAt: new Date().toISOString(), data: store.get() }, null, 2);
+      const blob = new Blob([payload], { type: "application/json" });
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = `calamity-codex-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 0);
+      toast("Профиль героя экспортирован", "↓");
+    };
+    if (importButton && importFile) importButton.onclick = () => importFile.click();
+    if (importFile) importFile.onchange = async () => {
+      const file = importFile.files?.[0];
+      if (!file) return;
+      try {
+        if (file.size > 1024 * 1024) throw new Error("Слишком большой файл");
+        const payload = JSON.parse(await file.text());
+        const data = payload?.app === "calamity-codex" ? payload.data : payload;
+        if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Неверный формат");
+        store.replace(data);
+        favoriteCache = null;
+        craftTreeRoot = String(data.craftTreeRoot || "");
+        syncRevengeanceUI(Boolean(data.revengeance));
+        route();
+        toast("Профиль героя восстановлен", "↑");
+      } catch {
+        toast("Не удалось прочитать сохранение", "!");
+      } finally {
+        importFile.value = "";
+      }
+    };
+    if (resetButton) resetButton.onclick = () => {
+      if (!confirm("Сбросить квесты, избранное и настройки этого кодекса?")) return;
+      store.replace({});
+      favoriteCache = null;
+      craftTreeRoot = "";
+      syncRevengeanceUI(false);
+      route();
+      toast("Профиль героя очищен", "×");
+    };
   }
 
-  function renderCrafts(filter) {
+  function renderCrafts(filter, requestedRoot = "") {
+    const requestedInfo = requestedRoot ? ingredientInfo(requestedRoot) : null;
+    if (requestedRoot) {
+      if (isTreeEntry(requestedInfo)) {
+        craftTreeRoot = requestedRoot;
+        rememberCraftRoot(requestedRoot);
+        store.set({ craftTreeRoot });
+      } else {
+        craftTreeRoot = "";
+      }
+    }
     const q = (filter || "").trim().toLocaleLowerCase("ru");
     const seen = new Set();
     const list = CODEX.crafts.filter((c) => {
@@ -3590,6 +4694,7 @@
       map[stage].push(c);
     });
     const recipeCount = getRecipeIndex().size;
+    const cycleCutCount = recipeCycleCuts.size + VANILLA_RECIPE_CUT_IDS.size;
     fillRail("");
     app.innerHTML = `
       <div class="page craft-graph-page">
@@ -3598,7 +4703,7 @@
           <span><b>${recipeCount.toLocaleString("ru-RU")}</b><small>рецептов в дереве</small></span>
           <span><b>${VANILLA_TREE_INDEX.items.length.toLocaleString("ru-RU")}</b><small>предметов Terraria</small></span>
           <span><b>${CODEX.crafts.length}</b><small>рекомендаций маршрута</small></span>
-          <span><b>↗</b><small>слева направо · как карта</small></span>
+          <span><b>${cycleCutCount}</b><small>циклических рецептов скрыто</small></span>
         </div>
         ${craftTreeBranchHTML(craftTreeRoot)}
         <section class="craft-index-panel panel" aria-labelledby="craft-index-title">
@@ -3622,13 +4727,16 @@
       </div>
     `;
     const branch = app.querySelector("#craft-tree-branch");
-    if (branch) bindCraftTreeBranch(branch);
+    if (branch) bindCraftTreeBranch(branch, filter);
     const inp = $("#craft-filter");
     let t;
     if (inp) inp.oninput = () => {
       clearTimeout(t);
       t = setTimeout(() => {
-        history.replaceState(null, "", `#/crafts?q=${encodeURIComponent(inp.value)}`);
+        const params = new URLSearchParams();
+        if (inp.value) params.set("q", inp.value);
+        if (craftTreeRoot) params.set("item", craftTreeRoot);
+        history.replaceState(null, "", `#/crafts${params.toString() ? `?${params}` : ""}`);
         route();
       }, 200);
     };
@@ -3644,6 +4752,91 @@
         </div>
       </div>
     `;
+    bindLazyBackgrounds(app);
+  }
+
+  let globalCatalogSearchRows = null;
+  let globalVanillaSearchRows = null;
+  function vanillaSearchRows() {
+    if (globalVanillaSearchRows) return globalVanillaSearchRows;
+    ensureVanillaIndexes();
+    globalVanillaSearchRows = [...VANILLA_BY_ID.values()]
+      .filter((item) => !isInternalVanillaName(item.name) && VANILLA_RU_BY_ID[String(item.id)])
+      .map((item) => {
+        const title = ruItemName(item.name, item);
+        return {
+          item,
+          title,
+          blob: `${title} ${item.name} ${vanillaTypeName(item.type)}`.toLocaleLowerCase("ru")
+        };
+      });
+    return globalVanillaSearchRows;
+  }
+  function catalogSearchRows() {
+    if (globalCatalogSearchRows) return globalCatalogSearchRows;
+    buildNameIndexes();
+    globalCatalogSearchRows = indexedItems().map((item) => {
+      const title = ruItemName(item);
+      return {
+        item,
+        title,
+        key: String(item.name).toLocaleLowerCase("ru"),
+        localizedKey: title.toLocaleLowerCase("ru"),
+        blob: catalogItemSearchBlob(item)
+      };
+    });
+    return globalCatalogSearchRows;
+  }
+
+  function recentSearchHits() {
+    const rows = store.get().searchRecent;
+    if (!Array.isArray(rows)) return [];
+    return rows.filter((row) => row && /^#\//.test(String(row.href || "")) && String(row.title || "").trim()).slice(0, 6).map((row) => ({
+      href: String(row.href),
+      title: String(row.title).slice(0, 120),
+      sub: String(row.sub || "").slice(0, 180),
+      type: String(row.type || "Недавнее").slice(0, 40),
+      mark: String(row.mark || "◆").slice(0, 3),
+      art: /^assets\//.test(String(row.art || "")) ? String(row.art) : ""
+    }));
+  }
+  function rememberSearchHit(hit) {
+    if (!hit || !/^#\//.test(String(hit.href || ""))) return;
+    const row = {
+      href: String(hit.href), title: String(hit.title || "").slice(0, 120), sub: String(hit.sub || "").slice(0, 180),
+      type: String(hit.type || "Результат").slice(0, 40), mark: String(hit.mark || "◆").slice(0, 3),
+      art: /^assets\//.test(String(hit.art || "")) ? String(hit.art) : ""
+    };
+    store.set({ searchRecent: [row, ...recentSearchHits().filter((item) => item.href !== row.href)].slice(0, 6) });
+  }
+  function globalSearchLinkHTML(hit, className = "search-hit", remember = false) {
+    return `<a class="${className}" href="${escAttr(hit.href)}"${remember ? " data-search-result" : ""}>
+      <span class="search-hit-art slot">${hit.art ? `<img src="${escAttr(hit.art)}" alt="" loading="lazy" decoding="async" />` : `<b>${esc(hit.mark || "◆")}</b>`}</span>
+      <span><b>${esc(hit.title)}</b><small>${esc(hit.sub || "")}</small></span>
+      ${className === "search-hit" ? `<span class="search-hit-type">${esc(hit.type || "")}</span>` : ""}
+    </a>`;
+  }
+  function showSearchStart(hint = "") {
+    const recent = recentSearchHits();
+    const progress = updateJourneyProgress();
+    const quick = [
+      { href: `#/novice?q=${progress.current?.id || 1}`, title: `Продолжить квест ${progress.current?.id || 1}`, sub: progress.current?.title || "Путь новичка", mark: "▶", art: "assets/sprites/Wooden_Sword.png" },
+      { href: "#/items", title: "Все предметы", sub: "Полный каталог Каламити", mark: "◆", art: "assets/sprites/StarterBag.png" },
+      { href: "#/crafts", title: "Дерево крафта", sub: "Рецепты и получение", mark: "⚒", art: "assets/sprites/Iron_Anvil.png" },
+      { href: "#/bosses", title: "Боссы по порядку", sub: "Призыв, место и награды", mark: "☠", art: "assets/sprites/Suspicious_Looking_Eye.png" }
+    ];
+    searchPanel.classList.remove("hidden");
+    searchPanel.innerHTML = `
+      <div class="search-drop-head"><span>Поиск по всему кодексу</span><kbd>Esc</kbd></div>
+      ${hint ? `<div class="search-min-hint">${esc(hint)}</div>` : ""}
+      ${recent.length ? `<section class="search-start-section"><div class="search-start-title"><span>Недавно открывали</span><button type="button" data-clear-search-recent>Очистить</button></div>${recent.map((hit) => globalSearchLinkHTML(hit)).join("")}</section>` : ""}
+      <section class="search-start-section"><div class="search-start-title"><span>Быстрые переходы</span></div><div class="search-quick-grid">${quick.map((hit) => globalSearchLinkHTML(hit, "search-quick")).join("")}</div></section>`;
+    searchPanel.querySelector("[data-clear-search-recent]")?.addEventListener("click", () => {
+      store.set({ searchRecent: [] });
+      showSearchStart(hint);
+      searchInput.focus();
+    });
+    searchPanel.querySelectorAll("a").forEach((link) => { link.onclick = () => { searchPanel.classList.add("hidden"); searchInput.value = ""; }; });
   }
 
   function searchAll(query) {
@@ -3669,21 +4862,36 @@
         itemHitNames.add(ruItemName(x).toLocaleLowerCase("ru"));
       }
     });
-    buildNameIndexes();
-    indexedItems().forEach((item) => {
-      const blob = `${item.name} ${ruItemName(item)} ${item.id} ${item.group} ${item.description} ${item.tooltip} ${ruText(item.obtain)} ${KIND_RU[item.kind] || ""} ${CLS_RU[item.cls] || ""} ${CATALOG_LEX.get(normalizeArtName(item.name)) || ""} ${(NPC_SOURCES[item.id]?.npcs || []).map((d) => `${d.npc} ${npcRuName(d.npc)}`).join(" ")}`.toLocaleLowerCase("ru");
-      const key = String(item.name).toLocaleLowerCase("ru");
-      const localizedKey = ruItemName(item).toLocaleLowerCase("ru");
+    catalogSearchRows().forEach(({ item, title, key, localizedKey, blob }) => {
       if (matchesSearch(blob, q) && !itemHitNames.has(key) && !itemHitNames.has(localizedKey)) {
         hits.push({
           href: `#/items?s=${encodeURIComponent(item.name)}`,
-          title: ruItemName(item),
+          title,
           sub: `${item.group} · ${item.cls === "all" ? "Все классы" : (CLS_RU[item.cls] || item.cls)}`,
           type: "Полный индекс",
           mark: ITEM_KIND_MARK[item.kind] || "◆",
           art: `assets/item-sprites/${encodeURIComponent(item.id)}.png`
         });
       }
+    });
+    const vanillaMatches = [];
+    vanillaSearchRows().forEach((row) => {
+      if (!matchesSearch(row.blob, q)) return;
+      const ru = row.title.toLocaleLowerCase("ru");
+      const en = row.item.name.toLocaleLowerCase("en");
+      const score = ru === q || en === q ? 0 : ru.startsWith(q) || en.startsWith(q) ? 1 : 2;
+      vanillaMatches.push({ ...row, score });
+    });
+    vanillaMatches.sort((a, b) => a.score - b.score || a.title.localeCompare(b.title, "ru"));
+    vanillaMatches.slice(0, 8).forEach(({ item, title }) => {
+      hits.push({
+        href: `#/crafts?item=${encodeURIComponent(`vanilla:${item.id}`)}`,
+        title,
+        sub: `${vanillaTypeName(item.type)} · открыть дерево крафта`,
+        type: "Terraria",
+        mark: "◇",
+        art: item.sprite || ""
+      });
     });
     CODEX.bosses.forEach((x) => {
       if (matchesSearch(`${x.name} ${x.en || ""} ${ruText(x.drops)} ${ruText(x.summon)}`, q))
@@ -3692,22 +4900,28 @@
     CODEX.crafts.forEach((x) => {
       const title = ruItemName(x.name);
       if (matchesSearch(`${x.name} ${title} ${ruText(x.ings)} ${x.why}`, q))
-        hits.push({ href: `#/crafts?q=${encodeURIComponent(x.name)}`, title, sub: ruText(x.ings), type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
+        hits.push({ href: `#/crafts?item=${encodeURIComponent(x.name)}`, title, sub: ruText(x.ings), type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
     });
+    const rank = (hit) => {
+      const title = String(hit.title || "").toLocaleLowerCase("ru");
+      const sub = String(hit.sub || "").toLocaleLowerCase("ru");
+      if (title === q) return 0;
+      if (title.startsWith(q)) return 1;
+      if (sub.includes(q)) return 2;
+      return 3;
+    };
+    hits.sort((a, b) => rank(a) - rank(b));
     const shown = hits.slice(0, 24);
     searchPanel.classList.remove("hidden");
     searchPanel.innerHTML = hits.length
-      ? `<div class="search-drop-head"><span>Найдено: ${hits.length}</span><kbd>Esc</kbd></div>${shown.map((h) => `
-          <a class="search-hit" href="${h.href}">
-            <span class="search-hit-art slot">${h.art ? `<img src="${escAttr(h.art)}" alt="" loading="lazy" decoding="async" />` : `<b>${esc(h.mark)}</b>`}</span>
-            <span><b>${esc(h.title)}</b><small>${esc(h.sub || "")}</small></span>
-            <span class="search-hit-type">${esc(h.type)}</span>
-          </a>`).join("")}`
+      ? `<div class="search-drop-head"><span>Найдено: ${hits.length}</span><kbd>Esc</kbd></div>${shown.map((hit) => globalSearchLinkHTML(hit, "search-hit", true)).join("")}`
       : `<div class="search-empty"><b>Ничего не найдено</b><small>Попробуй «виктайд», «скория» или «морские останки»</small></div>`;
-    searchPanel.querySelectorAll("a").forEach((a) => a.onclick = () => {
+    searchPanel.querySelectorAll("a[data-search-result]").forEach((link, index) => { link.onclick = () => {
+      rememberSearchHit(shown[index]);
       searchPanel.classList.add("hidden");
       searchInput.value = "";
-    });
+    }; });
+    return hits.length;
   }
 
   document.addEventListener("click", (e) => {
@@ -3724,7 +4938,7 @@
     control.classList.toggle("saved", saved);
     control.setAttribute("aria-pressed", String(saved));
     const label = control.getAttribute("aria-label") || "";
-    const action = saved ? "Добавить в избранное" : "Удалить из избранного";
+    const action = saved ? "Удалить из избранного" : "Добавить в избранное";
     const baseLabel = label.replace(/^(Добавить в избранное|Удалить из избранного)/, action);
     control.setAttribute("aria-label", baseLabel);
     control.title = baseLabel;
@@ -3745,8 +4959,40 @@
     if (document.body.dataset.view === "favorites") route();
   });
 
-  searchInput.addEventListener("input", () => searchAll(searchInput.value));
-  searchInput.addEventListener("focus", () => { if (searchInput.value.length >= 2) searchAll(searchInput.value); });
+  let globalSearchTimer = 0;
+  let lastGlobalSearch = "";
+  const queueGlobalSearch = (immediate = false) => {
+    clearTimeout(globalSearchTimer);
+    const value = searchInput.value;
+    if (value.trim().length < 2) {
+      lastGlobalSearch = "";
+      if (document.activeElement === searchInput) {
+        showSearchStart(value.trim() ? "Введи ещё один символ, чтобы начать поиск" : "Начни вводить название или выбери быстрый переход");
+      } else {
+        searchPanel.classList.add("hidden");
+      }
+      return;
+    }
+    const run = () => {
+      const normalized = value.trim().toLocaleLowerCase("ru");
+      if (normalized === lastGlobalSearch && !searchPanel.classList.contains("hidden")) return;
+      lastGlobalSearch = normalized;
+      const coreHits = searchAll(value);
+      // Английский tooltip-индекс нужен только для латинского запроса, который
+      // основной каталог не смог уверенно закрыть. Русский и ванильный поиск
+      // больше не скачивает дополнительные 68 КБ без необходимости.
+      if (/[a-z]/i.test(value) && coreHits < 24) {
+        loadCatalogTooltips().then((changed) => {
+          if (!changed || searchInput.value.trim().toLocaleLowerCase("ru") !== normalized) return;
+          searchAll(searchInput.value);
+        });
+      }
+    };
+    if (immediate) run();
+    else globalSearchTimer = setTimeout(run, 120);
+  };
+  searchInput.addEventListener("input", () => queueGlobalSearch(false));
+  searchInput.addEventListener("focus", () => queueGlobalSearch(true));
   searchInput.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       searchInput.value = "";
@@ -3872,6 +5118,102 @@
   let treePreviousFocus = null;
   const TREE_MAX_DEPTH = 32;
 
+  function bindDragPan(surface) {
+    if (!surface || surface.dataset.dragPanBound) return;
+    surface.dataset.dragPanBound = "1";
+    surface.classList.add("drag-pan");
+    if (!surface.hasAttribute("tabindex")) surface.tabIndex = 0;
+    if (!surface.hasAttribute("aria-label")) surface.setAttribute("aria-label", "Карта дерева крафта: зажми левую кнопку мыши и тяни для перемещения");
+    let drag = null;
+    let suppressClick = false;
+    const isControl = (target) => target?.closest?.("a, button, input, select, textarea, .npc-tip");
+    const begin = (x, y, id, kind) => {
+      drag = { id, kind, x, y, left: surface.scrollLeft, top: surface.scrollTop, moved: false };
+    };
+    const move = (x, y, event) => {
+      if (!drag) return;
+      const dx = x - drag.x;
+      const dy = y - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+      if (!drag.moved) {
+        drag.moved = true;
+        surface.classList.add("is-dragging");
+        window.getSelection?.()?.removeAllRanges?.();
+      }
+      surface.scrollLeft = drag.left - dx;
+      surface.scrollTop = drag.top - dy;
+      if (event?.cancelable) event.preventDefault();
+    };
+    const finish = (cancelled = false) => {
+      if (!drag) return;
+      const moved = drag.moved;
+      const kind = drag.kind;
+      drag = null;
+      surface.classList.remove("is-dragging");
+      if (moved && !cancelled) {
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, kind === "touch" ? 400 : 0);
+      }
+    };
+
+    // Отдельные mouse-события намеренно используются вместо одной только
+    // Pointer Events: так перетаскивание работает и внутри preview/webview,
+    // где pointer capture может быть отключён прокси-обёрткой.
+    const onMouseMove = (event) => move(event.clientX, event.clientY, event);
+    const onMouseUp = () => {
+      finish(false);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    surface.addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || isControl(event.target)) return;
+      begin(event.clientX, event.clientY, "mouse", "mouse");
+      document.addEventListener("mousemove", onMouseMove, { passive: false });
+      document.addEventListener("mouseup", onMouseUp, { once: true });
+    });
+
+    const touchPoint = (event, id) => [...(event.touches || []), ...(event.changedTouches || [])].find((touch) => touch.identifier === id);
+    const onTouchMove = (event) => {
+      if (!drag || drag.kind !== "touch") return;
+      const touch = touchPoint(event, drag.id);
+      if (touch) move(touch.clientX, touch.clientY, event);
+    };
+    const removeTouchListeners = () => {
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchCancel);
+    };
+    const onTouchEnd = (event) => {
+      if (!drag || drag.kind !== "touch") return;
+      const ended = [...(event.changedTouches || [])].some((touch) => touch.identifier === drag.id);
+      if (!ended) return;
+      finish(false);
+      removeTouchListeners();
+    };
+    const onTouchCancel = () => {
+      finish(true);
+      removeTouchListeners();
+    };
+    surface.addEventListener("touchstart", (event) => {
+      if (isControl(event.target) || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      begin(touch.clientX, touch.clientY, touch.identifier, "touch");
+      document.addEventListener("touchmove", onTouchMove, { passive: false });
+      document.addEventListener("touchend", onTouchEnd);
+      document.addEventListener("touchcancel", onTouchCancel);
+    }, { passive: true });
+
+    surface.addEventListener("dragstart", (event) => event.preventDefault());
+    surface.addEventListener("click", (event) => {
+      if (!suppressClick) return;
+      suppressClick = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  }
+
+  bindDragPan(treeBody);
+
   function toggleTreeNode(toggle) {
     const kids = toggle?.closest(".tnode")?.querySelector(":scope > .tkids");
     if (!kids) return;
@@ -3921,13 +5263,13 @@
     const nodeSources = catItem ? (NPC_SOURCES[catItem.id] || null) : null;
     const nodeDrops = npcSourceLines(nodeSources);
     const srcLine = recipe
-      ? (recipe.station ? `крафт · ${esc(ruText(recipe.station))}` : "крафт")
-      : (info.obtain ? esc(info.obtain.replace(/\s*[·•].*$/, "")) : "источник — смотри в полном каталоге");
+      ? (recipe.station ? `крафт · ${esc(ruText(recipe.station))}` : "крафт без отдельной станции")
+      : (info.obtain ? esc(info.obtain.replace(/\s*[·•].*$/, "")) : "получение без крафта");
     const stationIcon = recipe && recipe.station
       ? `<img class="tstation" src="${escAttr(craftStationSprite(recipe.station))}" alt="" loading="lazy" decoding="async" />`
       : "";
     const kidsHTML = showKids
-      ? `<div class="tkids" hidden>${kids.map((k, i) => treeNodeHTML(k.name, depth + 1, nextPath, k.count, i)).join("")}</div>`
+      ? `<div class="tkids" hidden>${kids.map((k, i) => treeNodeHTML(k.key || k.name, depth + 1, nextPath, k.count, i)).join("")}</div>`
       : "";
     const moreHTML = kids.length > 0 && tooDeep
       ? `<div class="tmore">рецепт уходит глубже — открой предмет в полном каталоге</div>`
@@ -3964,6 +5306,7 @@
     const rootSub = document.getElementById("tree-root-sub");
     const rootDesc = document.getElementById("tree-root-desc");
     const rootSrc = document.getElementById("tree-root-src");
+    const rootLive = document.getElementById("tree-root-live");
     if (rootImg) {
       rootImg.alt = info.ru || "Предмет";
       rootImg.hidden = false;
@@ -3992,12 +5335,21 @@
     if (rootSrc) {
       let line = "";
       if (info.recipe && info.recipe.ings.length) {
-        line = "рецепт: " + info.recipe.ings.map((i) => (i.count ? `${i.count} × ${ruItemName(i.name)}` : ruItemName(i.name))).join(" + ") + (info.recipe.station ? ` · у ${ruText(info.recipe.station)}` : "");
+        line = "рецепт: " + info.recipe.ings.map((i) => (i.count ? `${i.count} × ${ingredientInfo(i.key || i.name).ru}` : ingredientInfo(i.key || i.name).ru)).join(" + ") + (info.recipe.station ? ` · ${craftStationInline(info.recipe.station)}` : "");
       } else if (info.obtain) {
         line = info.obtain.replace(/\s*[·•].*$/, "").trim();
       }
       rootSrc.textContent = line;
       rootSrc.title = line;
+    }
+    if (rootLive) {
+      rootLive.classList.remove("loaded");
+      rootLive.hidden = !(info.vanilla && !info.recipe);
+      const liveLabel = rootLive.querySelector("small");
+      const liveText = rootLive.querySelector("p");
+      if (liveLabel) liveLabel.textContent = "официальная Terraria Wiki · уточняем онлайн…";
+      if (liveText) liveText.textContent = "Проверяем конкретный источник, противника, шанс выпадения и условия получения.";
+      if (!rootLive.hidden) enrichWikiSource(rootLive.parentElement, info);
     }
     const backBtn = document.getElementById("tree-back");
     if (backBtn) backBtn.disabled = treeStack.length === 0;
@@ -4127,7 +5479,52 @@
     }
   });
 
-  addEventListener("hashchange", () => { SND.play("tick"); route(); });
+  function syncConnectionStatus() {
+    const status = document.getElementById("connection-status");
+    const label = status?.querySelector("[data-connection-label]");
+    const offline = navigator.onLine === false;
+    status?.classList.toggle("offline", offline);
+    if (label) label.textContent = offline ? "офлайн-режим активен" : "каталог доступен офлайн";
+  }
+  addEventListener("online", syncConnectionStatus);
+  addEventListener("offline", syncConnectionStatus);
+  syncConnectionStatus();
+
+  const installButton = document.getElementById("install-app");
+  let installPrompt = null;
+  addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    if (installButton) installButton.hidden = false;
+  });
+  if (installButton) installButton.onclick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    installPrompt = null;
+    installButton.hidden = true;
+    if (choice?.outcome === "accepted") toast("Кодекс установлен как приложение", "⊕");
+  };
+  addEventListener("appinstalled", () => {
+    installPrompt = null;
+    if (installButton) installButton.hidden = true;
+  });
+
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js?v=20260817-core24", { updateViaCache: "none" }).then((registration) => registration.update()).catch(() => {
+        // Сайт остаётся обычным статическим приложением, если SW запрещён.
+      });
+    }, { once: true });
+  }
+
+  addEventListener("popstate", () => { restoreScrollOnNextRoute = true; });
+  addEventListener("hashchange", () => {
+    if (lastScrollKey) routeScrollPositions.set(lastScrollKey, scrollY);
+    if (routeScrollPositions.size > 120) routeScrollPositions.delete(routeScrollPositions.keys().next().value);
+    SND.play("tick");
+    route();
+  });
   route();
 
   /* Восстановление режима мести из сохранения */

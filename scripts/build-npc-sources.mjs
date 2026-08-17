@@ -410,6 +410,33 @@ const TILE_RU = {
   HellOre: "адская руда", BrimstoneSlag: "серный шлак"
 };
 const tileLabel = (l) => TILE_RU[l] || l;
+const TILE_ART = {
+  DraedonLabTurret: "assets/item-sprites/HostileLabTurret.png",
+  HostileFireTurret: "assets/item-sprites/HostileFireTurret.png",
+  HostileIceTurret: "assets/item-sprites/HostileIceTurret.png",
+  HostileLaserTurret: "assets/item-sprites/HostileLaserTurret.png",
+  HostileOnyxTurret: "assets/item-sprites/HostileOnyxTurret.png",
+  HostilePlagueTurret: "assets/item-sprites/HostilePlagueTurret.png",
+  HostileWaterTurret: "assets/item-sprites/HostileWaterTurret.png",
+  AbyssalPots: "assets/source-sprites/abyssal-pot.png",
+  SulphurousPots: "assets/source-sprites/sulphurous-pot.png",
+  SpineTree: "assets/item-sprites/SpineSapling.png",
+  AerialiteOre: "assets/item-sprites/AerialiteOre.png",
+  UelibloomOre: "assets/item-sprites/UelibloomOre.png",
+  AuricOre: "assets/item-sprites/AuricOre.png",
+  CryonicOre: "assets/item-sprites/CryonicOre.png",
+  PerennialOre: "assets/item-sprites/PerennialOre.png",
+  ScoriaOre: "assets/item-sprites/ScoriaOre.png",
+  ExodiumCluster: "assets/item-sprites/ExodiumCluster.png",
+  CharredOre: "assets/item-sprites/BrimstoneSlag.png",
+  AstralOre: "assets/item-sprites/AstralOre.png",
+  SeaPrism: "assets/item-sprites/SeaPrism.png",
+  LabTurret: "assets/item-sprites/LabTurret.png",
+  DraedonForge: "assets/item-sprites/DraedonsForge.png",
+  HellOre: "assets/item-sprites/BrimstoneSlag.png",
+  BrimstoneSlag: "assets/item-sprites/BrimstoneSlag.png"
+};
+const tileSource = (label) => ({ name: tileLabel(label), art: TILE_ART[label] || "" });
 
 /* ---------- 9. Сундуки ---------- */
 const chestDrops = new Map();
@@ -425,10 +452,23 @@ const CHEST_SRC_RU = {
   Abyss: "Бездна",
   EvilIsland: "остров зла"
 };
+const CHEST_ART = {
+  DraedonStructures: "assets/item-sprites/SecurityChest.png",
+  BrimstoneCrag: "assets/item-sprites/AshenChest.png",
+  VernalPass: "assets/item-sprites/BotanicChest.png",
+  SunkenSea: "assets/item-sprites/EutrophicCrate.png",
+  Abyss: "assets/item-sprites/AbyssTreasureChest.png",
+  DungeonArchive: "assets/vanilla-sprites/48.png",
+  MechanicShed: "assets/vanilla-sprites/48.png",
+  ShimmerShrine: "assets/vanilla-sprites/48.png",
+  UndergroundShrines: "assets/vanilla-sprites/48.png",
+  EvilIsland: "assets/vanilla-sprites/48.png"
+};
+const chestSource = (id) => ({ name: CHEST_SRC_RU[id] || id, art: CHEST_ART[id] || "assets/vanilla-sprites/48.png" });
 walkDir(path.join(SRC, "World"), (file) => {
   const text = stripComments(read(file));
   const base = path.basename(file, ".cs");
-  const src = CHEST_SRC_RU[base] || base;
+  const src = base;
   for (const m of text.matchAll(/new ChestItem\(\s*ModContent\.ItemType<([\w.]+)>\(\)/g)) {
     const id = itemId(m[1]);
     if (!id) continue;
@@ -447,11 +487,11 @@ for (const [npcName, { drops }] of npcDrops) {
 }
 for (const [id, tiles] of tileDrops) {
   if (!outSources[id]) outSources[id] = { npcs: [], tiles: [], chests: [] };
-  outSources[id].tiles = tiles.map(tileLabel);
+  outSources[id].tiles = tiles.map(tileSource);
 }
 for (const [id, chests] of chestDrops) {
   if (!outSources[id]) outSources[id] = { npcs: [], tiles: [], chests: [] };
-  outSources[id].chests = chests;
+  outSources[id].chests = chests.map(chestSource);
 }
 const chanceRank = (c) => {
   if (c === "всегда" || c === "эксперт+") return 0;

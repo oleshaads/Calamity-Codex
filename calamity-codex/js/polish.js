@@ -606,13 +606,23 @@
   });
   extraEn.forEach((row) => pairs.push(row));
   pairs.sort((a, b) => b[0].length - a[0].length);
+  // Компилируем словарь один раз. Старый вариант создавал сотни RegExp и
+  // столько же раз проходил каждую строку предмета при каждом старте SPA.
+  // Longest-first alternation сохраняет приоритет полного имени над его частью.
+  const pairNameMap = new Map();
+  pairs.forEach(([en, ru]) => {
+    const key = String(en).toLocaleLowerCase("en");
+    if (key && !pairNameMap.has(key)) pairNameMap.set(key, ru);
+  });
+  const pairAlternatives = [...pairNameMap.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pairMatcher = pairAlternatives.length
+    ? new RegExp(`(?<![A-Za-z])(?:${pairAlternatives.join("|")})(?![A-Za-z])`, "gi")
+    : /$^/g;
   const rus = (raw) => {
     if (!raw) return raw;
-    let t = String(raw);
-    pairs.forEach(([en, ru]) => {
-      const escRe = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      t = t.replace(new RegExp("(?<![A-Za-z])" + escRe + "(?![A-Za-z])", "gi"), ru);
-    });
+    const t = String(raw).replace(pairMatcher, (match) => pairNameMap.get(match.toLocaleLowerCase("en")) || match);
     return t
       .replace(/\bCalamity\b/g, "Каламити")
       .replace(/\s*@\s*/g, " на ")
