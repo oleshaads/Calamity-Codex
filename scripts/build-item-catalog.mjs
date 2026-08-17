@@ -6,8 +6,11 @@
  *   node scripts/build-item-catalog.mjs \
  *     /path/to/CalamityModPublic/Localization/en-US \
  *     [calamity-codex/js/catalog.js] \
- *     [calamity-codex/assets/item-sprites]
+ *     [calamity-codex/assets/item-sprites] \
+ *     [calamity-codex/js/catalog-tooltips.js]
  *
+ * The main catalog keeps reader-facing data compact. English tooltip search
+ * metadata is emitted separately and loaded only when the user starts a search.
  * When the source checkout also contains Items/ and NPCs/, the builder adds
  * official tooltips, crafting/drop hints, progression hints and local sprites.
  */
@@ -21,6 +24,7 @@ const sourceRepo = path.resolve(sourceDir, "../..");
 const itemSourceDir = path.join(sourceRepo, "Items");
 const npcSourceDir = path.join(sourceRepo, "NPCs");
 const spriteOutput = path.resolve(process.argv[4] || path.join(path.dirname(output), "../assets/item-sprites"));
+const tooltipOutput = path.resolve(process.argv[5] || path.join(path.dirname(output), "catalog-tooltips.js"));
 
 const FILE_PREFIX = "Mods.CalamityMod.Items.";
 const FILE_SUFFIX = ".hjson";
@@ -74,7 +78,20 @@ const STATIONS_RU = {
   CosmicAnvil: "у космической наковальни",
   DraedonsForge: "в кузнице Дрейдона",
   VoidCondenser: "в конденсаторе пустоты",
-  ParticleAccelerator: "в ускорителе частиц"
+  ParticleAccelerator: "в ускорителе частиц",
+  Sawmill: "у лесопилки",
+  AshenAltar: "у пепельного алтаря",
+  SCalAltar: "у алтаря проклятых",
+  Kegs: "у бочонка",
+  PlagueInfuser: "у чумного инфузора",
+  LivingLoom: "у живого ткацкого станка",
+  GlassKiln: "у стеклоплавильной печи",
+  ProfanedCrucible: "у осквернённого тигля",
+  DemonAltar: "у алтаря зла",
+  AdamantiteForge: "у адамантитовой или титановой кузни",
+  CrystalBall: "у хрустального шара",
+  ImbuingStation: "у станции наполнения",
+  SkyMill: "у небесной мельницы"
 };
 const RECIPE_GROUP_RU = {
   AnyGoldBar: "золотой или платиновый слиток",
@@ -272,6 +289,10 @@ function parseRecipes(segment, displayById) {
     }
     const groups = /AddRecipeGroup\(\s*(?:RecipeGroupID\.)?"?([A-Za-z_][A-Za-z0-9_]*)"?\s*(?:,\s*(\d+))?/g;
     while ((item = groups.exec(chain))) {
+      // `RecipeSystem.RecipeGroup...` is a namespace expression, not an
+      // ingredient called "Recipe System". Unknown wrappers are skipped
+      // instead of becoming fake tree nodes without an item sprite.
+      if (["RecipeSystem", "RecipeGroup"].includes(item[1])) continue;
       const amount = Number(item[2] || 1);
       const label = RECIPE_GROUP_RU[item[1]] || humanizeId(item[1]);
       ingredients.push(`${amount > 1 ? `${amount} × ` : ""}${label}`);
@@ -600,6 +621,7 @@ const coverage = {
   omittedWithoutSprite: items.length - publicItems.length
 };
 const payload = {
+  format: 2,
   modVersion: "2.2.2",
   source: "CalamityTeam/CalamityModPublic",
   commit,
@@ -607,10 +629,20 @@ const payload = {
   generatedAt: "2026-08-15",
   coverage,
   groups: groupRecords,
-  items: itemRecords
+  // name, groupId, internalId, obtain, stage, Russian description.
+  // image=true is guaranteed for every published record by the filter above.
+  items: itemRecords.map(([name, groupId, id, tooltip, image, obtain, stage, description]) => [name, groupId, id, obtain, stage, description])
 };
-const banner = `/* Rich offline Calamity Mod item catalog. Generated; do not edit by hand.\n * Source: ${payload.source}@${commit}\n * Build: node scripts/build-item-catalog.mjs <Localization/en-US>\n */\n`;
+const tooltipPayload = {
+  format: 2,
+  commit,
+  tooltips: itemRecords.map((item) => item[3] || null)
+};
+const banner = `/* Compact offline Calamity Mod item catalog. Generated; do not edit by hand.\n * Source: ${payload.source}@${commit}\n * Build: node scripts/build-item-catalog.mjs <Localization/en-US>\n */\n`;
+const tooltipBanner = `/* Lazy English tooltip search metadata. Generated; do not edit by hand. */\n`;
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, `${banner}window.CALAMITY_ITEM_INDEX=${JSON.stringify(payload)};\n`);
+fs.writeFileSync(tooltipOutput, `${tooltipBanner}window.CALAMITY_CATALOG_TOOLTIPS=${JSON.stringify(tooltipPayload)};\n`);
 console.log(`Wrote ${itemRecords.length} unique items across ${groupRecords.length} groups to ${output}`);
+console.log(`Wrote ${coverage.tooltips} lazy tooltip search rows to ${tooltipOutput}`);
 console.log(`Coverage: ${coverage.sprites} verified sprites, ${coverage.russianDescriptions} Russian descriptions, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files; ${coverage.omittedWithoutSprite} sprite-less records omitted`);

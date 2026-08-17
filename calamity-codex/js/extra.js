@@ -1,26 +1,26 @@
 /* Темы квестов, маршруты и полный каталог предметов по этапам */
 (() => {
   const T = {
-    forest:    { fx: "leaves",  accent: "#7ad3a0", bg: "assets/themes/forest.jpg",    filter: "none" },
-    wulfrum:   { fx: "sparks",  accent: "#b6ff4a", bg: "assets/themes/wulfrum.jpg",   filter: "none" },
-    stars:     { fx: "stars",   accent: "#e8b84a", bg: "assets/themes/forest.jpg",    filter: "saturate(.7) hue-rotate(-10deg) brightness(.85)" },
-    sea:       { fx: "bubbles", accent: "#3dcdc0", bg: "assets/themes/sea.jpg",       filter: "none" },
-    slime:     { fx: "blobs",   accent: "#9b8cff", bg: "assets/themes/mushroom.jpg",  filter: "hue-rotate(40deg) saturate(1.2)" },
-    desert:    { fx: "sand",    accent: "#e8b84a", bg: "assets/themes/desert.jpg",    filter: "none" },
-    acid:      { fx: "acid",    accent: "#b6e04a", bg: "assets/themes/sea.jpg",       filter: "hue-rotate(70deg) saturate(1.3) contrast(1.1)" },
-    mushroom:  { fx: "spores",  accent: "#6ecbff", bg: "assets/themes/mushroom.jpg",  filter: "none" },
-    evil:      { fx: "drip",    accent: "#c41e6a", bg: "assets/themes/evil.jpg",      filter: "none" },
-    dungeon:   { fx: "dust",    accent: "#8aa4d4", bg: "assets/themes/dungeon.jpg",   filter: "none" },
-    hell:      { fx: "embers",  accent: "#ff6b35", bg: "assets/themes/hell.jpg",      filter: "none" },
-    ice:       { fx: "snow",    accent: "#9be7ff", bg: "assets/themes/ice.jpg",       filter: "none" },
-    brim:      { fx: "ash",     accent: "#ff3b4a", bg: "assets/themes/brimstone.jpg", filter: "none" },
-    jungle:    { fx: "pollen",  accent: "#6ee07a", bg: "assets/themes/forest.jpg",    filter: "hue-rotate(25deg) saturate(1.4) contrast(1.05)" },
-    astral:    { fx: "stars",   accent: "#d07aff", bg: "assets/themes/mushroom.jpg",  filter: "hue-rotate(90deg) saturate(1.3) contrast(1.15)" },
-    ocean:     { fx: "bubbles", accent: "#4aa8ff", bg: "assets/themes/sea.jpg",       filter: "saturate(1.2) brightness(.9)" },
-    holy:      { fx: "gold",    accent: "#ffe08a", bg: "assets/themes/desert.jpg",    filter: "sepia(.35) saturate(1.4) brightness(1.1)" },
-    cosmic:    { fx: "warp",    accent: "#7ae0ff", bg: "assets/themes/ice.jpg",       filter: "hue-rotate(200deg) saturate(1.5) contrast(1.2)" },
-    dragon:    { fx: "fire",    accent: "#ffb347", bg: "assets/themes/hell.jpg",      filter: "saturate(1.3) hue-rotate(-8deg) brightness(1.05)" },
-    final:     { fx: "ritual",  accent: "#ff4d6d", bg: "assets/themes/brimstone.jpg", filter: "contrast(1.2) saturate(1.25)" }
+    forest:    { fx: "leaves",  accent: "#7ad3a0", bg: "assets/themes/forest.webp",    filter: "none" },
+    wulfrum:   { fx: "sparks",  accent: "#b6ff4a", bg: "assets/themes/wulfrum.webp",   filter: "none" },
+    stars:     { fx: "stars",   accent: "#e8b84a", bg: "assets/themes/forest.webp",    filter: "saturate(.7) hue-rotate(-10deg) brightness(.85)" },
+    sea:       { fx: "bubbles", accent: "#3dcdc0", bg: "assets/themes/sea.webp",       filter: "none" },
+    slime:     { fx: "blobs",   accent: "#9b8cff", bg: "assets/themes/mushroom.webp",  filter: "hue-rotate(40deg) saturate(1.2)" },
+    desert:    { fx: "sand",    accent: "#e8b84a", bg: "assets/themes/desert.webp",    filter: "none" },
+    acid:      { fx: "acid",    accent: "#b6e04a", bg: "assets/themes/sea.webp",       filter: "hue-rotate(70deg) saturate(1.3) contrast(1.1)" },
+    mushroom:  { fx: "spores",  accent: "#6ecbff", bg: "assets/themes/mushroom.webp",  filter: "none" },
+    evil:      { fx: "drip",    accent: "#c41e6a", bg: "assets/themes/evil.webp",      filter: "none" },
+    dungeon:   { fx: "dust",    accent: "#8aa4d4", bg: "assets/themes/dungeon.webp",   filter: "none" },
+    hell:      { fx: "embers",  accent: "#ff6b35", bg: "assets/themes/hell.webp",      filter: "none" },
+    ice:       { fx: "snow",    accent: "#9be7ff", bg: "assets/themes/ice.webp",       filter: "none" },
+    brim:      { fx: "ash",     accent: "#ff3b4a", bg: "assets/themes/brimstone.webp", filter: "none" },
+    jungle:    { fx: "pollen",  accent: "#6ee07a", bg: "assets/themes/forest.webp",    filter: "hue-rotate(25deg) saturate(1.4) contrast(1.05)" },
+    astral:    { fx: "stars",   accent: "#d07aff", bg: "assets/themes/mushroom.webp",  filter: "hue-rotate(90deg) saturate(1.3) contrast(1.15)" },
+    ocean:     { fx: "bubbles", accent: "#4aa8ff", bg: "assets/themes/sea.webp",       filter: "saturate(1.2) brightness(.9)" },
+    holy:      { fx: "gold",    accent: "#ffe08a", bg: "assets/themes/desert.webp",    filter: "sepia(.35) saturate(1.4) brightness(1.1)" },
+    cosmic:    { fx: "warp",    accent: "#7ae0ff", bg: "assets/themes/ice.webp",       filter: "hue-rotate(200deg) saturate(1.5) contrast(1.2)" },
+    dragon:    { fx: "fire",    accent: "#ffb347", bg: "assets/themes/hell.webp",      filter: "saturate(1.3) hue-rotate(-8deg) brightness(1.05)" },
+    final:     { fx: "ritual",  accent: "#ff4d6d", bg: "assets/themes/brimstone.webp", filter: "contrast(1.2) saturate(1.25)" }
   };
 
   const meta = {

@@ -8,7 +8,9 @@
   <title>Каламити Кодекс — путеводитель по Terraria Calamity</title>
   <meta name="description" content="Русский спутник по Terraria + Calamity: 30 квестов, 2500+ предметов, боссы, крафты и биомы." />
   <link rel="icon" href="assets/favicon.png" type="image/png" />
-  <link rel="stylesheet" href="css/modern.css" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260817-core24" />
+  <link rel="preload" href="js/codex.min.js?v=20260817-core24" as="script" />
+  <link rel="stylesheet" href="css/modern.min.css?v=20260817-core24" />
 </head>
 <body>
   <a class="skip-link" href="#app">Перейти к содержимому</a>
@@ -77,7 +79,8 @@
           <span><b>Месть</b><i>revengeance</i></span>
           <div class="ragebar mini"><i></i></div>
         </div>
-        <p class="rail-status"><span class="status-dot"></span> каталог доступен офлайн</p>
+        <button class="install-app" id="install-app" type="button" hidden>⊕ Установить кодекс</button>
+        <p class="rail-status" id="connection-status"><span class="status-dot"></span><span data-connection-label>каталог доступен офлайн</span></p>
       </div>
     </aside>
 
@@ -115,7 +118,14 @@
       </header>
 
       <div id="search-panel" class="search-drop hidden" role="dialog" aria-label="Результаты поиска"></div>
-      <main id="app" tabindex="-1"></main>
+      <main id="app" tabindex="-1" aria-busy="true">
+        <section class="app-boot" aria-label="Загрузка кодекса">
+          <span class="app-boot-mark" aria-hidden="true">◆</span>
+          <div><b>Загружаем кодекс</b><small>Подготавливаем маршрут, каталог и поиск…</small></div>
+          <i aria-hidden="true"></i>
+        </section>
+        <noscript><section class="app-noscript"><b>Нужен JavaScript</b><p>Включи JavaScript, чтобы открыть каталог, поиск и дерево крафта.</p></section></noscript>
+      </main>
     </div>
     <div id="rail-scrim" class="rail-scrim" hidden></div>
   </div>
@@ -125,6 +135,7 @@
     <a href="#/novice?q=1" data-nav="novice"><span class="slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span><span>Путь</span></a>
     <a href="#/bosses" data-nav="bosses"><span class="slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span><span>Боссы</span></a>
     <a href="#/items" data-nav="items"><span class="slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span><span>Предметы</span></a>
+    <a href="#/crafts" data-nav="crafts"><span class="slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span><span>Крафт</span></a>
   </nav>
 
   <button class="to-top" id="to-top" type="button" aria-label="Наверх">▲</button>
@@ -143,6 +154,7 @@
             <i id="tree-root-sub"></i>
             <p id="tree-root-desc" class="tree-root-desc"></p>
             <span id="tree-root-src" class="tree-root-src"></span>
+            <span id="tree-root-live" class="wiki-source-live tree-root-live" data-wiki-live hidden><small>официальная Terraria Wiki · уточняем онлайн…</small><p>Проверяем конкретный источник и условия получения.</p></span>
           </span>
         </div>
         <div class="tree-tools">
@@ -152,7 +164,7 @@
           <button class="tree-nav-btn" id="tree-close" type="button" data-tree-close aria-label="Закрыть дерево">✕</button>
         </div>
       </div>
-      <div class="tree-legend"><b>▸ круг</b> на карточке — развернуть ингредиенты · клик по карточке — её дерево · <b>↗</b> — карточка в каталоге · лист — «где взять»</div>
+      <div class="tree-legend"><b>✥ зажми ЛКМ</b> и тяни карту · <b>▸ круг</b> — развернуть ингредиенты · клик по карточке — её дерево · <b>↗</b> — карточка в каталоге</div>
       <div class="tree-body" id="tree-body"></div>
     </div>
   </div>
@@ -160,19 +172,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
-  <script src="js/data.js"></script>
-  <script src="js/extra.js"></script>
-  <script src="js/lexicon.js"></script>
-  <script src="js/plain.js"></script>
-  <script src="js/plain-late.js"></script>
-  <script src="js/polish.js"></script>
-  <script src="js/sprites.js"></script>
-  <script src="js/catalog.js"></script>
-  <script src="js/vanilla-tree.js"></script>
-  <script src="js/npc-sources.js"></script>
-  <script src="js/npc-ru.js"></script>
-  <script src="js/npc-art.js"></script>
-  <script src="js/ru-names.js"></script>
-  <script src="js/app.js"></script>
+  <script defer src="js/codex.min.js?v=20260817-core24"></script>
 </body>
 </html>

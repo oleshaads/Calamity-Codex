@@ -57,7 +57,8 @@
     remains: "останки", ruffian: "разбойничий", saxophone: "саксофон", scythe: "коса", sensor: "датчик", shirt: "рубаха", sink: "раковина", sofa: "диван",
     spores: "споры", statigel: "статигелевый", sulphurous: "сернистый", synth: "синтезатор", table: "стол", tesla: "тесла", toga: "тога", trident: "трезубец",
     wulfrum: "вульфрум", wall: "стена", water: "вода", of: "из", the: "этот", and: "и", or: "или", any: "любой", all: "весь", final: "финальный",
-    first: "первый", zero: "ноль", dust: "пыль", seed: "семя", shard: "осколок", shell: "панцирь", scale: "чешуя", ore: "руда", bar: "слиток"
+    first: "первый", zero: "ноль", dust: "пыль", seed: "семя", shard: "осколок", shell: "панцирь", scale: "чешуя", ore: "руда", bar: "слиток",
+    calamity: "Каламити", terminus: "Терминус", hp: "ОЗ", npc: "НИП", dps: "УВС", ui: "интерфейс"
   });
   const EXTRA_PHRASES = { 
     "of the": "из",
@@ -158,26 +159,39 @@
     if (WORDS[key]) return cased(WORDS[key], token);
     return cased(transliterate(token), token);
   }
+  // Раньше translateName на каждом из 2535 предметов заново сортировал все
+  // фразы и компилировал по RegExp на каждую фразу. Один предварительно
+  // собранный matcher выполняет ту же longest-first замену за один проход.
+  const phraseNameMap = new Map(Object.entries(PHRASES).map(([en, ru]) => [en.toLocaleLowerCase("en"), ru]));
+  const phraseAlternatives = [...phraseNameMap.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map((phrase) => phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const phraseMatcher = phraseAlternatives.length
+    ? new RegExp(`(?<![A-Za-z])(?:${phraseAlternatives.join("|")})(?![A-Za-z])`, "gi")
+    : /$^/g;
+
   function translateName(value) {
     const original = String(value || "").trim();
     if (!original || /[А-Яа-яЁё]/.test(original) && !/[A-Za-z]/.test(original)) return original;
-    const exact = PHRASES[original.toLowerCase()];
+    const exact = phraseNameMap.get(original.toLocaleLowerCase("en"));
     if (exact) return exact;
-    let text = humanize(original);
-    const phraseKeys = Object.keys(PHRASES).sort((a, b) => b.length - a.length);
-    phraseKeys.forEach((phrase) => {
-      text = text.replace(new RegExp(`(^|[^A-Za-z])${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|[^A-Za-z])`, "gi"), `$1${PHRASES[phrase]}`);
-    });
+    const text = humanize(original).replace(phraseMatcher, (match) => phraseNameMap.get(match.toLocaleLowerCase("en")) || match);
     return text.replace(/[A-Za-z][A-Za-z0-9'’-]*/g, translateToken).replace(/\s+/g, " ").trim();
   }
-  let namePairs = null;
+  let nameMatcher = null;
+  let localizedNameMap = null;
+  function prepareNameMatcher() {
+    if (nameMatcher) return;
+    const names = Object.entries(byName).sort((a, b) => b[0].length - a[0].length).slice(0, 420);
+    localizedNameMap = new Map(names.map(([en, ru]) => [en.toLocaleLowerCase("en"), ru]));
+    const alternatives = names.map(([en]) => en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    nameMatcher = alternatives.length
+      ? new RegExp(`(?<![A-Za-z0-9])(?:${alternatives.join("|")})(?![A-Za-z0-9])`, "gi")
+      : /$^/g;
+  }
   function localizeText(value) {
-    let text = String(value || "");
-    const names = namePairs || (namePairs = Object.entries(byName).sort((a, b) => b[0].length - a[0].length));
-    names.slice(0, 420).forEach(([en, ru]) => {
-      const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      text = text.replace(new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, "gi"), ru);
-    });
+    prepareNameMatcher();
+    const text = String(value || "").replace(nameMatcher, (match) => localizedNameMap.get(match.toLocaleLowerCase("en")) || match);
     return text.replace(/[A-Za-z][A-Za-z0-9'’-]*/g, translateToken).replace(/\s+/g, " ").trim();
   }
 

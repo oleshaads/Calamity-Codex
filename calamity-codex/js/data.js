@@ -1220,7 +1220,7 @@ CODEX.materials = [
 CODEX.biomes = [
   {
     name: "Затонувшее море", en: "Sunken Sea",
-    img: "assets/themes/sunken-sea.jpg", danger: "Низкая", dangerLvl: "low",
+    img: "assets/themes/sunken-sea.webp", danger: "Низкая", dangerLvl: "low",
     desc: "Светлый грот под пустыней: ракушки, бирюзовые кристаллы, спокойная вода. Это не зелёный океан у данжа.",
     where: "Дойди до жёлтой пустыни, копай вниз через песок. После подземной пустыни появится голубая вода и светлый камень.",
     when: "С первых часов. Огромную раковину не трогай, пока не убит Пустынный бич.",
@@ -1230,7 +1230,7 @@ CODEX.biomes = [
   },
   {
     name: "Сернистое море", en: "Sulphurous Sea",
-    img: "assets/themes/sulphur.jpg",
+    img: "assets/themes/sulphur.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Ядовитый океан со стороны данжа. Вода зелёная и жжёт. Отсюда спуск в Бездну, сюда же приходит кислотный дождь.",
     where: "Океан у кирпичной крепости со стариком. Если вода синяя и не жжёт — ты не там, это чистый океан.",
@@ -1241,7 +1241,7 @@ CODEX.biomes = [
   },
   {
     name: "Бездна", en: "The Abyss",
-    img: "assets/themes/abyss.jpg",
+    img: "assets/themes/abyss.webp",
     danger: "Смертельная", dangerLvl: "dead",
     desc: "Четыре слоя чёрной воды под сернистым морем. Воздух кончается сразу, хищники снимают новичка за секунды.",
     where: "Спускайся с зелёного берега вниз. Слой 1 ещё серый. Дальше — кромешная тьма.",
@@ -1252,7 +1252,7 @@ CODEX.biomes = [
   },
   {
     name: "Серный кратер", en: "Brimstone Crag",
-    img: "assets/themes/brimstone.jpg",
+    img: "assets/themes/brimstone.webp",
     danger: "Высокая", dangerLvl: "high",
     desc: "Пепельные руины ниже ада. Лава, красный собор, враги, которые бьют уже в прехардмоде.",
     where: "Дно мира — ад, потом ещё ниже или в сторону. Ищи красный пепел и обломки храма.",
@@ -1263,7 +1263,7 @@ CODEX.biomes = [
   },
   {
     name: "Астральная инфекция", en: "Astral Infection",
-    img: "assets/themes/astral.jpg",
+    img: "assets/themes/astral.webp",
     danger: "Высокая", dangerLvl: "high",
     desc: "Фиолетово-бирюзовый биом хардмода: заражённая земля, метеорит и маяк. Враги жёсткие с первой минуты хардмода.",
     where: "Появляется само, когда падает Стена плоти. На карте — чужая палитра и кратер-метеорит.",
@@ -1274,7 +1274,7 @@ CODEX.biomes = [
   },
   {
     name: "Планетойды", en: "Planetoids",
-    img: "assets/themes/sky.jpg",
+    img: "assets/themes/sky.webp",
     danger: "Низкая", dangerLvl: "low",
     desc: "Круглые острова выше обычных парящих. На большом центральном — космическая лаборатория Дрейдона.",
     where: "Зелье гравитации, столб из верёвки или крюк — лети выше облаков, пока небо не станет чёрным.",
@@ -1285,7 +1285,7 @@ CODEX.biomes = [
   },
   {
     name: "Био-лаборатории", en: "Bio-center Labs",
-    img: "assets/themes/wulfrum.jpg",
+    img: "assets/themes/wulfrum.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Серые комнаты Дрейдона с турелями и чертежами. Пять штук на мир: море, небо, джунгли, ад, лёд.",
     where: "Прямоугольные серые стены, провода, красные пушки на потолке. Ищи механизмом поиска нужного цвета.",
@@ -1296,7 +1296,7 @@ CODEX.biomes = [
   },
   {
     name: "Святилища", en: "Shrines",
-    img: "assets/themes/forest.jpg",
+    img: "assets/themes/forest.webp",
     danger: "Низкая", dangerLvl: "low",
     desc: "Крошечные домики по биомам. В каждом один особый предмет: кольцо, ботинки или ездовое животное.",
     where: "Лес, пустыня, снега, джунгли, зло, океан. Смотри по поверхности и чуть под землёй.",
@@ -1307,7 +1307,7 @@ CODEX.biomes = [
   },
   {
     name: "Остров зла", en: "Evil Island",
-    img: "assets/themes/evil-island.jpg",
+    img: "assets/themes/evil-island.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Кусок порчи или багрянца в небе — того зла, которого нет внизу в твоём мире.",
     where: "Над данжем или над джунглями. Лети зельем гравитации.",
@@ -1318,7 +1318,7 @@ CODEX.biomes = [
   },
   {
     name: "Пустыня", en: "Desert",
-    img: "assets/themes/desert.jpg",
+    img: "assets/themes/desert.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Жёлтый песок с кактусами. Здесь первый босс мода — Пустынный бич. Под песком — затонувшее море.",
     where: "Один из краёв мира. Подземная пустыня — этажом ниже, с окаменелостями и львами.",
@@ -1329,7 +1329,7 @@ CODEX.biomes = [
   },
   {
     name: "Чистый океан", en: "Ocean",
-    img: "assets/themes/sea.jpg", filter: "saturate(1.15) brightness(.95)",
+    img: "assets/themes/sea.webp", filter: "saturate(1.15) brightness(.95)",
     danger: "Низкая", dangerLvl: "low",
     desc: "Синяя вода на краю мира, противоположном данжу. Кораллы, звёзды, ракушки. Позже — Левиафан и Анахита.",
     where: "Край карты, НЕ со стороны кирпичной крепости. Вода не жжёт.",
@@ -1340,7 +1340,7 @@ CODEX.biomes = [
   },
   {
     name: "Данж", en: "Dungeon",
-    img: "assets/themes/dungeon.jpg",
+    img: "assets/themes/dungeon.webp",
     danger: "Высокая", dangerLvl: "high",
     desc: "Кирпичная крепость скелетов. Книги, щит, алхимический стол, потом Полтергаст и Пустота.",
     where: "Вход со стариком на поверхности. До Скелетрона внутри тебя убьёт страж.",
@@ -1351,7 +1351,7 @@ CODEX.biomes = [
   },
   {
     name: "Ад", en: "Underworld",
-    img: "assets/themes/hell.jpg",
+    img: "assets/themes/hell.webp",
     danger: "Высокая", dangerLvl: "high",
     desc: "Лавовое дно мира. Мост для Стены плоти, адский камень, вуду-демоны, ниже — серный кратер.",
     where: "Копай вниз, пока не пойдёт лава и пепельные здания.",
@@ -1362,7 +1362,7 @@ CODEX.biomes = [
   },
   {
     name: "Джунгли", en: "Jungle",
-    img: "assets/themes/jungle.jpg",
+    img: "assets/themes/jungle.webp",
     danger: "Высокая", dangerLvl: "high",
     desc: "Густой биом: ульи, храм, Плантера, чума, потом Ярон. Фрукты жизни здесь растут с начала хардмода.",
     where: "Обычно напротив пустыни. Подземные джунгли — ниже, с грязью и лианами.",
@@ -1373,7 +1373,7 @@ CODEX.biomes = [
   },
   {
     name: "Снега", en: "Snow biome",
-    img: "assets/themes/ice.jpg",
+    img: "assets/themes/ice.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Лёд и метель. Здесь Криоген. В хардмоде — эссенция Элеума, после босса — крионитовая руда.",
     where: "Одна из полос мира, белая поверхность и ледяные пещеры.",
@@ -1384,7 +1384,7 @@ CODEX.biomes = [
   },
   {
     name: "Порча и багрянец", en: "Corruption / Crimson",
-    img: "assets/themes/evil.jpg",
+    img: "assets/themes/evil.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Зло мира. Сначала ванильный босс, потом босс мода: Разум улья или Перфораторы. После них на островах — аэролит.",
     where: "Фиолетовые расселины или кровавые холмы. Выбирается при создании мира.",
@@ -1395,7 +1395,7 @@ CODEX.biomes = [
   },
   {
     name: "Святые земли", en: "The Hallow",
-    img: "assets/themes/hallow.jpg",
+    img: "assets/themes/hallow.webp",
     danger: "Средняя", dangerLvl: "mid",
     desc: "Розовая радуга хардмода. После Лунного лорда здесь профанные враги и бой Провиденс.",
     where: "Полоса, которая врезается в мир после Стены плоти, обычно со стороны джунглей.",
@@ -1406,7 +1406,7 @@ CODEX.biomes = [
   },
   {
     name: "Грибной биом", en: "Glowing Mushroom biome",
-    img: "assets/themes/mushroom.jpg",
+    img: "assets/themes/mushroom.webp",
     danger: "Низкая", dangerLvl: "low",
     desc: "Синие светящиеся грибы в глубоких пещерах. Здесь живёт Крабулон.",
     where: "Глубокий камень с ярко-синими грибами. Либо маленький грибной планетойд в небе.",

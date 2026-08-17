@@ -9,7 +9,7 @@
 - `emblem.png`, `hero.jpg`, `novice.jpg`, `veteran.jpg` — логотип и домашние сцены;
 - `themes/forest.jpg`, `themes/wulfrum.jpg`, `themes/sea.jpg`, `themes/brimstone.jpg`, `themes/hell.jpg`, `themes/desert.jpg`, `themes/ice.jpg`, `themes/evil.jpg`, `themes/mushroom.jpg`, `themes/dungeon.jpg` — тематические фоны разделов и биомов.
 
-Авторство этих файлов — автор сайта; происхождение источника неизвестно, поэтому они не выдаются за игровые ассеты.
+Авторство этих файлов — автор сайта; происхождение источника неизвестно, поэтому они не выдаются за игровые ассеты. Для браузерной поставки `hero.webp` и `themes/*.webp` воспроизводимо перекодированы из этих JPG через ImageMagick с quality 82; исходные JPG сохранены как мастер-копии, а интерфейс загружает уменьшенные WebP.
 
 ## Авторские иллюстрации биомов
 
@@ -42,23 +42,26 @@
 
 - `crest.jpg` — вертикальный кроп официальной сцены Sunken Sea (ассет домашнего crest; в текущей разметке главной не используется);
 - `emblem.webp` — webp-копия `emblem.png`;
-- `favicon.png` — кроп официального `MainMenu/Logo.png` (crest логотипа).
+- `favicon.png` — кроп официального `MainMenu/Logo.png` (crest логотипа); `icon-192.png` и `icon-512.png` — его пиксельно масштабированные PWA-копии без изменения рисунка.
 
 ## Calamity Mod: спрайты предметов и боссов
 
 Источник: `CalamityTeam/CalamityModPublic`, commit `1a8cebd27ec5615316b78f71973446b5528d2b78`.
 
-- `item-sprites/*.png` — текстуры из `Items/`, а для предметов с общей текстурой — связанные официальные `NPCs/` или `Projectiles/` PNG. Точная политика выбора зафиксирована в `scripts/build-item-catalog.mjs`.
+- `item-sprites/*.png` — текстуры из `Items/`, а для предметов с общей текстурой — связанные официальные `NPCs/` или `Projectiles/` PNG. Точная политика выбора зафиксирована в `scripts/build-item-catalog.mjs`; тот же генератор создаёт компактный `js/catalog.js` и отдельный lazy-индекс поисковых tooltip `js/catalog-tooltips.js`.
 - `item-sprites/Riftburst.png` — спрайт предмета Riftburst, пересобранный как однокадровый PNG из ранее поставленного GIF-файла; пиксели кадра сохранены без изменений, формат приведён к честному PNG, чтобы файл гарантированно отображался любым браузером.
 - `boss-sprites/*.png` — официальные boss-head PNG из `NPCs/*`.
 - `npc-sprites/*.png` — официальные текстуры обычных NPC и мини-боссов из `NPCs/*`, используемые в строках источников и карточках врагов дерева крафта. Карта `js/npc-art.js` собрана из того же pinned commit; для сегментированного Burrower используется его официальная голова `NPCs/Deconstructors/DeconstructorMK1Head.png`.
+- `source-sprites/abyssal-pot.png` и `source-sprites/sulphurous-pot.png` — по одному полному кадру без изменения пикселей из официальных tile-sheet `Tiles/Abyss/AbyssalPots.png` и `Tiles/Abyss/SulphurousPots.png` того же pinned commit. Используются рядом с источником выпадения в дереве крафта; прозрачные служебные поля листа обрезаны.
 - `lex/calamity/*.png` — Laboratory Icon, штатные UI-текстуры Adrenaline/Rage и четыре оригинальных town-NPC head из того же checkout.
 
 ## Terraria
 
-- `js/vanilla-tree.js` — полный индекс ванильных предметов и рецептов Terraria 1.4.4: 5087 предметов, 3502 рецепта и локальные ссылки на 5072 иконки.
+- `js/vanilla-tree.js` — полный индекс ванильных предметов и рецептов Terraria 1.4.4: 5087 предметов, 3502 рецепта и локальные ссылки на 5072 иконки. Формат v2 хранит последовательный Item ID неявно, типы — через общую таблицу, а пути к спрайтам выводит из ID; это сокращает передаваемый и разбираемый JS без потери записей.
+- `js/vanilla-ru.js` — официальные русские названия всех 5073 именованных записей ванильного индекса в компактном массиве по стабильному числовому Item ID; 14 внутренних служебных ID без официального ItemName остаются без выдуманного имени. Источники `en-US/ru-RU ItemName` и ID→internal-name — зеркало `dsafxP/terrariamuzz`, commit `c95e85de00dd7e5a02478a2ffa82cc3a5131042c` от 16 июля 2026 года. Файл воспроизводимо собирается `scripts/build-vanilla-ru.mjs`; машинная транслитерация для именованных ванильных предметов не используется.
 - `assets/vanilla-sprites/*.png` — 5072 настоящих ванильных item-спрайта из `natan-dot-com/Terraria-Dataset`, commit `51d0b5f1e83c971d16d76e7cbb1364cb3f07d19e` от 31 января 2022 года. Для нескольких служебных ID без официального имени оставлена честная заглушка; ID ингредиента `-1` в исходной записи рецепта Zenith нормализован в ID Enchanted Sword (989).
 - `sprites/*.png` — ванильные спрайты инвентаря и предметов для этапов базовой Terraria. `sprites/Deer_Thing.png` — игровой спрайт предмета Deer Thing (Item ID 5120), каноническая страница: <https://terraria.wiki.gg/wiki/Deer_Thing>. Локальная копия сверена с публичным набором `EzraGillooly/terraria-compass` (`public/icons/items/deer-thing.png`).
+- `vanilla-extra/ash-wood.png` и `vanilla-extra/wand-of-frosting.png` — недостающие в старом наборе Terraria-Dataset официальные инвентарные спрайты из зеркала `EzraGillooly/terraria-compass`, commit `9148e616dcee7bcff88f8fa5637909196227e51c`, пути `public/icons/calamity/ash-wood.png` и `public/icons/items/wand-of-frosting.png`. Второй файл воспроизводимо перекодирован из фактического WebP-содержимого зеркала в PNG без изменения размера рисунка.
 - `lex/vanilla/*.png` (обычные предметы и bestiary NPC) — отдельные оригинальные игровые текстуры из публичного набора `Live-yan/terraviewer-images`, commit `d8b7a655e210fe377186a083635733ece85c3594`. Идентификаторы `item_*` и `npc_*` явно закреплены в `scripts/fetch-lexicon-art.sh`; имена не подбираются приблизительно.
 - `lex/vanilla/demon-altar.png` — настоящая tile/station-текстура Demon Altar из публичного Terraria recipe viewer `64mb/terraria-web-book`, commit `a825a5d87d18c63c22a461265b2d9188579b204f`, путь `assets/terraria/tool/demon_altar.png`.
 - Исходный `item_75.png` (Fallen Star) является вертикальной игровой анимационной полосой. Скрипт детерминированно вырезает первый полный кадр `22×26`; цвет, пиксели и форма кадра не изменяются.
