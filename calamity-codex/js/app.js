@@ -108,7 +108,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core63";
+  const ASSET_VERSION = "20260819-core64";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -507,11 +507,6 @@
     const recipe = visualRecipeFor(name);
     const obtainRaw = (info.obtain || (lex && lex.where) || "").replace(/\s*[·•].*$/, "").trim();
     const genericObtain = isGenericObtainText(obtainRaw);
-    const obtain = recipe && /^Скрафтить/i.test(obtainRaw)
-      ? ""
-      : genericObtain
-        ? "Локальный индекс не содержит подтверждённого конкретного источника. Кодекс проверяет официальную wiki ниже вместо того, чтобы угадывать способ получения."
-        : obtainRaw;
     const used = info.used || (lex && lex.used) || "";
     const when = info.when || "";
     const type = info.typeLabel || (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
@@ -519,6 +514,11 @@
     const catItem = catalogByName(name);
     const tipSources = npcSourceForItem({ id: catItem ? catItem.id : "" });
     const wikiProfile = !recipe ? officialWikiProfile(info) : null;
+    const obtain = recipe && /^Скрафтить/i.test(obtainRaw)
+      ? ""
+      : genericObtain
+        ? (npcSourceLines(tipSources) || wikiProfile ? "" : "Конкретный источник в локальном индексе не указан. Открой официальную страницу предмета.")
+        : obtainRaw;
     tipCard.innerHTML = `
       <div class="tip-card-head">
         <span class="slot tip-card-slot">${art ? `<img class="item-art" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(info.kind || "mat")}">` : unavailableArt(info.kind)}</span>
@@ -539,7 +539,7 @@
           ${when ? `<div class="fact"><span>Когда</span><p>${esc(when)}</p></div>` : ""}
           ${bossRelationsHTML(info.bossLinks)}
         </div>
-        ${wikiProfile ? `<section class="wiki-source-live acquisition-wiki" data-wiki-live><small>${esc(wikiProfile.label)} · проверяем источник…</small><p>Ищем конкретный способ получения, противника, структуру, магазин или условие появления.</p><a href="${escAttr(wikiProfile.url)}" target="_blank" rel="noopener noreferrer">Открыть официальную страницу ↗</a></section>` : ""}
+        ${wikiLiveSectionHTML(wikiProfile, info.key || name, "acquisition-wiki")}
         <div class="tip-card-actions">
           ${recipe ? `${info.recipe ? fullTreeLink(name) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(name)}"><span aria-hidden="true">⚒</span> Рецепт</button>${craftPlanActionButton(name)}` : ""}
           ${info.catName ? `<a class="craft-catalog-link" href="#/items?s=${encodeURIComponent(info.catName)}">В каталоге ↗</a>` : ""}
@@ -3398,38 +3398,73 @@
     return {
       key: `calamity:${title.toLocaleLowerCase("en")}`,
       label: "официальная Calamity Mod Wiki",
-      url: `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(title)}`,
+      url: `https://calamitymod.wiki.gg/wiki/${encodeURIComponent(title).replace(/%20/g, "_")}`,
       requests: [["https://calamitymod.wiki.gg/api.php", title, "en"]]
     };
   }
-  async function requestWikiExtract(apiUrl, pageTitle, language) {
-    const api = new URL(apiUrl);
-    api.search = new URLSearchParams({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", redirects: "1", titles: pageTitle, format: "json", origin: "*" });
-    const response = await fetch(api, { mode: "cors", credentials: "omit" });
-    if (!response.ok) throw new Error(`wiki ${response.status}`);
-    const payload = await response.json();
+  function wikiLiveSectionHTML(profile, itemKey, extraClass = "") {
+    if (!profile) return "";
+    const cls = extraClass ? ` ${extraClass}` : "";
+    return `<section class="wiki-source-live${cls}" data-wiki-live data-wiki-item="${escAttr(itemKey)}"><small>${esc(profile.label)} · проверяем источник…</small><p>Ищем конкретный способ получения, противника, структуру, магазин или условие появления.</p><a href="${escAttr(profile.url)}" target="_blank" rel="noopener noreferrer">Открыть официальную страницу ↗</a><button type="button" class="wiki-retry" data-wiki-retry hidden>Повторить проверку</button></section>`;
+  }
+  async function fetchWikiJson(url) {
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 8000) : 0;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit", signal: controller?.signal });
+      if (!response.ok) throw new Error(`wiki ${response.status}`);
+      return await response.json();
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  function wikiExtractFromPayload(payload, language) {
     const page = Object.values(payload?.query?.pages || {})[0];
     const extract = String(page?.extract || "").trim();
-    if (!extract || page?.missing !== undefined || /содержимое на этой странице отсутствует/i.test(extract)) throw new Error("no wiki extract");
+    if (!extract || page?.missing !== undefined || /содержимое на этой странице отсутствует/i.test(extract)) return "";
     let text = extract.split(/\n\s*\n/)[0].replace(/\s+/g, " ").slice(0, 1400);
     if (language === "ru") text = ruText(text.replace(/\(\s*англ\.\s*[^)]+\)/gi, "").replace(/\s+/g, " ").trim());
-    return { text, language };
+    return text;
+  }
+  async function requestWikiExtract(apiUrl, pageTitle, language) {
+    const extractApi = new URL(apiUrl);
+    extractApi.search = new URLSearchParams({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", redirects: "1", titles: pageTitle, format: "json", origin: "*" });
+    const exact = wikiExtractFromPayload(await fetchWikiJson(extractApi), language);
+    if (exact) return { text: exact, language };
+    const searchApi = new URL(apiUrl);
+    searchApi.search = new URLSearchParams({ action: "query", list: "search", srsearch: pageTitle, srlimit: "1", format: "json", origin: "*" });
+    let foundTitle = "";
+    try {
+      const searchPayload = await fetchWikiJson(searchApi);
+      foundTitle = String(searchPayload?.query?.search?.[0]?.title || "").trim();
+    } catch { foundTitle = ""; }
+    if (!foundTitle || foundTitle === pageTitle) throw new Error("no wiki extract");
+    const fallbackApi = new URL(apiUrl);
+    fallbackApi.search = new URLSearchParams({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", redirects: "1", titles: foundTitle, format: "json", origin: "*" });
+    const fallback = wikiExtractFromPayload(await fetchWikiJson(fallbackApi), language);
+    if (!fallback) throw new Error("no wiki extract");
+    return { text: fallback, language };
   }
   async function enrichWikiSource(root, info) {
     const box = root?.querySelector?.("[data-wiki-live]");
     const profile = officialWikiProfile(info);
     if (!box || !profile || visualRecipeFor(info.key || info.name)) return;
+    const itemKey = info.key || info.catName || info.name || "";
+    if (itemKey) box.dataset.wikiItem = itemKey;
     const cached = getWikiSourceCache()[profile.key];
     const paragraph = box.querySelector("p");
     const label = box.querySelector("small");
     const link = box.querySelector("a");
+    const retry = box.querySelector("[data-wiki-retry]");
     if (link) link.href = profile.url;
+    if (retry) retry.hidden = true;
     const apply = (text, cachedResult = false, language = "ru") => {
       if (!paragraph || !text) return;
       paragraph.textContent = text;
       box.hidden = false;
       box.classList.remove("failed");
       box.classList.add("loaded");
+      if (retry) retry.hidden = true;
       if (!info.cycleCut) box.closest(".noncraft-source")?.classList.add("wiki-enriched");
       const languageMark = language === "en" ? " · EN" : "";
       if (label) label.textContent = cachedResult ? `${profile.label}${languageMark} · сохранённая копия` : `${profile.label}${languageMark} · получено онлайн`;
@@ -3439,8 +3474,16 @@
       return;
     }
     box.hidden = false;
+    box.classList.remove("failed", "loaded");
     if (label) label.textContent = `${profile.label} · проверяем источник…`;
     if (paragraph) paragraph.textContent = "Ищем конкретный способ получения, противника, структуру, магазин или условие появления предмета.";
+    if (navigator.onLine === false) {
+      box.classList.add("failed");
+      if (label) label.textContent = `${profile.label} · офлайн`;
+      if (paragraph) paragraph.textContent = "Сейчас нет сети. Открой официальную страницу по ссылке или повтори проверку, когда появится соединение. Кодекс не подставляет догадку.";
+      if (retry) retry.hidden = false;
+      return;
+    }
     for (const [apiUrl, title, language] of profile.requests) {
       try {
         const result = await requestWikiExtract(apiUrl, title, language);
@@ -3454,8 +3497,9 @@
       return;
     }
     box.classList.add("failed");
-    if (label) label.textContent = `${profile.label} · проверка недоступна`;
-    if (paragraph) paragraph.textContent = "Не удалось получить данные автоматически. Открой официальную страницу по ссылке ниже — локальная карточка не подменяет источник догадкой.";
+    if (label) label.textContent = `${profile.label} · открой страницу`;
+    if (paragraph) paragraph.textContent = "Автоматическая проверка сейчас недоступна. Открой официальную страницу по ссылке — там точный источник. Кодекс не подставляет догадку.";
+    if (retry) retry.hidden = false;
   }
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
@@ -3998,7 +4042,7 @@
     const purpose = catalogPurpose(item);
     const obtain = bossObtainOverride(item) || item.obtain || "";
     const obtainDisplay = isGenericObtainText(obtain)
-      ? "Конкретный локальный источник не подтверждён. Нажми «Получение»: кодекс проверит официальную wiki и сохранит найденный способ для офлайн-просмотра."
+      ? "Точный источник откроется по кнопке «Получение» — кодекс сверит официальную wiki и сохранит копию офлайн."
       : ruText(obtain);
     const isCraft = /^Скрафтить/i.test(obtain);
     const visualRecipe = visualRecipeFor(`catalog:${item.id}`);
@@ -4063,7 +4107,7 @@
     const showWhy = why && why !== desc;
     const getRaw = String(it.get || "").replace(/\bCalamity\b/g, "Каламити").trim();
     const getPlain = isGenericObtainText(getRaw)
-      ? "Конкретный источник уточняется через отдельную кнопку «Получение» по официальной wiki."
+      ? "Точный источник — по кнопке «Получение»."
       : ruText(getRaw);
     const showGet = getPlain && !/^крафт\.?$/i.test(getPlain);
     const local = spriteOfFixed(it) || (CODEX.sprites && (CODEX.sprites[it.name] || CODEX.sprites[it.nameRu])) || "";
@@ -5042,16 +5086,16 @@
     const recipeText = hasRecipe
       ? `${info.recipe.ings.map((item) => `${item.count ? `${item.count} × ` : ""}${ingredientInfo(item.key || item.name).ru}`).join(" + ")}${info.recipe.station ? ` · ${craftStationInline(info.recipe.station)}` : ""}`
       : `${info.compositeCraft ? "Создание комплекта" : "Получение без крафта"}: ${where || "официальный игровой источник"}`;
+    const sourceWiki = !hasRecipe ? officialWikiProfile(info) : null;
     const localWhere = isGenericObtainText(where)
-      ? "Точный локальный источник не подтверждён. Кодекс проверяет официальную wiki ниже вместо универсальной догадки."
-      : ruText(where || "Точный локальный источник не подтверждён; используется проверка официальной wiki.");
+      ? (sourceHTML || sourceWiki ? "" : "Конкретный источник в локальном индексе не указан.")
+      : ruText(where);
     const acquisitionSource = sourceHTML
       ? `<div class="src-list">${sourceHTML}</div>`
-      : `<p>${esc(localWhere)}</p>`;
-    const sourceWiki = !hasRecipe ? officialWikiProfile(info) : null;
-    const wikiLiveHTML = sourceWiki
-      ? `<section class="wiki-source-live" data-wiki-live><small>${esc(sourceWiki.label)} · проверяем источник…</small><p>Ищем конкретный способ получения, противника, структуру, магазин или условие появления.</p><a href="${escAttr(sourceWiki.url)}" target="_blank" rel="noopener noreferrer">Открыть официальную страницу ↗</a></section>`
-      : "";
+      : localWhere
+        ? `<p>${esc(localWhere)}</p>`
+        : "";
+    const wikiLiveHTML = wikiLiveSectionHTML(sourceWiki, info.key || name);
     const recipeYield = Math.max(1, Number(info.recipe?.yield || 1));
     const recipeHTML = hasRecipe
       ? `<div class="craft-chips">${info.recipe.ings.map((item) => ingChipHTML(item.key || item.name, item.count)).join("")}${stationChipHTML(info.recipe.station)}</div>${recipeYield > 1 ? `<p class="recipe-batch-note">Один крафт создаёт ×${esc(craftAmount(recipeYield))} результата; итоговые базовые ресурсы учитывают размер этой партии.</p>` : ""}`
@@ -5071,7 +5115,7 @@
       : "";
     const wiki = info.vanilla
       ? `https://terraria.wiki.gg/ru/wiki/${encodeURIComponent(info.ru || info.en || name).replace(/%20/g, "_")}`
-      : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(info.en || info.catName || name)}`;
+      : `https://calamitymod.wiki.gg/wiki/${encodeURIComponent(info.en || info.catName || name).replace(/%20/g, "_")}`;
     return `
       <div class="craft-tree-inspector-head">
         <span class="slot craft-tree-inspector-slot">${artHTML}</span>
@@ -7217,6 +7261,16 @@
     toast(result.added ? "Цель добавлена в общий план" : `Уже в плане · ${recipeCraftCountLabel(result.quantity)}`, result.added ? "+" : "✓");
   });
   document.addEventListener("click", (event) => {
+    const retry = event.target.closest?.("[data-wiki-retry]");
+    if (retry) {
+      event.preventDefault();
+      const box = retry.closest("[data-wiki-live]");
+      const key = box?.dataset.wikiItem || "";
+      if (!box || !key) return;
+      box.classList.remove("failed", "loaded");
+      enrichWikiSource(box.parentElement, ingredientInfo(key));
+      return;
+    }
     const button = event.target.closest?.("[data-item-details]");
     if (!button) return;
     event.preventDefault();
@@ -7490,10 +7544,8 @@
       let line = "";
       if (info.recipe && info.recipe.ings.length) {
         line = "рецепт: " + info.recipe.ings.map((i) => (i.count ? `${i.count} × ${ingredientInfo(i.key || i.name).ru}` : ingredientInfo(i.key || i.name).ru)).join(" + ") + (info.recipe.station ? ` · ${craftStationInline(info.recipe.station)}` : "");
-      } else if (info.obtain) {
-        line = isGenericObtainText(info.obtain)
-          ? "Точный источник проверяется по официальной wiki ниже."
-          : info.obtain.replace(/\s*[·•].*$/, "").trim();
+      } else if (info.obtain && !isGenericObtainText(info.obtain)) {
+        line = info.obtain.replace(/\s*[·•].*$/, "").trim();
       }
       rootSrc.textContent = line;
       rootSrc.title = line;
@@ -7502,8 +7554,11 @@
       rootLive.classList.remove("loaded", "failed");
       const sourceProfile = !info.recipe ? officialWikiProfile(info) : null;
       rootLive.hidden = !sourceProfile;
+      rootLive.dataset.wikiItem = info.key || name || "";
       const liveLabel = rootLive.querySelector("small");
       const liveText = rootLive.querySelector("p");
+      const liveRetry = rootLive.querySelector("[data-wiki-retry]");
+      if (liveRetry) liveRetry.hidden = true;
       if (liveLabel) liveLabel.textContent = `${sourceProfile?.label || "официальная wiki"} · проверяем источник…`;
       if (liveText) liveText.textContent = "Ищем конкретный способ получения, противника, структуру, магазин или условие появления.";
       if (!rootLive.hidden) enrichWikiSource(rootLive.parentElement, info);

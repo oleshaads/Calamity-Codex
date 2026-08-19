@@ -5245,9 +5245,26 @@ body.recipe-open { overflow: hidden; }
 .acquisition-wiki { margin: 12px 0 2px; padding: 12px 13px; }
 .wiki-source-live a { width: max-content; margin-top: 3px; color: #8ed5dd; font-family: var(--mono); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .wiki-source-live a:hover { filter: brightness(1.2); }
-.wiki-source-live.failed { border-color: #765137; background: #24180f; }
-.wiki-source-live.failed small { color: #e0a36f; }
-.wiki-source-live.failed p { color: #d4b79d !important; }
+.wiki-source-live.failed { border-color: #3d5560; background: #121c24; }
+.wiki-source-live.failed small { color: #8eb8c4; }
+.wiki-source-live.failed p { color: #b7c4cb !important; }
+.wiki-retry {
+  width: max-content;
+  margin-top: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border: 1px solid #3a5560;
+  border-radius: 6px;
+  color: #c5d6dc;
+  background: #17242c;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.wiki-retry:hover { border-color: #6fbfc7; color: #e7f4f6; }
+.wiki-source-live a + .wiki-retry { display: inline-flex; margin-left: 10px; vertical-align: middle; }
 
 /* Масштабируется только граф внутри фиксированного viewport дерева. */
 .tree-body > .tnode,
