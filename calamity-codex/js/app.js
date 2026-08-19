@@ -54,6 +54,7 @@
     novice: "Путь новичка",
     wiki: "Справочник",
     bosses: "Боссы",
+    mobs: "Мобы",
     items: "Предметы",
     useful: "Полезное",
     favorites: "Избранное",
@@ -73,6 +74,7 @@
     if (view === "novice") return `novice:${params.q || 1}`;
     if (view === "wiki") return `wiki:${params.tab || "progress"}`;
     if (view === "bosses") return `bosses:${params.era || "all"}:${params.kind || "all"}:${params.status || "all"}`;
+    if (view === "mobs") return `mobs:${params.q || "all"}:${params.type || "all"}:${params.biome || "all"}`;
     if (view === "items") return `items:${params.mode || "catalog"}:${params.cls || "all"}:${params.kind || "all"}:${params.q || "all"}:${params.fav || ""}:${params.era || "all"}:${params.sort || "stage"}`;
     if (view === "useful") return `useful:${params.type || "all"}`;
     if (view === "lex") return `lex:${params.type || "all"}`;
@@ -83,6 +85,7 @@
   const SECTION_THEMES = {
     wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/mushroom.webp",  accent: "#8ebbe0", fx: "dust" },
     bosses:    { eyebrow: "Бестиарий Каламити", mark: "☠", no: "II",  cover: "assets/headers/bosses.webp",    bg: "assets/themes/brimstone.webp", accent: "#f06c73", fx: "fire" },
+    mobs:      { eyebrow: "Бестиарий — все существа", mark: "👾", no: "III", cover: "assets/headers/bosses.webp",    bg: "assets/themes/forest.webp",   accent: "#8fd08f", fx: "spores" },
     items:     { eyebrow: "Арсенал героя",      mark: "◆", no: "III",  cover: "assets/headers/items.webp",     bg: "assets/headers/items.webp",   accent: "#68d8c9", fx: "sparks", filter: "saturate(.78) contrast(1.05) brightness(.76)" },
     useful:    { eyebrow: "Набор исследователя", mark: "✚", no: "IV",   cover: "assets/headers/crafts.webp",    bg: "assets/themes/forest.webp",   accent: "#7ed6a0", fx: "leaves" },
     favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "V",    cover: "assets/headers/favorites.webp", bg: "assets/themes/dungeon.webp",  accent: "#efc66e", fx: "stars" },
@@ -95,7 +98,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core62";
+  const ASSET_VERSION = "20260819-core69";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -344,6 +347,11 @@
     if (view === "lex") return [[Object.keys(CODEX.lex || {}).length, "терминов"], ["RU / EN", "названия"]];
     if (view === "crafts") return [[getRecipeIndex().size, "рецептов в дереве"], [VANILLA_TREE_INDEX.items.length, "ванильных предметов"]];
     if (view === "biomes") return [[CODEX.biomes.length, "биомов"], [4, "уровня риска"]];
+    if (view === "mobs") {
+      const total = Object.keys(NPC_DATA || {}).length;
+      const calamity = Object.keys(window.CALAMITY_NPC_ART || {}).length;
+      return [[total, "существ"], [calamity, "Каламити"]];
+    }
     return [];
   }
   const mast = (title, lead) => {
@@ -761,19 +769,45 @@
     if (e.relatedTarget && tipCard.contains(e.relatedTarget)) return;
     hideTipCardSoon();
   });
-  /* Remote-спрайты (wiki): при недоступности сети картинка заменяется
-     аккуратной заглушкой, а не исчезает бесследно. */
+  /* Любые сломанные спрайты — заменяем аккуратной заглушкой, а не битой иконкой.
+     Для локальных assets пробуем подтянуть картинку с вики, прежде чем показать заглушку. */
   document.addEventListener("error", (e) => {
     const img = e.target;
-    if (!img || img.tagName !== "IMG" || !img.classList.contains("remote")) return;
-    const holder = img.parentElement;
-    const fallback = document.createElement("i");
-    fallback.className = "art-fallback";
-    fallback.textContent = "◆";
-    fallback.title = "Спрайт недоступен офлайн";
-    fallback.setAttribute("aria-label", "Спрайт недоступен офлайн");
-    img.remove();
-    if (holder) holder.appendChild(fallback);
+    if (!img || img.tagName !== "IMG") return;
+    if (img.dataset.broken) return;
+    const src = String(img.getAttribute("src")||"");
+    // Пробуем вики-фолбэк для локальных ассетов, которые не нашлись
+    if ((src.includes("assets/npc-sprites/") || src.includes("assets/boss-sprites/") || src.includes("assets/item-sprites/") || src.includes("assets/vanilla-sprites/")) && !img.dataset.wikiTried) {
+      img.dataset.wikiTried = "1";
+      const alt = String(img.alt||img.dataset.mobEn||"").trim();
+      const isCal = src.includes("npc-sprites") || src.includes("boss-sprites") || src.includes("item-sprites");
+      // Пытаемся угадать имя из src или alt
+      let title = alt;
+      if (!title) {
+        const m = src.match(/\/([^\/]+)\.png(?:\?.*)?$/);
+        if (m) title = decodeURIComponent(m[1]).replace(/_/g, " ");
+      }
+      if (title) {
+        fetchWikiThumb(title, isCal).then((url) => {
+          if (url) { img.dataset.broken=""; img.src = url; img.classList.add("remote"); return; }
+          showFallback();
+        });
+        return;
+      }
+    }
+    showFallback();
+    function showFallback(){
+      if (img.dataset.broken==="done") return;
+      img.dataset.broken="done";
+      const holder = img.parentElement;
+      const fallback = document.createElement("i");
+      fallback.className = "art-fallback";
+      fallback.textContent = "◆";
+      fallback.title = "Спрайт недоступен офлайн";
+      fallback.setAttribute("aria-label", "Спрайт недоступен офлайн");
+      img.remove();
+      if (holder) holder.appendChild(fallback);
+    }
   }, true);
 
   document.addEventListener("click", (e) => {
@@ -1489,7 +1523,7 @@
     return `<span class="badge ${cls}">${pretty[era] || label}</span>`;
   }
 
-  const CATALOG_VIEWS = new Set(["items", "crafts", "useful", "favorites"]);
+  const CATALOG_VIEWS = new Set(["items", "crafts", "useful", "favorites", "mobs"]);
   function renderCatalogLoading(view, failed = false) {
     if (!app) return;
     app.setAttribute("aria-busy", String(!failed));
@@ -1566,6 +1600,7 @@
       else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
       else if (view === "wiki") { applySectionTheme(view); renderWiki(params); }
       else if (view === "bosses") { applySectionTheme(view); renderBosses(params); }
+      else if (view === "mobs") { applySectionTheme(view); renderMobs(params); }
       else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || "", params.item || "", params.plan === "1"); }
       else if (view === "items") { applySectionTheme(view); renderItems(params); }
       else if (view === "useful") { applySectionTheme(view); renderUseful(params); }
@@ -1710,12 +1745,36 @@
         </div>
       </section>
       <section class="home-strip">
+        ${!store.get().onboardingDismissed ? `<section class="onboarding-banner" id="onboarding-banner" aria-label="Подсказка для новичков">
+          <span aria-hidden="true">◆</span>
+          <div>
+            <b>Впервые в кодексе? Вот как всё устроено</b>
+            <p>Слева — 4 смысловые группы. Начни с <b>Пути новичка</b>, а дальше выбирай цель: <b>дерево</b> покажет любой крафт, <b>предметы</b> — каталог, <b>боссы</b> — порядок боёв. Поиск сверху находит всё.</p>
+            <div class="onboarding-steps"><span>Старт: Главная → Путь</span><span>Цель: Дерево / Предметы / Боссы</span><span>Мир: Полезное → Биомы → Справочник</span><span>Личное: Избранное → Словарь</span></div>
+          </div>
+          <button type="button" id="onboarding-dismiss" aria-label="Скрыть подсказку">✕ Понятно</button>
+        </section>` : ""}
         <div class="home-section-head">
-          <div><small>Быстрый доступ</small><h2>Разделы кодекса</h2></div>
-          <p>Все данные уже внутри страницы: спрайты, рецепты и описания работают без сети.</p>
+          <div><small>Навигация по смыслу</small><h2>Куда дальше</h2></div>
+          <p>4 главные цели вынесены наверх — остальное аккуратно спрятано, чтобы не перегружать первый взгляд.</p>
         </div>
-        <div class="jump-grid">
-          ${jumps.map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+        <div class="jump-primary-label">Главные сценарии</div>
+        <div class="jump-grid jump-primary">
+          ${jumps.slice(0,4).map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+        </div>
+        <details class="home-quick-shelf" id="home-quick-shelf">
+          <summary><span><i aria-hidden="true">＋</i> Все разделы кодекса</span><em>${jumps.length} разделов · вторичные</em></summary>
+          <div class="home-quick-shelf-body">
+            <p style="margin-bottom:10px;color:#8ea0af;font-size:12px;">Полный список — когда нужно всё сразу. Главные 4 уже наверху, чтобы первый взгляд не тонул.</p>
+            <div class="jump-grid jump-secondary">
+              ${jumps.slice(4).map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+            </div>
+          </div>
+        </details>
+        <div class="home-help-grid" aria-label="Как ориентироваться">
+          <div class="home-help-card"><b>◆ Старт</b><p>Главная показывает, где ты остановился. Путь новичка — 30 шагов от дома до ведьмы.</p><span>Начни здесь, если впервые</span></div>
+          <div class="home-help-card"><b>⚒ Выбор цели</b><p>Дерево собирает любой рецепт до базы. Предметы — каталог. Боссы — порядок и арены.</p><span>Когда знаешь, что ищешь</span></div>
+          <div class="home-help-card"><b>✚ Мир</b><p>Полезное — 71 must-have. Биомы и справочник — где, когда и зачем.</p><span>Для подготовки и справки</span></div>
         </div>
         <details class="secondary-shelf home-era-shelf">
           <summary><span><i aria-hidden="true">IV</i><b>Эпохи прохождения</b><small>Краткий порядок противников и снаряжения</small></span><em>4 этапа</em></summary>
@@ -1723,6 +1782,13 @@
         </details>
       </section>
     `;
+    const onboardingDismiss = document.getElementById("onboarding-dismiss");
+    if (onboardingDismiss) onboardingDismiss.onclick = () => {
+      store.set({ onboardingDismissed: true });
+      document.getElementById("onboarding-banner")?.classList.add("onboarding-dismissed");
+      SND.play("snap");
+      toast("Подсказка скрыта — вернуть можно сбросом профиля", "◆");
+    };
   }
 
   function questProgress() {
@@ -2722,14 +2788,22 @@
     if (!context) return base;
     return `${base}${base && !/[.!?]$/.test(base) ? "." : ""}${base ? " " : ""}${context}`;
   }
+  function bossRefArt(boss) {
+    const art = boss.art || BOSS_ART_BY_ID[boss.id] || (boss.n ? BOSS_ART[boss.n] : "") || "";
+    return art ? releaseAsset(art) : "";
+  }
   function bossRelationsHTML(links) {
     if (!links?.length) return "";
-    return `<div class="fact boss-relations-fact"><span>Связанные боссы</span><div class="boss-ref-list">${links.map(({ boss, type }) => `
-      <a class="boss-ref boss-ref-${escAttr(type.toLocaleLowerCase("en"))}" href="#/bosses?q=${encodeURIComponent(boss.name)}" data-boss-detail="${escAttr(boss.en || boss.name)}" title="Показать все сведения: ${escAttr(boss.name)}">
-        <i aria-hidden="true">${type === "S" ? "✦" : type === "D" ? "◆" : type === "A" ? "?" : type === "G" ? "⌁" : type === "C" ? "+" : "☠"}</i>
+    return `<div class="fact boss-relations-fact"><span>Связанные боссы</span><div class="boss-ref-list">${links.map(({ boss, type }) => {
+      const art = bossRefArt(boss);
+      const artHTML = art ? `<span class="boss-ref-art slot"><img src="${escAttr(art)}" alt="" loading="lazy" decoding="async" /></span>` : `<i aria-hidden="true">${type === "S" ? "✦" : type === "D" ? "◆" : type === "A" ? "?" : type === "G" ? "⌁" : type === "C" ? "+" : "☠"}</i>`;
+      return `
+      <a class="boss-ref boss-ref-${escAttr(type.toLocaleLowerCase("en"))} ${art ? "has-art" : ""}" href="#/bosses?q=${encodeURIComponent(boss.name)}" data-boss-detail="${escAttr(boss.en || boss.name)}" title="Показать все сведения: ${escAttr(boss.name)}">
+        ${artHTML}
         <b>${esc(boss.name)}</b>
         <small>${esc(BOSS_RELATION_LABELS[type] || BOSS_RELATION_LABELS.R)}</small>
-      </a>`).join("")}</div></div>`;
+      </a>`;
+    }).join("")}</div></div>`;
   }
 
   function craftStationSentence(recipe) {
@@ -4102,21 +4176,52 @@
     app.innerHTML = `
       <div class="page">
         <div class="novice-layout">
+          <button class="quest-picker-open" id="quest-picker-open" type="button" data-quest-picker-open aria-haspopup="dialog" aria-controls="quest-picker-modal">
+            <span aria-hidden="true">☰</span>
+            <span><b>Список квестов — 30 шагов</b><small>Глава ${String(q.id).padStart(2,"0")}: ${esc(q.title)} · ${pct}% пройдено · ${done.size}/30</small></span>
+            <em>${done.size}/30</em>
+          </button>
+          <div class="quest-class-bar panel">
+            <div class="quest-class-head">
+              <span>твой класс</span>
+              <b>Предметы и советы под твой стиль боя</b>
+            </div>
+            <div class="class-pick class-pick-large">
+              ${CODEX.classes.map((c) => {
+                const icons = { melee: "⚔", ranged: "➶", mage: "✦", summoner: "◈", rogue: "◎" };
+                return `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${CLASS_TITLES[c.id]}"><i aria-hidden="true">${icons[c.id] || "·"}</i><b>${c.name}</b><small>${CLASS_TITLES[c.id]}</small></button>`;
+              }).join("")}
+            </div>
+            <p class="class-hint">${CLASS_HINTS[cls]}</p>
+          </div>
           <aside class="quest-side">
             <div class="qpanel">
               <div class="qpanel-head"><span>Путь героя</span><b>${done.size} / ${quests.length}</b></div>
               <div class="hpbar"><i style="width:${pct}%"></i></div>
+              <div class="qpanel-progress-hint" style="margin:8px 0 10px;color:#8a9aa6;font-family:var(--mono);font-size:9px;">${pct}% завершено · ${done.size} из ${quests.length} квестов · ${done.size === quests.length ? "маршрут пройден" : "продолжай путь"}</div>
               <div class="class-pick">
                 ${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${CLASS_TITLES[c.id]}">${c.name}</button>`).join("")}
               </div>
               <p class="qpanel-hint">${CLASS_HINTS[cls]}</p>
             </div>
-            ${quests.map((item) => `
-              <div class="q-item ${item.id === q.id ? "active" : ""} ${done.has(item.id) ? "done" : ""}" data-qid="${item.id}">
-                <div class="q-num">${String(item.id).padStart(2, "0")}</div>
+            ${(() => {
+              const ERA_LABEL = { pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" };
+              const ERA_ORDER = ["pre", "hard", "post", "end"];
+              let lastEra = "";
+              return quests.map((item) => {
+                let header = "";
+                if (item.era !== lastEra) {
+                  const label = ERA_LABEL[item.era] || item.era;
+                  const idx = ERA_ORDER.indexOf(item.era) + 1;
+                  header = `<div class="q-era-head"><i>${idx || "·"}</i><b>${label}</b><span>${quests.filter(q=>q.era===item.era).length} квестов</span></div>`;
+                  lastEra = item.era;
+                }
+                return `${header}<div class="q-item ${item.id === q.id ? "active" : ""} ${done.has(item.id) ? "done" : ""}" data-qid="${item.id}" title="${escAttr(item.title)} — ${escAttr(item.subtitle)}">
+                <div class="q-num">${done.has(item.id) ? "✓" : String(item.id).padStart(2, "0")}</div>
                 <div><b>${item.title}</b><small>${item.subtitle}</small></div>
-              </div>
-            `).join("")}
+              </div>`;
+              }).join("");
+            })()}
           </aside>
           <article class="quest">
             <div class="quest-hero">
@@ -4194,6 +4299,94 @@
     });
     const railActive = rail?.querySelector(".q-item.active");
     if (railActive && typeof railActive.scrollIntoView === "function") railActive.scrollIntoView({ block: "nearest" });
+    const pageActive = app.querySelector(".quest-side .q-item.active");
+    if (pageActive && typeof pageActive.scrollIntoView === "function") pageActive.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // --- всплывающий список квестов ---
+    const questPicker = document.getElementById("quest-picker-modal");
+    const questPickerList = document.getElementById("quest-picker-list");
+    const questPickerInput = document.getElementById("quest-picker-input");
+    const questPickerProgress = document.getElementById("quest-picker-progress");
+    const questPickerBar = document.getElementById("quest-picker-bar");
+    let questPickerFilter = "all";
+    let questPickerPreviousFocus = null;
+    function renderQuestPickerList() {
+      if (!questPickerList) return;
+      const q = (questPickerInput?.value || "").trim().toLocaleLowerCase("ru");
+      const filtered = quests.filter((item) => {
+        if (questPickerFilter === "done" && !done.has(item.id)) return false;
+        if (questPickerFilter === "remaining" && done.has(item.id)) return false;
+        if (!q) return true;
+        const blob = `${item.id} ${item.title} ${item.subtitle} ${item.era} ${item.story || ""}`.toLocaleLowerCase("ru");
+        return matchesSearch(blob, q);
+      });
+      const ERA_LABEL = { pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" };
+      let lastEra = "";
+      const html = filtered.map((item) => {
+        let header = "";
+        if (item.era !== lastEra) {
+          const label = ERA_LABEL[item.era] || item.era;
+          header = `<div class="q-era-head"><i>${item.id}</i><b>${label}</b><span>${quests.filter(x=>x.era===item.era).length}</span></div>`;
+          lastEra = item.era;
+        }
+        const active = item.id === q.id ? " active" : "";
+        const doneCls = done.has(item.id) ? " done" : "";
+        return `${header}<button class="quest-picker-item${active}${doneCls}" type="button" data-qpick="${item.id}" role="option" aria-selected="${item.id===q.id}">
+          <span class="q-num">${done.has(item.id) ? "✓" : String(item.id).padStart(2,"0")}</span>
+          <span><b>${esc(item.title)}</b><small>${esc(item.subtitle)}</small></span>
+          <span class="qp-era ${item.era}">${ERA_LABEL[item.era]||item.era}</span>
+        </button>`;
+      }).join("") || `<div class="empty-state"><span>◇</span><b>Ничего не найдено</b><p>Попробуй другое слово</p></div>`;
+      questPickerList.innerHTML = html;
+      if (questPickerProgress) questPickerProgress.innerHTML = `<b>${done.size} / ${quests.length}</b> пройдено`;
+      if (questPickerBar) questPickerBar.style.width = `${pct}%`;
+      questPickerList.querySelectorAll("[data-qpick]").forEach((btn) => {
+        btn.onclick = () => { closeQuestPicker(); location.hash = `#/novice?q=${btn.dataset.qpick}`; };
+      });
+      const activeBtn = questPickerList.querySelector(".quest-picker-item.active");
+      if (activeBtn) activeBtn.scrollIntoView({ block: "nearest" });
+    }
+    function openQuestPicker() {
+      if (!questPicker) return;
+      questPickerPreviousFocus = document.activeElement;
+      renderQuestPickerList();
+      questPicker.hidden = false;
+      document.body.classList.add("quest-picker-open-body");
+      setElementInert(document.querySelector(".shell"), true);
+      setElementInert(document.querySelector(".mobile-tabs"), true);
+      questPickerInput?.focus();
+      SND.play("open");
+    }
+    function closeQuestPicker(opts={}) {
+      if (!questPicker || questPicker.hidden) return;
+      questPicker.hidden = true;
+      document.body.classList.remove("quest-picker-open-body");
+      setElementInert(document.querySelector(".shell"), false);
+      setElementInert(document.querySelector(".mobile-tabs"), false);
+      if (opts.restoreFocus !== false && questPickerPreviousFocus) questPickerPreviousFocus.focus?.({preventScroll:true});
+      SND.play("close");
+    }
+    document.getElementById("quest-picker-open")?.addEventListener("click", openQuestPicker);
+    questPicker?.querySelectorAll("[data-quest-picker-close]").forEach((el) => el.addEventListener("click", () => closeQuestPicker()));
+    questPicker?.querySelector(".quest-picker-backdrop")?.addEventListener("click", () => closeQuestPicker());
+    questPickerInput?.addEventListener("input", renderQuestPickerList);
+    questPicker?.querySelectorAll("[data-qp-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        questPickerFilter = btn.dataset.qpFilter || "all";
+        questPicker?.querySelectorAll("[data-qp-filter]").forEach((b) => b.classList.toggle("active", b===btn));
+        renderQuestPickerList();
+        SND.play("select");
+      });
+    });
+    questPicker?.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); closeQuestPicker(); }
+      if (e.key === "Tab") {
+        const panel = questPicker.querySelector(".quest-picker-panel");
+        if (panel) trapFocus(e, panel);
+      }
+    });
+    // also close on Escape from anywhere when picker is open
+    const qpEsc = (e) => { if (e.key==="Escape" && questPicker && !questPicker.hidden) { e.preventDefault(); closeQuestPicker(); } };
+    document.addEventListener("keydown", qpEsc, { once: true });
     const saved = store.get().openSh || {};
     app.querySelectorAll(".shelf").forEach((el) => {
       const key = q.id + ":" + (el.querySelector(".shelf-t")?.textContent || "");
@@ -5543,6 +5736,7 @@
             <em>${fmt(CODEX.items.length)}</em>
           </a>
         </nav>
+        <p class="catalog-mode-hint"><b>Как выбрать?</b> Нужен порядок развития — открой <b>маршрут</b> (242 карточки по главам). Ищешь конкретную вещь — оставайся в <b>каталоге</b> и используй поиск.</p>
         ${mode === "catalog" ? `
           <details class="catalog-about-shelf">
             <summary><span><i aria-hidden="true">i</i><b>Об источниках каталога</b><small>Покрытие спрайтов, описаний и рецептов</small></span><em>${fmt(indexCount)} предметов</em></summary>
@@ -5961,6 +6155,228 @@
     </article>`;
   }
 
+
+  function getAllMobs() {
+    const bossesSet = new Set([...(CODEX.bosses||[]), ...(CODEX.minis||[])].map(b => String(b.en||b.name||"").toLowerCase()));
+    const seen = new Set();
+    const list = [];
+    // Calamity + vanilla from NPC_DATA
+    Object.keys(NPC_DATA || {}).forEach((name) => {
+      const low = String(name).toLowerCase();
+      if (bossesSet.has(low) || npcIsBossByName(name)) return;
+      if (seen.has(low)) return;
+      seen.add(low);
+      const info = NPC_DATA[name] || {};
+      const isCalamity = !!(window.CALAMITY_NPC_ART && window.CALAMITY_NPC_ART[name]);
+      list.push({ en: name, ru: npcRuName(name), art: npcArtForName(name), isCalamity, info });
+    });
+    // Add any NPC that appears in drops but not in NPC_DATA (still a mob)
+    Object.values(NPC_SOURCES || {}).forEach((src) => {
+      (src.npcs||[]).forEach((d) => {
+        const name = d.npc;
+        const low = String(name).toLowerCase();
+        if (seen.has(low) || bossesSet.has(low) || npcIsBossByName(name)) return;
+        seen.add(low);
+        const isCalamity = !!(window.CALAMITY_NPC_ART && window.CALAMITY_NPC_ART[name]);
+        list.push({ en: name, ru: npcRuName(name), art: npcArtForName(name), isCalamity, info: NPC_DATA[name] || {} });
+      });
+    });
+    // Sort: calamity first, then alphabetically by RU
+    return list.sort((a,b) => {
+      if (a.isCalamity !== b.isCalamity) return a.isCalamity ? -1 : 1;
+      return String(a.ru||a.en).localeCompare(String(b.ru||b.en), "ru");
+    });
+  }
+  const WIKI_IMAGE_CACHE_KEY = "calamity-codex-wiki-images-v1";
+  function wikiImageCache() {
+    try { return JSON.parse(localStorage.getItem(WIKI_IMAGE_CACHE_KEY) || "{}"); } catch { return {}; }
+  }
+  function setWikiImageCache(name, url) {
+    try {
+      const c = wikiImageCache();
+      c[name.toLowerCase()] = url;
+      localStorage.setItem(WIKI_IMAGE_CACHE_KEY, JSON.stringify(c));
+    } catch {}
+  }
+  async function fetchWikiThumb(title, isCalamity) {
+    const key = String(title||"").toLowerCase() + (isCalamity ? ":cal" : ":van");
+    const cache = wikiImageCache();
+    if (cache[key]) return cache[key];
+    const safe = String(title||"").replace(/ /g, "_");
+    const api = isCalamity ? "https://calamitymod.wiki.gg/api.php" : "https://terraria.wiki.gg/api.php";
+    // Use File: page imageinfo - more reliable than pageimages
+    const url = `${api}?action=query&titles=${encodeURIComponent("File:" + safe + ".png")}&prop=imageinfo&iiprop=url&format=json&origin=*`;
+    try {
+      const r = await fetch(url);
+      const j = await r.json();
+      const pages = j?.query?.pages;
+      const page = pages ? Object.values(pages)[0] : null;
+      const src = page?.imageinfo?.[0]?.url || "";
+      if (src) { setWikiImageCache(title, src); return src; }
+      // fallback to thumbnail via pageimages
+      const alt = `${api}?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&format=json&pithumbsize=128&origin=*`;
+      const r2 = await fetch(alt);
+      const j2 = await r2.json();
+      const p2 = j2?.query?.pages ? Object.values(j2.query.pages)[0] : null;
+      const src2 = p2?.thumbnail?.source || "";
+      if (src2) { setWikiImageCache(title, src2); return src2; }
+      const fb = isCalamity ? `https://calamitymod.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(safe)}.png` : `https://terraria.wiki.gg/wiki/Special:FilePath/${encodeURIComponent(safe)}.png`;
+      return fb;
+    } catch {
+      return "";
+    }
+  }
+  function enrichMobImages(root) {
+    if (!root) return;
+    const cards = root.querySelectorAll(".mob-card[data-needs-wiki='1']");
+    cards.forEach(async (card) => {
+      const en = card.dataset.mobEn || "";
+      const isCal = card.dataset.isCal === "1";
+      const img = card.querySelector(".mob-shot img");
+      const fallback = card.querySelector(".mob-shot .npc-mono");
+      if (!en || !img) return;
+      const url = await fetchWikiThumb(en, isCal);
+      if (url && img) {
+        img.src = url;
+        img.style.display = "";
+        img.classList.add("remote");
+        if (fallback) fallback.style.display = "none";
+        // verify image loads, otherwise show fallback
+        img.onerror = () => { img.style.display="none"; if (fallback) fallback.style.display="grid"; };
+      }
+    });
+  }
+  function mobCard(m) {
+    const ru = m.ru || m.en;
+    const en = m.en;
+    const isCal = m.isCalamity;
+    const info = m.info || {};
+    const where = npcWhereForName(en) || ruText(info.biome || "");
+    const when = ruText(info.time || "");
+    const req = ruText(info.req || "");
+    const desc = ruText(info.desc || info.source || "");
+    const hasLocalArt = !!m.art;
+    // drops
+    const drops = [];
+    Object.entries(NPC_SOURCES||{}).forEach(([itemId, src]) => {
+      (src.npcs||[]).forEach((d) => {
+        if (String(d.npc).toLowerCase() === String(en).toLowerCase()) {
+          drops.push({ id:itemId, chance:d.chance||"", qty:d.qty||"", cond:d.cond||"", ru: itemRuById(itemId) });
+        }
+      });
+    });
+    const limited = drops.slice(0, 8);
+    const more = drops.length > 8 ? drops.length - 8 : 0;
+    const wikiUrl = isCal
+      ? `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(en)}`
+      : `https://terraria.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(en)}`;
+    const typeLabel = isCal ? "Каламити" : "Ваниль";
+    const typeCls = isCal ? "calamity" : "vanilla";
+    const needsWiki = !hasLocalArt;
+    const artHTML = hasLocalArt
+      ? `<span class="slot mob-shot"><img src="${escAttr(m.art)}" alt="" loading="lazy" decoding="async" /><b class="npc-mono" style="display:none">${esc(String(ru).charAt(0).toUpperCase())}</b></span>`
+      : `<span class="slot mob-shot"><img src="" alt="" loading="lazy" decoding="async" style="display:none" /><b class="npc-mono" aria-hidden="true">${esc(String(ru).charAt(0).toUpperCase())}</b></span>`;
+    return `<article class="card has-art mob-card" data-mob-type="${typeCls}" data-needs-wiki="${needsWiki ? "1" : "0"}" data-mob-en="${escAttr(en)}" data-is-cal="${isCal ? "1" : "0"}">
+      <div class="card-shot slot mob-shot-wrap" data-kind="mob">
+        ${artHTML}
+        <span class="kind-pill">${esc(typeLabel)}</span>
+      </div>
+      <div class="card-body">
+        <span class="boss-type-pill ${typeCls}">${esc(typeLabel)}</span>
+        <div class="card-title">${esc(ru)}${en && ru!==en ? `<span class="en-sub">в игре: ${esc(en)}</span>` : ""}</div>
+        ${desc ? `<p class="desc">${esc(desc)}</p>` : `<p class="desc" style="color:#6b7682">Описание уточняется с ${isCal ? "Calamity" : "Terraria"} Wiki — открой карточку полностью на вики.</p>`}
+        <details class="card-facts-shelf mob-facts-shelf">
+          <summary><span><b>Где, когда и что падает</b><small>биом, условия и дроп</small></span><i aria-hidden="true">⌄</i></summary>
+          <div class="facts">
+            ${where ? `<div class="fact"><span>Где</span><p>${esc(where)}</p></div>` : `<div class="fact"><span>Где</span><p>${esc(where || "Уточняется на вики — обычный биом мира")}</p></div>`}
+            ${when ? `<div class="fact"><span>Когда</span><p>${esc(when)}</p></div>` : ""}
+            ${req ? `<div class="fact"><span>Условия</span><p>${esc(req)}</p></div>` : ""}
+            ${drops.length ? `<div class="fact" style="grid-column:1/-1"><span>Что падает — ${drops.length}</span><div class="craft-chips">${limited.map((d) => {
+              const isVanillaDrop = /^\d+$/.test(String(d.id));
+              const sprite = isVanillaDrop ? `assets/vanilla-sprites/${encodeURIComponent(d.id)}.png` : `assets/item-sprites/${encodeURIComponent(d.id)}.png`;
+              return `<a class="craft-chip" href="#/items?s=${encodeURIComponent(d.ru)}" title="${esc(d.ru)} — ${esc(d.chance)}"><img class="ings-icon" src="${sprite}" alt="" loading="lazy" onerror="this.style.display='none'"/><em>${esc(d.chance||"?")}${d.qty?` · ${esc(d.qty)}`:""}${d.cond?` · ${esc(d.cond)}`:""}</em><b>${esc(d.ru)}</b></a>`;
+            }).join("")}${more?`<span style="padding:4px 8px;color:#8a9aa6;font-family:var(--mono);font-size:9px;">+ ещё ${more}</span>`:""}</div></div>` : `<div class="fact"><span>Дроп</span><p>Маунты, материалы или декора — уточни на вики, если список пуст офлайн.</p></div>`}
+          </div>
+        </details>
+        <div class="card-links">
+          <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">${isCal ? "Calamity Wiki ↗" : "Terraria Wiki ↗"}</a>
+          <a href="#/items?s=${encodeURIComponent(en)}" title="Найти дроп в каталоге">Найти дроп →</a>
+        </div>
+      </div>
+    </article>`;
+  }
+  function renderMobs(params = {}) {
+    fillRail("");
+    const type = ["all","calamity","vanilla"].includes(params.type) ? params.type : "all";
+    const biome = (params.biome || "all").trim();
+    const q = (params.q || "").trim().toLocaleLowerCase("ru");
+    const limit = Math.max(60, Number(params.limit) || 60);
+    const all = getAllMobs();
+    const biomes = [...new Set(all.map(m => (m.info.biome||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru")).slice(0,12);
+    let list = all.filter((m) => {
+      if (type==="calamity" && !m.isCalamity) return false;
+      if (type==="vanilla" && m.isCalamity) return false;
+      if (biome!=="all" && String(m.info.biome||"").toLowerCase()!==biome.toLowerCase()) return false;
+      if (!q) return true;
+      const blob = `${m.en} ${m.ru} ${m.info.biome||""} ${m.info.desc||""} ${m.info.source||""}`.toLocaleLowerCase("ru");
+      return matchesSearch(blob, q);
+    });
+    const totalCal = all.filter(m=>m.isCalamity).length;
+    const totalVan = all.length - totalCal;
+    const visible = list.slice(0, limit);
+    app.innerHTML = `
+      <div class="page mobs-page">
+        ${mast("Все существа", "Полный бестиарий мобов Terraria и Calamity: обычные враги, криттеры и редкие — оформлены так же как боссы, с описанием, шансами и дропом. Спрайты и данные подтягиваются с официальных вики.")}
+        <div class="mob-stats" style="display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:8px;margin-bottom:12px;">
+          <span class="panel" style="padding:10px 12px;"><b style="color:#e8c46f;font-family:var(--mono);font-size:18px;">${all.length}</b><small style="display:block;color:#8a9aa6;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;">всего существ</small></span>
+          <span class="panel" style="padding:10px 12px;"><b style="color:#8fd08f;font-family:var(--mono);font-size:18px;">${totalCal}</b><small style="display:block;color:#8a9aa6;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;">Каламити</small></span>
+          <span class="panel" style="padding:10px 12px;"><b style="color:#8ebbe0;font-family:var(--mono);font-size:18px;">${totalVan}</b><small style="display:block;color:#8a9aa6;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;">ванили</small></span>
+        </div>
+        <details class="catalog-filter-shelf mob-filter-shelf" ${(type!=="all"||biome!=="all"||q)?"open":""}>
+          <summary><span><i aria-hidden="true">⌄</i><b>Фильтры бестиария мобов</b><small>тип, биом и поиск</small></span><em>${(type!=="all"||biome!=="all"||q)?"активны":"все"}</em></summary>
+          <section class="catalog-filter-stack panel" style="padding:10px 12px;display:grid;gap:10px;">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <button class="chip ${type==="all"?"active":""}" data-mob-type="all">Все <em>${all.length}</em></button>
+              <button class="chip ${type==="calamity"?"active":""}" data-mob-type="calamity">Каламити <em>${totalCal}</em></button>
+              <button class="chip ${type==="vanilla"?"active":""}" data-mob-type="vanilla">Ваниль <em>${totalVan}</em></button>
+            </div>
+            ${biomes.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;"><span style="color:#8a9aa6;font-family:var(--mono);font-size:9px;align-self:center;">Биом:</span><button class="chip ${biome==="all"?"active":""}" data-mob-biome="all">Все</button>${biomes.map(b=>`<button class="chip ${biome===b?"active":""}" data-mob-biome="${escAttr(b)}">${esc(b)}</button>`).join("")}</div>`:""}
+          </section>
+        </details>
+        <label class="search-wrap" style="margin-bottom:10px;">
+          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="1.7"/></svg>
+          <input id="mob-search" type="search" placeholder="Имя моба, биом, дроп…" value="${escAttr(params.q||"")}" />
+          ${q?`<button type="button" id="mob-clear" class="filter-clear">Сбросить</button>`:""}
+        </label>
+        <p class="found">Показано: <b>${visible.length}</b> из ${list.length} · всего ${all.length}</p>
+        ${visible.length?`<div class="item-grid" id="mob-grid">${visible.map(mobCard).join("")}</div>${visible.length<list.length?`<div class="catalog-more"><button class="btn ghost" type="button" id="mob-more">Показать ещё 60<small>${visible.length} из ${list.length}</small></button></div>`:""}`:`<div class="empty-state"><span>👾</span><b>Ничего не найдено</b><p>Попробуй другое имя или сбрось фильтр.</p><a class="btn ghost" href="#/mobs">Сбросить</a></div>`}
+      </div>
+    `;
+    const build = (over={}, replace=false) => {
+      const next = { type, biome, q: params.q||"", ...over };
+      const qs = new URLSearchParams();
+      if (next.type && next.type!=="all") qs.set("type", next.type);
+      if (next.biome && next.biome!=="all") qs.set("biome", next.biome);
+      if (next.q) qs.set("q", next.q);
+      if (over.limit || params.limit) {
+        const lim = over.limit || params.limit;
+        if (Number(lim) > 60) qs.set("limit", String(lim));
+      }
+      const hash = "#/mobs" + (qs.toString()?`?${qs}`:"");
+      if (replace) { history.replaceState(null,"",hash); route(); } else location.hash = hash;
+    };
+    app.querySelectorAll("[data-mob-type]").forEach(b=> b.onclick=()=> build({type:b.dataset.mobType, limit:60}));
+    app.querySelectorAll("[data-mob-biome]").forEach(b=> b.onclick=()=> build({biome:b.dataset.mobBiome, limit:60}));
+    const inp = document.getElementById("mob-search");
+    let t;
+    if (inp) inp.oninput = () => { clearTimeout(t); t=setTimeout(()=> build({q:inp.value, limit:60}, true), 180); };
+    document.getElementById("mob-clear")?.addEventListener("click", ()=> build({q:""}, true));
+    document.getElementById("mob-more")?.addEventListener("click", ()=> build({limit: visible.length+60}, true));
+    bindSprites(app);
+    enrichMobImages(app);
+  }
+
+
   const USEFUL_TIER_LABELS = {
     start: "Старт", pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал"
   };
@@ -6184,6 +6600,11 @@
     app.innerHTML = `
       <div class="page craft-graph-page">
         ${mast("Полное дерево крафта", "Главный инструмент кодекса: выбери любой результат и раскрой все зависимости до базовых ресурсов, точных партий и рабочих станций.")}
+        <section class="craft-steps" aria-label="Как пользоваться деревом">
+          <div class="craft-step"><i>1</i><span><b>Выбери результат</b><small>Любой предмет Calamity или ванили — поиском или плиткой</small></span></div>
+          <div class="craft-step"><i>2</i><span><b>Раскрой ветки</b><small>Клик по ▸ или карточке — глубже до базы</small></span></div>
+          <div class="craft-step"><i>3</i><span><b>Собери смету</b><small>Чеклист, количество и станции — внутри рецепта</small></span></div>
+        </section>
         <details class="catalog-about-shelf craft-about-shelf">
           <summary><span><i aria-hidden="true">i</i><b>О базе дерева</b><small>Покрытие рецептов и защита от циклов</small></span><em>${recipeCount.toLocaleString("ru-RU")} рецептов</em></summary>
           <div class="catalog-about-content"><div class="craft-graph-stats" aria-label="Статистика дерева рецептов">
