@@ -95,7 +95,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core61";
+  const ASSET_VERSION = "20260819-core62";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -440,6 +440,10 @@
     const restore = restoreFocus && tipCardPinned ? tipCardAnchor : null;
     clearTimeout(tipCardHideTimer);
     tipCard.hidden = true;
+    tipCard.classList.remove("boss-detail-card");
+    delete tipCard.dataset.encounterKind;
+    delete tipCard.dataset.encounterEra;
+    tipCard.setAttribute("aria-modal", "false");
     tipCardAnchor = null;
     tipCardPinned = false;
     if (restore) requestAnimationFrame(() => restore.focus?.({ preventScroll: true }));
@@ -478,6 +482,10 @@
   function renderTipCard(name) {
     if (!tipCard) return;
     tipCard.classList.remove("boss-detail-card");
+    delete tipCard.dataset.encounterKind;
+    delete tipCard.dataset.encounterEra;
+    tipCard.setAttribute("aria-modal", "false");
+    tipCard.setAttribute("aria-label", "Сведения об объекте");
     const info = ingredientInfo(name);
     const lex = exactLexLookup(name);
     const lexKey = lex ? (lex.en || lex.ru) : "";
@@ -553,9 +561,11 @@
     const encounterId = encounter ? String(encounter.id || encounter.n) : "";
     const defeated = encounterId ? getDefeatedBosses().has(encounterId) : false;
     const danger = encounter ? (encounter.kind === "mini" ? ({ pre: 30, hard: 55, post: 76, end: 90 }[encounter.era] || 45) : ({ pre: 22, hard: 46, post: 72, end: 100 }[encounter.era] || 30)) : 0;
-    const localArt = npcArtForName(npcName)
-      || routeBossArt(boss)
+    // Boss/mini-boss cards must prefer the explicit audited encounter art.
+    // Generic NPC lookup may point to another animation frame or ordinary clam.
+    const localArt = routeBossArt(boss)
       || (mini && (mini.art || BOSS_ART_BY_ID[mini.id]))
+      || npcArtForName(npcName)
       || (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id]))
       || "";
     const artHTML = localArt
@@ -593,6 +603,10 @@
       ? `<div class="fact npc-drops-fact"><span>Что дропает</span><div class="craft-chips">${drops.map((d) => `<span class="craft-chip npc-drop-chip" data-ing="${escAttr(d.name)}" role="button" tabindex="0" aria-label="Открыть предмет: ${escAttr(itemRuById(d.id))}" title="Открыть предмет"><img class="ings-icon" src="assets/item-sprites/${encodeURIComponent(d.id)}.png" alt="" loading="lazy" decoding="async" /><em>${esc(d.chance || "")}${d.qty ? ` · ${esc(d.qty)}` : ""}</em><b>${esc(itemRuById(d.id))}</b></span>`).join("")}</div></div>`
       : "";
     tipCard.classList.toggle("boss-detail-card", Boolean(encounter));
+    tipCard.dataset.encounterKind = encounter?.kind || "";
+    tipCard.dataset.encounterEra = encounter?.era || "";
+    tipCard.setAttribute("aria-modal", String(Boolean(encounter)));
+    tipCard.setAttribute("aria-label", encounter ? `Полные сведения о боссе: ${ru}` : `Сведения о противнике: ${ru}`);
     tipCard.innerHTML = `
       <div class="tip-card-head">
         <span class="slot tip-card-slot npc-slot"${localArt ? "" : ` title="Спрайт — на официальной wiki"`}>${artHTML}</span>

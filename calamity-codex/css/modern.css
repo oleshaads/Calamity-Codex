@@ -5736,3 +5736,49 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
 .tip-card-body > .vanilla-semantic-stats { margin: 0 0 10px; }
 .vanilla-semantic-stats span { padding: 4px 8px; border: 1px solid #36505a; border-radius: 10px; color: #a9d5db; background: #122128; font-family: var(--mono); font-size: 9px; font-weight: 800; }
 @media (max-width: 760px) { .vanilla-semantic-stats { margin-inline: 12px; } }
+
+/* Центрированное и исправленное представление карточки босса */
+.tip-card.boss-detail-card {
+  --boss-detail-accent: #d06d78;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(780px, calc(100vw - 24px)) !important;
+  max-height: min(760px, calc(100vh - 24px)) !important;
+  border-color: color-mix(in srgb, var(--boss-detail-accent), #283640 45%);
+  box-shadow: 0 0 0 100vmax rgba(3,6,9,.74), 0 28px 90px rgba(0,0,0,.72), inset 4px 0 0 var(--boss-detail-accent);
+  transform: translate(-50%, -50%) !important;
+  animation: boss-detail-in .18s ease both;
+}
+.tip-card.boss-detail-card[data-encounter-kind="mini"] { --boss-detail-accent: #69c9d3; }
+.tip-card.boss-detail-card[data-encounter-kind="hidden"] { --boss-detail-accent: #c38be1; }
+@keyframes boss-detail-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) scale(.985); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.boss-detail-card .tip-card-head {
+  grid-template-columns: 82px minmax(0, 1fr) 34px;
+  gap: 14px;
+  align-items: start;
+  padding: 15px 16px;
+  border-bottom-color: color-mix(in srgb, var(--boss-detail-accent), #283640 54%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--boss-detail-accent), #171f28 88%), #17212a 62%);
+}
+.boss-detail-card .tip-card-slot { width: 82px; height: 82px; flex-basis: auto; border-color: color-mix(in srgb, var(--boss-detail-accent), #34424d 48%); background: color-mix(in srgb, var(--boss-detail-accent), #151d25 92%); }
+.boss-detail-card .tip-card-title { padding-top: 1px; }
+.boss-detail-card .tip-card-title small { margin-bottom: 5px; color: var(--boss-detail-accent); font-size: 9px; line-height: 1.35; letter-spacing: .13em; }
+.boss-detail-card .tip-card-title b { overflow: visible; color: #f1edef; font-size: clamp(17px, 2.4vw, 23px); line-height: 1.22; letter-spacing: 0; text-overflow: clip; white-space: normal; }
+.boss-detail-card .tip-card-title i { overflow: visible; margin-top: 4px; color: #929ea5; font-size: 10px; text-overflow: clip; white-space: normal; }
+.boss-detail-card .tip-card-close { width: 34px; height: 34px; border: 1px solid #46545f; border-radius: 8px; color: #d8e0e3; background: #17212a; box-shadow: none; }
+.boss-detail-card .boss-detail-state { max-width: 100%; border-color: color-mix(in srgb, var(--boss-detail-accent), #3b4650 58%); color: color-mix(in srgb, var(--boss-detail-accent), #fff 28%); background: color-mix(in srgb, var(--boss-detail-accent), #111820 91%); white-space: normal; }
+.boss-detail-card .boss-detail-overview > span { border-color: color-mix(in srgb, var(--boss-detail-accent), #34424d 78%); }
+.boss-detail-card .boss-detail-overview b { color: color-mix(in srgb, var(--boss-detail-accent), #fff 38%); }
+.boss-detail-card .boss-detail-danger i { background: linear-gradient(90deg, color-mix(in srgb, var(--boss-detail-accent), #111 34%), var(--boss-detail-accent)); }
+.boss-detail-card .npc-lore { border-left-color: var(--boss-detail-accent); }
+.boss-detail-card .tip-card-body { padding: 15px 16px 17px; }
+@media (max-width: 560px) {
+  .tip-card.boss-detail-card { width: calc(100vw - 12px) !important; max-height: calc(100vh - 12px) !important; }
+  .boss-detail-card .tip-card-head { grid-template-columns: 64px minmax(0, 1fr) 32px; gap: 10px; padding: 11px; }
+  .boss-detail-card .tip-card-slot { width: 64px; height: 64px; }
+  .boss-detail-card .tip-card-title b { font-size: 16px; }
+  .boss-detail-card .tip-card-body { padding: 11px; }
+}

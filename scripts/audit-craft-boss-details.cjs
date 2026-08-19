@@ -11,8 +11,8 @@ const cssSource = fs.readFileSync(path.join(root, "css/modern.css"), "utf8");
 for (const token of ["data-boss-detail=", "boss-detail-overview", "boss-detail-danger", "Полная карточка босса", "showNpcCard(bossLink.dataset.bossDetail"]) {
   check(appSource.includes(token) || cssSource.includes(token), `Complete craft boss details are missing: ${token}`);
 }
-for (const token of [".tip-card.boss-detail-card", ".boss-detail-state", ".boss-detail-overview", ".boss-detail-actions"]) {
-  check(cssSource.includes(token), `Complete boss-card styling is missing: ${token}`);
+for (const token of [".tip-card.boss-detail-card", ".boss-detail-state", ".boss-detail-overview", ".boss-detail-actions", "grid-template-columns: 82px minmax(0, 1fr) 34px", "translate(-50%, -50%)", "data-encounter-kind=\"mini\""]) {
+  check(cssSource.includes(token) || appSource.includes(token), `Complete boss-card styling is missing: ${token}`);
 }
 
 const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
@@ -67,6 +67,22 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   tip.querySelector("[data-tip-close]").click();
   await settle(35);
   check(tip.hidden && document.activeElement === hiveMind, "Closing complete boss information did not restore focus to the clicked craft boss");
+
+  // Exact visual regression from the user's Giant Clam screenshot.
+  window.location.hash = "#/crafts?item=catalog%3AClamCrusher";
+  await settle(120);
+  const clamLink = [...document.querySelectorAll("#craft-tree-inspector [data-boss-detail]")].find((link) => link.dataset.bossDetail === "Giant Clam");
+  check(clamLink, "Clam Crusher tree has no Giant Clam detail control");
+  clamLink.click();
+  await settle(70);
+  check(!tip.hidden && tip.dataset.encounterKind === "mini" && tip.dataset.encounterEra === "pre", "Giant Clam does not use the dedicated mini-boss visual identity");
+  check(tip.querySelector(".tip-card-title b")?.textContent === "Гигантский моллюск" && /мини-босс/i.test(tip.querySelector(".tip-card-title small")?.textContent || ""), "Giant Clam header is incomplete or mislabeled");
+  check(/^assets\/boss-sprites\/giant-clam\.png/.test(tip.querySelector(".npc-slot img")?.getAttribute("src") || ""), "Giant Clam card lacks genuine local art");
+  const clamLabels = [...tip.querySelectorAll(".tip-card-facts > .fact > span")].map((node) => node.textContent);
+  for (const label of ["Где бой", "Когда идти", "Как встретить", "Что даст победа"]) check(clamLabels.includes(label), `Giant Clam card is missing: ${label}`);
+  tip.querySelector("[data-tip-close]").click();
+  await settle(35);
+  check(tip.hidden && document.activeElement === clamLink, "Closing Giant Clam did not restore focus to its craft relation");
   check(errors.length === 0, `Complete craft boss details emitted runtime errors: ${errors.join("\n")}`);
   console.log("PASS: clicking a boss in crafting opens all local art, progression, summon, reward, drop and journal details without leaving the tree");
   dom.window.close();

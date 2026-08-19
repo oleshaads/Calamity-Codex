@@ -56,7 +56,7 @@ for (const [name, size] of Object.entries({ "mauler.png": [204, 106], "nuclear-t
 const builder = fs.readFileSync(path.join(root, "scripts/build-item-catalog.mjs"), "utf8");
 check(builder.includes("normalize-sprite-frames.mjs") && builder.includes("--skip-npcs"), "Catalog rebuild would restore full animation sheets");
 
-const releaseVersion = "20260819-core61";
+const releaseVersion = "20260819-core62";
 const appSource = fs.readFileSync(path.join(root, "calamity-codex/js/app.js"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "calamity-codex/sw.js"), "utf8");
 check(appSource.includes(`ASSET_VERSION = "${releaseVersion}"`) && appSource.includes("function releaseAsset") && appSource.includes("function versionLocalImages"), "Local sprite URLs are not tied to the current release");
