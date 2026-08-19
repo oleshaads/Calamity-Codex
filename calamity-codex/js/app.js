@@ -95,7 +95,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core63";
+  const ASSET_VERSION = "20260819-core64";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -1563,7 +1563,10 @@
 
     try {
       if (view === "home") { applyTheme(null); renderHome(); }
-      else if (view === "novice") renderNovice(Number(params.q) || store.get().quest || 1);
+      else if (view === "novice") {
+        if (params.q !== undefined) renderNovice(Number(params.q) || 1);
+        else renderNoviceMap();
+      }
       else if (view === "wiki") { applySectionTheme(view); renderWiki(params); }
       else if (view === "bosses") { applySectionTheme(view); renderBosses(params); }
       else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || "", params.item || "", params.plan === "1"); }
@@ -1651,7 +1654,7 @@
         title: "Прохождение",
         desc: "Маршрут, противники и мир — иди по порядку глав.",
         links: [
-          [`#/novice?q=${currentQuest?.id || 1}`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
+          [`#/novice`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
           ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
           ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`]
         ]
@@ -4099,6 +4102,89 @@
     </article>`;
   }
 
+  const NOVICE_CLASS_TITLES = {
+    melee: "Бьёт мечом вблизи",
+    ranged: "Лук и пушки издалека",
+    mage: "Заклинания, нужна мана",
+    summoner: "Помощники бьют за тебя",
+    rogue: "Кинжалы и скрытность"
+  };
+  const NOVICE_CLASS_HINTS = {
+    melee: "Воин: стой ближе, бей мечом или цепом.",
+    ranged: "Стрелок: бегай, стреляй. Нужны стрелы или пули.",
+    mage: "Маг: синяя шкала маны. Не стой вплотную.",
+    summoner: "Призыватель: ты уворачиваешься, бьют помощники.",
+    rogue: "Плут: постой без ударов — удар из скрытности сильнее."
+  };
+  const NOVICE_ERAS = [
+    ["pre", "Прехардмод", "От первого дома и вульфрума до Стены плоти"],
+    ["hard", "Хардмод", "Новые руды, механические боссы, Плантера и Лунный лорд"],
+    ["post", "После Лунного лорда", "Профанные стражи, Провиденс, Пожиратель богов и Ярон"],
+    ["end", "Финал", "Экзо-мехи, Верховная ведьма и жизнь после титров"]
+  ];
+
+  /* Карта пути новичка: все квесты отдельной страницей, сгруппированные по
+     эпохам. Раньше список ютился в боковой панели и обрезался прокруткой. */
+  function renderNoviceMap() {
+    const quests = CODEX.quests;
+    const { done, cls } = questProgress();
+    const total = quests.length;
+    const pct = Math.round((done.size / total) * 100);
+    applyTheme(null);
+    document.body.style.setProperty("--theme-image", "none");
+    fillRail("");
+    const current = quests.find((x) => !done.has(x.id)) || quests[total - 1];
+    const allDone = done.size === total;
+    const questCard = (item) => {
+      const isDone = done.has(item.id);
+      const isCurrent = !allDone && item.id === current.id;
+      const art = GUIDE_ART[item.id] || "assets/sprites/Wooden_Sword.png";
+      return `<a class="qmap-card ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}" href="#/novice?q=${item.id}" style="--qa:${escAttr(item.accent || "#ffd97a")}" aria-label="Квест ${item.id}: ${escAttr(item.title)}${isDone ? " — пройден" : isCurrent ? " — текущий" : ""}">
+        <span class="qmap-num" aria-hidden="true">${isDone ? "✓" : String(item.id).padStart(2, "0")}</span>
+        <span class="qmap-art slot"><img src="${escAttr(releaseAsset(art))}" alt="" loading="lazy" decoding="async" /></span>
+        <span class="qmap-copy"><b>${esc(item.title)}</b><small>${esc(item.subtitle)}</small></span>
+        ${isCurrent ? `<span class="qmap-flag">ты здесь</span>` : ""}
+      </a>`;
+    };
+    app.innerHTML = `
+      <div class="page novice-map">
+        <header class="qmap-head">
+          <div class="qmap-intro">
+            <small>путь новичка</small>
+            <h2>${total} квестов от первого дома до финала</h2>
+            <p>Иди по порядку: каждый квест подсказывает, куда идти, что собрать, что скрафтить и кого бить. Отмечай завершённые — прогресс сохраняется, и кодекс всегда помнит, где ты остановился.</p>
+          </div>
+          <div class="qmap-status panel">
+            <div class="qmap-progress"><span><b>Путь героя</b><i>${done.size} / ${total} · ${pct}%</i></span><div class="hpbar"><i style="width:${pct}%"></i></div></div>
+            <a class="qmap-continue" href="#/novice?q=${current.id}">
+              <span class="slot"><img src="${escAttr(releaseAsset(GUIDE_ART[current.id] || "assets/sprites/Wooden_Sword.png"))}" alt="" loading="lazy" decoding="async" /></span>
+              <span class="qmap-continue-copy"><small>${allDone ? "маршрут пройден · можно перечитать финал" : done.size ? "продолжить с текущего места" : "начать с первого квеста"}</small><b>Квест ${String(current.id).padStart(2, "0")} · ${esc(current.title)}</b></span>
+              <em aria-hidden="true">▶</em>
+            </a>
+            <div class="class-pick" role="group" aria-label="Выбор класса героя">
+              ${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${NOVICE_CLASS_TITLES[c.id]}">${c.name}</button>`).join("")}
+            </div>
+            <p class="qpanel-hint">${NOVICE_CLASS_HINTS[cls]}</p>
+          </div>
+        </header>
+        ${NOVICE_ERAS.map(([era, title, desc], index) => {
+          const list = quests.filter((x) => x.era === era);
+          if (!list.length) return "";
+          const eraDone = list.filter((x) => done.has(x.id)).length;
+          return `<section class="qmap-era" data-era="${escAttr(era)}" aria-label="${escAttr(title)}">
+            <header class="qmap-era-head">
+              <span class="qmap-era-no" aria-hidden="true">0${index + 1}</span>
+              <div><h3>${title}</h3><small>${desc}</small></div>
+              <em>${eraDone} / ${list.length}</em>
+            </header>
+            <div class="qmap-grid">${list.map(questCard).join("")}</div>
+          </section>`;
+        }).join("")}
+      </div>`;
+    app.querySelectorAll("[data-cls]").forEach((el) => el.onclick = () => { store.set({ cls: el.dataset.cls }); renderNoviceMap(); });
+    bindSprites(app);
+  }
+
   function renderNovice(id) {
     const quests = CODEX.quests;
     const q = quests.find((x) => x.id === id) || quests[0];
@@ -4111,47 +4197,36 @@
       all: gear.length,
       mine: gear.filter((i) => i.cls === "all" || i.cls === cls).length
     };
-    const CLASS_TITLES = {
-      melee: "Бьёт мечом вблизи",
-      ranged: "Лук и пушки издалека",
-      mage: "Заклинания, нужна мана",
-      summoner: "Помощники бьют за тебя",
-      rogue: "Кинжалы и скрытность"
-    };
-    const CLASS_HINTS = {
-      melee: "Воин: стой ближе, бей мечом или цепом.",
-      ranged: "Стрелок: бегай, стреляй. Нужны стрелы или пули.",
-      mage: "Маг: синяя шкала маны. Не стой вплотную.",
-      summoner: "Призыватель: ты уворачиваешься, бьют помощники.",
-      rogue: "Плут: постой без ударов — удар из скрытности сильнее."
-    };
+    const CLASS_TITLES = NOVICE_CLASS_TITLES;
+    const CLASS_HINTS = NOVICE_CLASS_HINTS;
+    const classPickHTML = `
+      <div class="class-pick class-pick-inline" role="group" aria-label="Выбор класса героя">
+        ${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${CLASS_TITLES[c.id]}">${c.name}</button>`).join("")}
+      </div>
+      <p class="qpanel-hint">${CLASS_HINTS[cls]}</p>`;
     const gearHTML = gear.length
-      ? `<div class="filter-row">
+      ? `${classPickHTML}
+        <div class="filter-row">
           <button class="mini ${itemFilter === "mine" ? "on" : ""}" data-if="mine">Мой класс</button>
           <button class="mini ${itemFilter === "all" ? "on" : ""}" data-if="all">Все</button>
         </div>
         <div class="item-grid">${gear.map((it) => itemCard(it, cls, itemFilter)).join("")}</div>`
-      : `<div class="item-grid">${q.collect.map((x) => `<div class="card text-only"><div class="card-body"><div class="card-title">${T(RU(x.t))}</div><p class="desc">${T(x.d)}</p></div></div>`).join("")}</div>`;
+      : `${classPickHTML}<div class="item-grid">${q.collect.map((x) => `<div class="card text-only"><div class="card-body"><div class="card-title">${T(RU(x.t))}</div><p class="desc">${T(x.d)}</p></div></div>`).join("")}</div>`;
+    const prevQuest = quests.find((x) => x.id === q.id - 1) || null;
+    const nextQuest = quests.find((x) => x.id === q.id + 1) || null;
 
     app.innerHTML = `
       <div class="page">
+        <div class="quest-topbar">
+          <a class="btn ghost quest-topbar-all" href="#/novice">≡ Все квесты</a>
+          <div class="quest-topbar-meta"><small>Путь героя · ${done.size} / ${quests.length}</small><div class="hpbar mini"><i style="width:${pct}%"></i></div></div>
+          <nav class="quest-topbar-nav" aria-label="Соседние квесты">
+            ${prevQuest ? `<a class="btn ghost" href="#/novice?q=${prevQuest.id}" title="${escAttr(prevQuest.title)}">←</a>` : `<span class="btn ghost is-off" aria-hidden="true">←</span>`}
+            <b>Квест ${String(q.id).padStart(2, "0")} / ${quests.length}</b>
+            ${nextQuest ? `<a class="btn ghost" href="#/novice?q=${nextQuest.id}" title="${escAttr(nextQuest.title)}">→</a>` : `<span class="btn ghost is-off" aria-hidden="true">→</span>`}
+          </nav>
+        </div>
         <div class="novice-layout">
-          <aside class="quest-side">
-            <div class="qpanel">
-              <div class="qpanel-head"><span>Путь героя</span><b>${done.size} / ${quests.length}</b></div>
-              <div class="hpbar"><i style="width:${pct}%"></i></div>
-              <div class="class-pick">
-                ${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${CLASS_TITLES[c.id]}">${c.name}</button>`).join("")}
-              </div>
-              <p class="qpanel-hint">${CLASS_HINTS[cls]}</p>
-            </div>
-            ${quests.map((item) => `
-              <div class="q-item ${item.id === q.id ? "active" : ""} ${done.has(item.id) ? "done" : ""}" data-qid="${item.id}">
-                <div class="q-num">${String(item.id).padStart(2, "0")}</div>
-                <div><b>${item.title}</b><small>${item.subtitle}</small></div>
-              </div>
-            `).join("")}
-          </aside>
           <article class="quest">
             <div class="quest-hero">
               <div class="pic" style="background-image:url('${q.bg || "assets/hero.webp"}');filter:${q.filter || "none"}"></div>
@@ -4190,7 +4265,6 @@
       </div>
     `;
 
-    app.querySelectorAll("[data-qid]").forEach((el) => el.onclick = () => location.hash = `#/novice?q=${el.dataset.qid}`);
     app.querySelectorAll("[data-cls]").forEach((el) => el.onclick = () => { store.set({ cls: el.dataset.cls }); renderNovice(q.id); });
     app.querySelectorAll("[data-if]").forEach((el) => el.onclick = () => { store.set({ itemFilter: el.dataset.if }); renderNovice(q.id); });
     app.querySelectorAll("[data-task]").forEach((el) => el.onchange = () => {
@@ -4217,17 +4291,15 @@
     if (nextButton) nextButton.onclick = () => {
       if (q.id < quests.length) location.hash = `#/novice?q=${q.id + 1}`;
     };
-    const side = app.querySelector(".quest-side");
-    if (side) fillRail(side.innerHTML);
-    const rail = document.getElementById("rail-extra");
-    rail?.querySelectorAll("[data-qid]").forEach((el) => {
-      el.onclick = () => location.hash = `#/novice?q=${el.dataset.qid}`;
-    });
-    rail?.querySelectorAll("[data-cls]").forEach((el) => {
-      el.onclick = () => { store.set({ cls: el.dataset.cls }); renderNovice(q.id); };
-    });
-    const railActive = rail?.querySelector(".q-item.active");
-    if (railActive && typeof railActive.scrollIntoView === "function") railActive.scrollIntoView({ block: "nearest" });
+    fillRail(`
+      <div class="rail-quest">
+        <a class="rail-quest-all" href="#/novice"><i aria-hidden="true">≡</i> Все квесты маршрута</a>
+        <div class="rail-quest-now"><small>сейчас открыт</small><b>${String(q.id).padStart(2, "0")} · ${esc(q.title)}</b></div>
+        <div class="rail-quest-nav">
+          ${prevQuest ? `<a href="#/novice?q=${prevQuest.id}"><small>← назад</small><span>${esc(prevQuest.title)}</span></a>` : `<span class="is-off"><small>← назад</small><span>Это начало</span></span>`}
+          ${nextQuest ? `<a href="#/novice?q=${nextQuest.id}"><small>дальше →</small><span>${esc(nextQuest.title)}</span></a>` : `<span class="is-off"><small>дальше →</small><span>Это финал</span></span>`}
+        </div>
+      </div>`);
     const saved = store.get().openSh || {};
     app.querySelectorAll(".shelf").forEach((el) => {
       const key = q.id + ":" + (el.querySelector(".shelf-t")?.textContent || "");
