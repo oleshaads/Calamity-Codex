@@ -1,4 +1,4 @@
-const VERSION = "20260817-core24";
+const VERSION = "20260819-core60";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
@@ -7,6 +7,7 @@ const CORE_ASSETS = [
   `./manifest.webmanifest?v=${VERSION}`,
   `./css/modern.min.css?v=${VERSION}`,
   `./js/codex.min.js?v=${VERSION}`,
+  `./js/codex-data.min.js?v=${VERSION}`,
   "./assets/favicon.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
@@ -66,6 +67,13 @@ async function cacheFirst(request) {
   return response;
 }
 
+function currentReleaseAssetRequest(request, url) {
+  if (!url.pathname.includes("/assets/") || url.searchParams.get("v") === VERSION) return request;
+  const releasedUrl = new URL(url.href);
+  releasedUrl.searchParams.set("v", VERSION);
+  return new Request(releasedUrl.href, request);
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET" || request.headers.has("range")) return;
@@ -75,7 +83,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirstNavigation(request));
     return;
   }
-  event.respondWith(cacheFirst(request));
+  // Local art is keyed by this worker's release even when stale application
+  // code asks for an unversioned (or older-versioned) sprite URL. This prevents
+  // a cached vertical animation sheet from surviving a sprite-frame fix.
+  event.respondWith(cacheFirst(currentReleaseAssetRequest(request, url)));
 });
 
 self.addEventListener("message", (event) => {

@@ -39,25 +39,42 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const releaseVersion = "20260819-core60";
 const runtimeSources = [
-  "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "sprites.js", "catalog.js",
-  "vanilla-tree.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js", "app.js"
+  "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
+];
+const catalogSources = [
+  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
 ];
 const runtimePath = path.join(root, "js/codex.min.js");
+const catalogBundlePath = path.join(root, "js/codex-data.min.js");
 const minCssPath = path.join(root, "css/modern.min.css");
-check(fs.existsSync(runtimePath) && fs.existsSync(minCssPath), "Minified runtime bundle or stylesheet is missing; run npm run build:runtime");
+for (const output of [runtimePath, catalogBundlePath, minCssPath]) {
+  check(fs.existsSync(output), `Minified output is missing: ${path.relative(root, output)}; run npm run build:runtime`);
+  check(fs.existsSync(`${output}.br`), `Brotli sidecar is missing: ${path.relative(root, output)}.br; run npm run build:runtime`);
+}
 const runtimeBundle = fs.readFileSync(runtimePath, "utf8");
+const catalogBundle = fs.readFileSync(catalogBundlePath, "utf8");
 const minCss = fs.readFileSync(minCssPath, "utf8");
 const runtimeSource = runtimeSources.map((name) => fs.readFileSync(path.join(root, "js", name), "utf8")).join(";\n");
+const catalogSource = catalogSources.map((name) => fs.readFileSync(path.join(root, "js", name), "utf8")).join(";\n");
 const digest = (value) => crypto.createHash("sha256").update(value).digest("hex");
-check(runtimeBundle.includes(`source-sha256:${digest(runtimeSource)}`), "Runtime bundle is stale; run npm run build:runtime");
+check(runtimeBundle.includes(`source-sha256:${digest(runtimeSource)}`), "Core runtime bundle is stale; run npm run build:runtime");
+check(catalogBundle.includes(`source-sha256:${digest(catalogSource)}`), "Lazy catalog bundle is stale; run npm run build:runtime");
 check(minCss.includes(`source-sha256:${digest(fs.readFileSync(path.join(root, "css/modern.css"), "utf8"))}`), "Minified stylesheet is stale; run npm run build:runtime");
+for (const output of [runtimePath, catalogBundlePath, minCssPath]) {
+  const decoded = zlib.brotliDecompressSync(fs.readFileSync(`${output}.br`));
+  check(decoded.equals(fs.readFileSync(output)), `Brotli sidecar does not match ${path.relative(root, output)}`);
+}
 const scriptTags = [...indexHtml.matchAll(/<script\b[^>]*src="js\/[^"]+"[^>]*>/g)].map((match) => match[0]);
-check(scriptTags.length === 1 && /\bdefer\b/.test(scriptTags[0]) && scriptTags[0].includes("js/codex.min.js?v=20260817-core24"), "Index must load one versioned deferred runtime bundle");
-check(indexHtml.includes('rel="preload" href="js/codex.min.js?v=20260817-core24" as="script"'), "Runtime bundle is not preloaded from the document head");
-check(indexHtml.includes("css/modern.min.css?v=20260817-core24"), "Index does not load the current minified stylesheet");
-check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < zlib.gzipSync(runtimeSource, { level: 9 }).length, "Runtime bundle does not reduce compressed transfer size");
-check(indexHtml.includes("manifest.webmanifest?v=20260817-core24"), "PWA manifest is not linked with the current core version");
+check(scriptTags.length === 1 && /\bdefer\b/.test(scriptTags[0]) && scriptTags[0].includes(`js/codex.min.js?v=${releaseVersion}`), "Index must load one versioned deferred core bundle");
+check(indexHtml.includes(`rel="preload" href="js/codex.min.js?v=${releaseVersion}" as="script"`), "Core runtime bundle is not preloaded from the document head");
+check(indexHtml.includes(`css/modern.min.css?v=${releaseVersion}`), "Index does not load the current minified stylesheet");
+check(!indexHtml.includes("codex-data.min.js"), "Heavy catalog data must not block the initial document");
+check(app.includes("ensureCatalogData") && app.includes("codex-data.min.js") && app.includes(`ASSET_VERSION = "${releaseVersion}"`), "Route/search-triggered catalog loading is not wired to the current release");
+check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 225 * 1024, "Initial core bundle exceeds the 225 KiB gzip performance budget");
+check(runtimeBundle.length < catalogBundle.length, "Initial core bundle is not smaller than the deferred catalog payload");
+check(indexHtml.includes(`manifest.webmanifest?v=${releaseVersion}`), "PWA manifest is not linked with the current core version");
 const manifestPath = path.join(root, "manifest.webmanifest");
 const serviceWorkerPath = path.join(root, "sw.js");
 check(fs.existsSync(manifestPath) && fs.existsSync(serviceWorkerPath), "PWA manifest or service worker is missing");
@@ -66,11 +83,17 @@ check(manifest.display === "standalone" && manifest.start_url === "./#/", "PWA m
 check((manifest.icons || []).some((icon) => icon.sizes === "192x192") && (manifest.icons || []).some((icon) => icon.sizes === "512x512"), "PWA install icons are incomplete");
 for (const icon of manifest.icons || []) check(fs.existsSync(path.join(root, icon.src)), `PWA icon is missing: ${icon.src}`);
 const serviceWorker = fs.readFileSync(serviceWorkerPath, "utf8");
-check(serviceWorker.includes('VERSION = "20260817-core24"') && serviceWorker.includes("networkFirstNavigation") && serviceWorker.includes("trimRuntimeCache"), "Service worker version/cache strategies are incomplete");
-check(app.includes('serviceWorker.register("sw.js?v=20260817-core24"') && app.includes("syncConnectionStatus"), "App does not register the current service worker or expose connection state");
+check(serviceWorker.includes(`VERSION = "${releaseVersion}"`) && serviceWorker.includes("networkFirstNavigation") && serviceWorker.includes("trimRuntimeCache"), "Service worker version/cache strategies are incomplete");
+check(serviceWorker.includes("codex-data.min.js") && serviceWorker.includes("codex.min.js"), "Service worker does not preserve both core and deferred catalog bundles offline");
+check(app.includes("serviceWorker.register(`sw.js?v=${ASSET_VERSION}`") && app.includes("syncConnectionStatus"), "App does not register the current service worker or expose connection state");
 check(indexHtml.includes('id="install-app"') && app.includes("beforeinstallprompt") && app.includes("appinstalled"), "PWA install prompt UI is missing");
 check(indexHtml.includes("app-boot") && indexHtml.includes('aria-busy="true"'), "Initial loading state is missing");
 check(/class="mobile-tabs"[\s\S]*?data-nav="crafts"/.test(indexHtml), "Mobile navigation does not expose the craft tree");
+check(indexHtml.includes('aria-labelledby="tree-dialog-title tree-root-name"') && indexHtml.includes('aria-describedby="tree-legend"') && indexHtml.includes('id="tree-dialog-title"') && indexHtml.includes('id="tree-legend"'), "Craft-tree dialog title or description semantics are incomplete");
+check(indexHtml.includes('id="biome-modal"') && indexHtml.includes('aria-labelledby="biome-modal-title"') && indexHtml.includes('aria-describedby="biome-modal-desc"'), "Biome gallery dialog semantics are incomplete");
+check(indexHtml.includes('id="tip-card"') && indexHtml.includes('role="dialog" aria-modal="false"') && indexHtml.includes('aria-haspopup="dialog"'), "Non-modal detail/search dialog semantics are incomplete");
+check(app.includes("function trapFocus") && app.includes("function setElementInert") && app.includes("setMobileMenu") && app.includes("restoreFocus"), "Modal/mobile focus management is incomplete");
+check(app.includes("function prefetchCatalogData") && app.includes('link.rel = "prefetch"') && app.includes("catalogIntentSelector") && app.includes("connection?.saveData"), "Catalog intent prefetch is missing or ignores data-saver mode");
 check(!indexHtml.includes("catalog-tooltips.js"), "Tooltip search metadata must remain lazy and must not block initial page load");
 const tooltipPath = path.join(root, "js/catalog-tooltips.js");
 check(fs.existsSync(tooltipPath), "Lazy catalog tooltip search metadata is missing");
@@ -128,15 +151,18 @@ for (const phrase of [
   "предмет не крафтится: добывается или находится в мире"
 ]) check(!app.includes(phrase), `Generic craft-tree placeholder is still rendered: ${phrase}`);
 check(app.includes("let exactLexIndex = null") && app.includes("item.search.includes(q)"), "Craft/search lookup caches are missing");
-check(app.includes("function ensureVanillaIndexes()") && app.includes("let vanillaIndexesReady = false") && app.includes("const itemCount = (ITEM_INDEX.items || []).length"), "Large catalog/vanilla indexes are still expanded eagerly on the home route");
+check(app.includes("function ensureVanillaItems()") && app.includes("function ensureVanillaRecipes()") && app.includes("let vanillaItemsReady = false") && app.includes("let vanillaRecipesReady = false") && !app.includes("ensureVanillaIndexes"), "Vanilla names and recipe graph are not split into independent lazy indexes");
+check(app.includes("function scheduleGlobalSearchWarmup()") && app.includes("queueBackgroundTask") && app.includes('priority: "background"') && app.includes("requestIdleCallback"), "Global search indexes are not prepared in split background tasks");
+check(app.includes("catalogItemCount()") && app.includes("CATALOG_VIEWS"), "Large catalog indexes are still expanded eagerly on the home route");
 check(app.includes("showSearchStart") && app.includes("rememberSearchHit") && app.includes("searchRecent"), "Global search has no recent results or quick-start actions");
 check(app.includes("routeScrollPositions") && app.includes('history.scrollRestoration = "manual"') && app.includes("restoreScrollOnNextRoute"), "Back/forward navigation does not restore the previous reading position");
 check((app.match(/applySectionTheme\(view\)/g) || []).length >= 7, "Section-specific background themes are not applied consistently");
+check(/items:\s*\{[^\n]+bg:\s*"assets\/headers\/items\.webp"[^\n]+filter:\s*"saturate\(\.78\)/.test(app), "Items page must use the subdued armory background instead of the desert scene");
 check(app.includes('class="jump" data-dest=') && app.includes('class="era-no"'), "Home navigation and progression eras lack visual identities");
 check(!app.includes("�"), "Application source contains a broken replacement character");
 const polishSource = fs.readFileSync(path.join(root, "js/polish.js"), "utf8");
 check(polishSource.includes("pairMatcher") && !polishSource.includes("pairs.forEach(([en, ru]) => {\n      const escRe"), "Russian text normalization still recompiles hundreds of expressions per field");
-check(app.includes("loadCatalogTooltips") && app.includes('new URL("js/catalog-tooltips.js?'), "English tooltip metadata is not loaded lazily on search");
+check(app.includes("loadCatalogTooltips") && app.includes("js/catalog-tooltips.js?v=${ASSET_VERSION}"), "English tooltip metadata is not loaded lazily on search");
 check(app.includes("vanillaSearchRows") && app.includes("#/crafts?item="), "Global search does not link vanilla items directly to craft trees");
 check(app.includes("copyCraftTreeLink") && app.includes("data-copy-tree-link"), "Shareable craft-tree links are missing");
 check(app.includes("hero-export") && app.includes("hero-import") && app.includes("store.replace"), "Hero profile backup controls are missing");
@@ -145,9 +171,11 @@ check(app.includes("pruneRecipeCycles") && app.includes("findRecipeCycles") && a
 check(app.includes("Получение без крафта") && app.includes("noncraft-source") && app.includes("vanillaObtain"), "Non-craftable items do not have explicit acquisition cards");
 check(app.includes("catalogResource") && app.includes("forcedCatalog") && app.includes("catalog:${cat.id}"), "Not every catalog item has a unique recipe/acquisition tree entry");
 check(app.includes("purposeByKind") && app.includes("completeSentence") && app.includes("desc.length < 60") && app.includes("when.length < 70"), "Short item what/where/how/when descriptions are not expanded");
-check(app.includes("terraria.wiki.gg/ru/api.php") && !app.includes("terraria.wiki.gg/api.php") && app.includes("enrichWikiSource") && app.includes("WIKI_SOURCE_CACHE_KEY"), "Vanilla acquisition cards must use/cache Russian official wiki text only");
+check(app.includes("terraria.wiki.gg/ru/api.php") && app.includes("terraria.wiki.gg/api.php") && app.includes("calamitymod.wiki.gg/api.php") && app.includes("enrichWikiSource") && app.includes("официальная Calamity Mod Wiki") && app.includes("languageMark") && app.includes("WIKI_SOURCE_CACHE_KEY"), "Universal acquisition lookup must prefer Russian Terraria text, label English fallbacks honestly and cache both official wikis");
 check(app.includes("STATION_DISPLAY_RU") && app.includes("stationDisplayName") && app.includes("ruText(q.mood"), "Station, item or chapter descriptions can still bypass the Russian display layer");
-check(app.includes("BOSS_FACT_OVERRIDES") && app.includes("bossFactText") && app.includes("30 Фантомных духов"), "Boss cards still rely on terse unexplained progression text");
+const bossesSource = fs.readFileSync(path.join(root, "js/bosses.js"), "utf8");
+check(bossesSource.includes("Primordial Wyrm") && bossesSource.includes("XB-∞ Hekate") && bossesSource.includes("Supreme Ultramage, Permafrost") && bossesSource.includes("THE LORDE"), "Complete hidden-boss data is missing");
+check(app.includes("bossFactText") && app.includes('data-boss-kind') && app.includes("boss-type-pill"), "Boss cards do not share the complete card component or category metadata");
 check(app.includes("npc-source-copy") && app.includes("fact source-fact"), "NPC source rows are not using the full-width wrapped layout");
 check(app.includes("WORLD_SOURCE_ART") && app.includes("worldSourceChip") && app.includes("world-source-grid"), "Tile and chest sources are still text-only");
 check(app.includes("INGREDIENT_NAME_ALIASES") && app.includes("VANILLA_ART_ALIASES") && app.includes("VANILLA_EXTRA_ART") && app.includes("russianAmount"), "Craft ingredient art aliases or Russian quantity parsing are incomplete");
@@ -157,13 +185,25 @@ check(app.includes("tipCard.contains(e.relatedTarget)") && app.includes("let y =
 check(app.includes("else if (cat) recipe = recipes.get(normalizeArtName(cat.name))"), "Catalog recipes can still borrow a different item's recipe through a dictionary alias");
 check(indexHtml.includes("зажми ЛКМ"), "Craft-tree drag guidance is missing from the modal");
 check(app.includes("IntersectionObserver") && app.includes("bindLazyBackgrounds(app)"), "Biome backgrounds are not lazy-loaded");
+check(app.includes("function renderBiomes(params = {})") && app.includes("data-biome-danger") && app.includes("data-biome-view") && app.includes("openBiomeViewer") && !app.includes('id="biome-s"'), "Biome danger filters or full-screen gallery are incomplete, or redundant text search returned");
 check(app.includes("GUIDE_PAGE_SIZE = 48") && app.includes("visible.length + pageSize"), "Guide recommendation cards are not paginated");
-check(app.includes("now - lastFrameAt >= 33") && app.includes('document.addEventListener("visibilitychange", startAnimation)') && app.includes("navigator.connection?.saveData"), "Background particles are not capped, pausable and data-saver aware");
+check(app.includes('id="item-sort"') && app.includes('["stage", "name", "type"]') && app.includes('query.set("sort"') && app.includes('sortSelect.onchange'), "Full catalog progression/name/type sorting or URL state is incomplete");
+check(app.includes("const CATALOG_ERAS") && app.includes("catalogEraOf") && app.includes("catalogProgressionRank") && app.includes('data-p="era"') && app.includes('query.set("era"'), "Full catalog availability filters or progression order are incomplete");
+check(app.includes('class="stage-pill ${stageId}"') && app.includes("data-stage=\"${stageId}\"") && app.includes("const pick = filteredPool["), "Catalog stage labels or filter-aware random selection are missing");
+check(app.includes('desynchronized: true') && app.includes("const frameScale = elapsed / 33.333") && app.includes("averageWork > 2") && app.includes("dataset.refreshRate") && app.includes('document.addEventListener("visibilitychange", startAnimation)') && app.includes("navigator.connection?.saveData"), "Native-refresh adaptive particle rendering is incomplete");
+check((app.match(/addEventListener\("scroll"/g) || []).length === 1 && app.includes("paintViewportFrame") && app.includes("style.transform = `scaleX("), "Scroll work is not coalesced into one compositor-friendly animation frame");
+check(app.includes("let panFrame = 0") && app.includes("requestAnimationFrame(paintPan)") && app.includes("cancelAnimationFrame(panFrame)"), "Craft-tree dragging is not coalesced to the display refresh cycle");
+check(app.includes("app.animate([{ opacity: 0 }, { opacity: 1 }]") && !app.includes("void app.offsetWidth") && app.includes('document.querySelector(".stage-bar")'), "Route/boss transitions still force animation of the full page layer");
+check(app.includes("Одна запись в storage вместо записи для каждой из 96 карточек"), "Bulk card state still performs repeated synchronous storage writes");
 check(app.includes("Calamity Codex route failed") && app.includes("route-reload"), "Route-level error boundary is missing");
 const modernCss = fs.readFileSync(path.join(root, "css/modern.css"), "utf8");
 check(modernCss.includes("content-visibility: auto") && modernCss.includes("contain-intrinsic-size"), "Off-screen biome layout containment is missing");
-check(modernCss.includes(".drag-pan") && modernCss.includes("cursor: grab") && modernCss.includes("touch-action: none"), "Craft-tree drag-pan styling is missing");
-check(modernCss.includes(".app-boot") && modernCss.includes("repeat(5, minmax(0, 1fr))"), "Loading feedback or five-item mobile navigation styling is missing");
+check(modernCss.includes(".biome-controls") && modernCss.includes(".biome-danger-chips") && modernCss.includes('[data-biome-danger="dead"]') && modernCss.includes(".biome-modal-panel") && modernCss.includes(".biome-zoom"), "Biome danger controls or full-screen gallery have no responsive styling");
+check(modernCss.includes(".scroll-hp") && modernCss.includes("transform-origin: left center") && modernCss.includes("will-change: transform"), "Scroll progress is not isolated on a compositor transform");
+check(!modernCss.includes("backdrop-filter") && !modernCss.includes("@keyframes tgl-pulse") && !modernCss.includes("@keyframes root-sweep") && !modernCss.includes("@keyframes station-bob"), "Continuous paint-heavy blur/tree animations are still enabled");
+check(/@keyframes app-in\s*\{[\s\S]*?from\s*\{\s*opacity:\s*0;\s*\}[\s\S]*?to\s*\{\s*opacity:\s*1;\s*\}/.test(modernCss), "Route transition still transforms the entire page layer");
+check(modernCss.includes(".drag-pan") && modernCss.includes("cursor: grab") && modernCss.includes("touch-action: none") && modernCss.includes("will-change: scroll-position"), "Craft-tree drag-pan styling is missing");
+check(modernCss.includes(".app-boot") && modernCss.includes("repeat(6, minmax(0, 1fr))"), "Loading feedback or six-item mobile navigation styling is missing");
 check(modernCss.includes("body::after") && modernCss.includes(".stage-bar::after") && modernCss.includes("@keyframes sigil-turn"), "Section atmosphere, accent line or header sigil styling is missing");
 check(modernCss.includes(".hero::after") && modernCss.includes("--jump-accent") && modernCss.includes(".era-no"), "Home hero, section shortcuts or era timeline styling is missing");
 check(modernCss.includes(".rail::before") && modernCss.includes(".catalog-mode.active") && modernCss.includes('.card[data-era="end"]'), "Sidebar, catalog modes or boss-era visual identities are missing");
@@ -171,7 +211,8 @@ check(modernCss.includes(".class-note.melee") && app.includes('class-note ${escA
 check(modernCss.includes("@keyframes quest-pan") && modernCss.includes(".step:not(:last-child)::before") && modernCss.includes(".shelf[open]"), "Quest scenes, step timeline or expanded sections lack visual hierarchy");
 check(modernCss.includes(".search-hit::before") && modernCss.includes(".tree-backdrop") && modernCss.includes(".tip-card"), "Search and overlay surfaces lack visual focus treatment");
 check(modernCss.includes("--card-accent") && modernCss.includes('.card:has(.card-shot[data-kind="weapon"])') && modernCss.includes(".fact > span::before"), "Item cards do not expose visual type hierarchy");
-check(modernCss.includes("scroll-snap-type: x proximity") && modernCss.includes(".items-page .filter-bar") && modernCss.includes("position: sticky"), "Mobile filter rows or sticky search controls are not usable on long lists");
+check(modernCss.includes("scroll-snap-type: x proximity") && modernCss.includes(".items-page .filter-bar") && modernCss.includes("#item-sort") && modernCss.includes(".stage-pill.end") && modernCss.includes("position: sticky"), "Mobile filters, catalog sorting/stage labels or sticky controls are not usable on long lists");
+check(app.includes("catalog-filter-stack") && app.includes("catalog-filter-label") && modernCss.includes(".catalog-filter-row") && modernCss.includes('.catalog-item-card[data-stage="end"]') && modernCss.includes(".catalog-item-card::after"), "Catalog filter hierarchy or stage-accent card styling is incomplete");
 check(modernCss.includes(".fact.source-fact { grid-column: 1 / -1; }") && modernCss.includes(".npc-source-copy") && modernCss.includes("grid-template-columns: 28px minmax(0, 1fr)"), "Source rows can collapse into one-letter columns");
 check(modernCss.includes(".world-source-chip") && modernCss.includes(".world-source-art") && modernCss.includes(".world-source-group"), "Tile/chest source imagery has no layout styling");
 check(/\.tip-card\s*\{[\s\S]*?z-index:\s*150/.test(modernCss) && /\.tree-modal\s*\{[\s\S]*?z-index:\s*100/.test(modernCss), "Hover detail cards are not stacked above the craft-tree modal");
@@ -182,11 +223,11 @@ for (const relative of [
 const craftArtAuditPath = path.resolve("scripts/audit-craft-art.cjs");
 check(fs.existsSync(craftArtAuditPath), "Full craft imagery regression audit is missing");
 const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
-check(packageJson.scripts?.audit?.includes("audit-craft-art.cjs") && packageJson.devDependencies?.jsdom, "npm audit does not run the craft imagery coverage check");
+check(packageJson.scripts?.audit?.includes("audit-craft-art.cjs") && packageJson.scripts?.audit?.includes("audit-lazy-runtime.cjs") && packageJson.scripts?.audit?.includes("audit-high-refresh.cjs") && packageJson.scripts?.audit?.includes("audit-home-dashboard.cjs") && packageJson.scripts?.audit?.includes("audit-layout-shelves.cjs") && packageJson.scripts?.audit?.includes("audit-tree-priority.cjs") && packageJson.scripts?.audit?.includes("audit-craft-boss-details.cjs") && packageJson.scripts?.audit?.includes("audit-accessibility.cjs") && packageJson.scripts?.audit?.includes("audit-search-performance.cjs") && packageJson.scripts?.audit?.includes("audit-useful.cjs") && packageJson.scripts?.audit?.includes("audit-visual-recipes.cjs") && packageJson.scripts?.audit?.includes("audit-craft-plan.cjs") && packageJson.scripts?.audit?.includes("audit-acquisition.cjs") && packageJson.scripts?.audit?.includes("audit-tree-zoom.cjs") && packageJson.scripts?.audit?.includes("audit-biome-filters.cjs") && packageJson.scripts?.audit?.includes("audit-bosses.cjs") && packageJson.scripts?.audit?.includes("audit-boss-relations.cjs") && packageJson.scripts?.audit?.includes("audit-sprite-frames.cjs") && packageJson.devDependencies?.jsdom, "npm audit does not run the lazy-runtime, high-refresh, home-dashboard, shelf-layout, tree-priority, craft-boss-details, accessibility, search, useful-section, visual-recipe, shared-craft-plan, acquisition, tree-zoom, biome, boss, boss-relation, sprite-frame and craft-imagery regression checks");
 const npcBuilderSource = fs.readFileSync(path.resolve("scripts/build-npc-sources.mjs"), "utf8");
 check(npcBuilderSource.includes("TILE_ART") && npcBuilderSource.includes("CHEST_ART") && npcBuilderSource.includes("tileSource"), "NPC source rebuild would lose tile/chest imagery");
 const serverSource = fs.readFileSync(path.resolve("scripts/serve.py"), "utf8");
-check(serverSource.includes("_gzip_cache") && serverSource.includes("If-None-Match") && serverSource.includes("must-revalidate") && serverSource.includes("max-age=31536000, immutable"), "Static server gzip/ETag/immutable-cache optimization is missing");
+check(serverSource.includes("_gzip_cache") && serverSource.includes("_brotli_cache") && serverSource.includes("Content-Encoding") && serverSource.includes("If-None-Match") && serverSource.includes("must-revalidate") && serverSource.includes("max-age=31536000, immutable"), "Static server Brotli/gzip/ETag/immutable-cache optimization is missing");
 for (const item of vanillaItems) if (item.sprite) check(fs.existsSync(path.join(root, item.sprite)), `Missing vanilla item sprite: ${item.sprite}`);
 check(app.includes("npcSourceArt"), "Craft source rows are not rendering enemy art");
 check(app.includes("EXTRA_RECIPE_DEFS") && app.includes("Copper Shortsword") && app.includes("Zenith"), "Vanilla Zenith recipe override is missing");
@@ -246,7 +287,7 @@ const tableOf = (name) => {
 const dataContext = { window: {} };
 dataContext.window = dataContext;
 vm.createContext(dataContext);
-for (const script of ["js/data.js", "js/extra.js", "js/lexicon.js", "js/plain.js", "js/plain-late.js", "js/polish.js", "js/sprites.js"]) {
+for (const script of ["js/data.js", "js/extra.js", "js/lexicon.js", "js/plain.js", "js/plain-late.js", "js/polish.js", "js/bosses.js", "js/sprites.js"]) {
   vm.runInContext(fs.readFileSync(path.join(root, script), "utf8"), dataContext, { filename: script });
 }
 const CODEX = dataContext.CODEX;
@@ -255,7 +296,7 @@ check(new Set(Object.values(CODEX.lex || {}).map((entry) => entry.type)).size ==
 const LEX_ART = tableOf("LEX_ART");
 const REFERENCE_ART = tableOf("REFERENCE_ART");
 const WIKI_ART = tableOf("WIKI_ART");
-check(Object.keys(WIKI_ART).length === 23, `Expected 23 explicit wiki art entries, got ${Object.keys(WIKI_ART).length}`);
+check(Object.keys(WIKI_ART).length === 27, `Expected 27 explicit wiki art entries, got ${Object.keys(WIKI_ART).length}`);
 for (const [name, relative] of Object.entries(WIKI_ART)) {
   check(fs.existsSync(path.join(root, relative)), `Wiki art for "${name}" is missing locally: ${relative}`);
 }
@@ -289,30 +330,60 @@ const unresolved = [...CODEX.armors, ...CODEX.materials, ...CODEX.hpUps, ...CODE
   .filter((name) => !wikiResolves(name));
 check(unresolved.length === 0, `Wiki reference cards without local art: ${unresolved.join(", ")}`);
 
-// Every biome card must reference its own local image: no missing files,
-// no two biomes sharing one scene.
-const biomeImages = (CODEX.biomes || []).map((biome) => String(biome.img || ""));
-check(biomeImages.length >= 18, `Expected at least 18 biome cards, got ${biomeImages.length}`);
-for (const img of biomeImages) {
-  check(img.startsWith("assets/"), `Biome image path is not local: ${img}`);
-  check(fs.existsSync(path.join(root, img)), `Biome image is missing locally: ${img}`);
+// Every biome name has an explicit semantic scene. This catches both reused
+// placeholders and accidental swaps between otherwise valid image files.
+const expectedBiomeImages = {
+  "Затонувшее море": "assets/themes/sunken-sea.webp",
+  "Сернистое море": "assets/themes/sulphur.webp",
+  "Бездна": "assets/themes/abyss.webp",
+  "Серный кратер": "assets/biomes/brimstone-crag.webp",
+  "Астральная инфекция": "assets/themes/astral.webp",
+  "Планетойды": "assets/themes/sky.webp",
+  "Био-лаборатории": "assets/biomes/bio-center-labs.webp",
+  "Святилища": "assets/biomes/shrines.webp",
+  "Остров зла": "assets/themes/evil-island.webp",
+  "Пустыня": "assets/themes/desert.webp",
+  "Чистый океан": "assets/biomes/ocean.webp",
+  "Данж": "assets/themes/dungeon.webp",
+  "Ад": "assets/themes/hell.webp",
+  "Джунгли": "assets/themes/jungle.webp",
+  "Снега": "assets/biomes/snow.webp",
+  "Порча и багрянец": "assets/themes/evil.webp",
+  "Святые земли": "assets/themes/hallow.webp",
+  "Грибной биом": "assets/themes/mushroom.webp"
+};
+const biomes = CODEX.biomes || [];
+const biomeImages = biomes.map((biome) => String(biome.img || ""));
+check(biomes.length === Object.keys(expectedBiomeImages).length, `Expected ${Object.keys(expectedBiomeImages).length} biome cards, got ${biomes.length}`);
+for (const biome of biomes) {
+  const expected = expectedBiomeImages[biome.name];
+  check(expected, `Biome has no audited semantic image mapping: ${biome.name}`);
+  check(biome.img === expected, `Wrong image for biome "${biome.name}": ${biome.img}; expected ${expected}`);
+  check(fs.existsSync(path.join(root, expected)), `Biome image is missing locally: ${expected}`);
 }
 check(new Set(biomeImages).size === biomeImages.length, `Biome cards share one image: ${biomeImages.join(", ")}`);
 check(biomeImages.every((img) => img.endsWith(".webp")), "Biome cards must use optimized WebP scenes");
 const themeDir = path.join(root, "assets/themes");
 const themeWebp = fs.readdirSync(themeDir).filter((name) => name.endsWith(".webp"));
 check(themeWebp.length === 18, `Expected 18 optimized theme WebP files, got ${themeWebp.length}`);
+const dedicatedBiomeDir = path.join(root, "assets/biomes");
+const dedicatedBiomeJpg = fs.readdirSync(dedicatedBiomeDir).filter((name) => name.endsWith(".jpg"));
+const dedicatedBiomeWebp = fs.readdirSync(dedicatedBiomeDir).filter((name) => name.endsWith(".webp"));
+check(dedicatedBiomeJpg.length === 5 && dedicatedBiomeWebp.length === 5, "Dedicated Brimstone Crag/lab/shrine/ocean/snow biome masters or WebP files are incomplete");
+check(dedicatedBiomeJpg.every((name) => dedicatedBiomeWebp.includes(name.replace(/\.jpg$/, ".webp"))), "Dedicated biome JPG/WebP pairs do not match");
 check(fs.existsSync(path.join(root, "assets/hero.webp")), "Optimized hero.webp is missing");
-check(fs.existsSync(path.resolve("scripts/build-web-images.sh")), "Web image rebuild script is missing");
+const webImageBuilderPath = path.resolve("scripts/build-web-images.sh");
+check(fs.existsSync(webImageBuilderPath), "Web image rebuild script is missing");
+check(fs.readFileSync(webImageBuilderPath, "utf8").includes("for folder in themes biomes"), "Web image rebuild script would omit dedicated biome scenes");
 check(!app.includes("assets/themes/forest.jpg") && modernCss.includes("assets/hero.webp"), "Runtime still references unoptimized JPG scene assets");
 
 console.log(`PASS: ${items.length} catalog cards have verified local sprites and Russian descriptions`);
 console.log(`PASS: all ${localizedVanillaItems.length} named vanilla records use official Russian names without generic inspector placeholders`);
-console.log("PASS: versioned bundled runtime, compact pagination, lazy indexes/assets, bounded particles, PWA offline cache and gzip/ETag delivery are enabled");
-console.log("PASS: global search, shareable/acyclic trees, fully Russian guidance/wiki sources, drag maps and profile backup are wired");
+console.log("PASS: split runtime, native-refresh adaptive animation, coalesced scroll/drag, PWA cache and Brotli/gzip delivery are enabled");
+console.log("PASS: global search, shareable trees, intent prefetch, focus-safe dialogs/mobile menu and profile backup are wired");
 console.log(`PASS: ${officialArt.length} decorative assets are present with documented provenance`);
 console.log(`PASS: ${lexFiles.length} dictionary textures have pinned sources and honest representative labels`);
 console.log("PASS: craft ingredients and world/chest source imagery have local mappings plus a full DOM regression audit");
 console.log("PASS: generated item fallback art is absent; missing reference sprites are labeled honestly");
 console.log(`PASS: all ${Object.keys(WIKI_ART).length} wiki reference cards resolve verified local art`);
-console.log(`PASS: all ${biomeImages.length} biome cards have their own local image`);
+console.log(`PASS: all ${biomeImages.length} biome names resolve their audited scene and expose danger filters plus an accessible gallery`);

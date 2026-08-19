@@ -31,15 +31,22 @@ if (!itemRows.every((item, index) => item.id === index + 1)) {
   throw new Error("Compact vanilla index requires sequential item IDs starting at 1");
 }
 const itemIds = new Set(itemRows.map((item) => String(item.id)));
-const recipeRows = recipes.map((recipe) => [
-  Number(recipe["Result ID"]),
-  Number(recipe["Table ID"]),
-  (recipe.Recipe || []).map((ingredient) => {
-    // The source uses -1 for the Enchanted Sword alternate slot in Zenith.
-    const id = Number(ingredient["Ingredient ID"]);
-    return [id === -1 ? 989 : id, Number(ingredient.Quantity || 1)];
-  })
-]);
+const recipeRows = recipes.map((recipe) => {
+  const row = [
+    Number(recipe["Result ID"]),
+    Number(recipe["Table ID"]),
+    (recipe.Recipe || []).map((ingredient) => {
+      // The source uses -1 for the Enchanted Sword alternate slot in Zenith.
+      const id = Number(ingredient["Ingredient ID"]);
+      return [id === -1 ? 989 : id, Number(ingredient.Quantity || 1)];
+    })
+  ];
+  const resultQuantity = Math.max(1, Number(recipe["Result Quantity"] || 1));
+  // Keep the common one-result recipe at three fields; only the 454 batched
+  // recipes pay for a fourth value in the compact payload.
+  if (resultQuantity !== 1) row.push(resultQuantity);
+  return row;
+});
 for (const [, , ingredients] of recipeRows) {
   for (const [id] of ingredients) {
     if (!itemIds.has(String(id))) throw new Error(`Unknown vanilla ingredient id: ${id}`);
@@ -63,6 +70,8 @@ const output = `/* Compact vanilla Terraria item/recipe index. Source and revisi
   coverage: {
     items: itemRows.length,
     recipes: recipeRows.length,
+    multiOutputRecipes: recipeRows.filter((row) => Number(row[3] || 1) > 1).length,
+    maxResultQuantity: Math.max(...recipeRows.map((row) => Number(row[3] || 1))),
     sprites: itemRows.length - missingSpriteIds.length,
     missingSpriteIds,
     normalizedNegativeIngredientIds: 1

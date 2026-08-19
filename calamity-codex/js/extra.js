@@ -54,7 +54,7 @@
         { t: "Найди пустыню", d: "Один из краёв мира. Спустись в подземную пустыню (песок + окаменелости)." },
         { t: "Копай ещё ниже", d: "Под пустыней — светлая вода и Navystone. Это Затонувшее море, не Сернистое." },
         { t: "Собирай, не зли", d: "Большинство мобов спокойны. Ломай светящиеся Sea Prism и осколки. Сундуки у дна." },
-        { t: "Лаборатория моря", d: "Ищи прямоугольные стены и турели. Schematic (Sunken Sea) — первая схема Дрейдона. Giant Clam не трогай до бича." }
+        { t: "Лаборатория моря", d: "Ищи прямоугольные стены и турели. Schematic (Sunken Sea) — первая схема Дрейдона. Гигантский моллюск не трогай до бича." }
       ]},
     5:  { theme: "slime",    mood: "Синяя корона на студне. Разминка арены.",
       objective: "Построй арену, скрафти слизневую корону, убей короля слизней и надень крюк, если его ещё нет.",
@@ -75,7 +75,7 @@
       steps: [
         { t: "Напеки Sea Remains", d: "Океан (чистый): кораллы, звёзды, ракушки на дне. Pearl Shard — с Desert Scourge. Печь: 2+2+2+2 = 1 Sea Remains. На сет 12, на оружие ещё 2–5." },
         { t: "Сет и инструмент", d: "Наковальня. Шлем строго своего класса. Greatbay Pickaxe (3) лучше золота. Reefclaw Hamaxe (2)." },
-        { t: "Giant Clam", d: "Большая раковина в Затонувшем море. После бича агрессивна. Бей в гроте, крюк на потолок." },
+        { t: "Гигантский моллюск", d: "Большая раковина в Затонувшем море. После бича агрессивна. Бей в гроте, крюк на потолок." },
         { t: "Sea King", d: "Появится NPC. Посели у океана. Amidias' Blessing — бесконечный воздух, пока тебя не ударили." }
       ]},
     8:  { theme: "acid",     mood: "Красный глаз на небе, зелёная вода у данжа.",
@@ -129,7 +129,7 @@
         { t: "Кобальт/палладий", d: "Первая хардмод-руда (или по реворку сразу после WoF). Кирка, сет, крылья — приоритет №1." },
         { t: "Три эссенции", d: "Sunlight — гарпии/космос. Eleum — снега. Havoc — Brimstone Crag. Стопка каждой." },
         { t: "Astral Infection", d: "Новый фиолетовый биом + метеорит. Starblight Soot. Руду метеорита НЕ КОПАЙ до Astrum Deus." },
-        { t: "Моллюск 2.0", d: "Затонувшее море, Giant Clam усилен. Mollusk Husk → танк-сет." }
+        { t: "Моллюск 2.0", d: "Затонувшее море, Гигантский моллюск усилен. Mollusk Husk → танк-сет." }
       ]},
     15: { theme: "ice",      mood: "Сфера во льду. Архимаг откроет дверь.",
       objective: "Скрафти крио-ключ, убей Криогена в снегах, посели Архимага. Крионит копай после двух мехов.",
@@ -241,7 +241,7 @@
     30: { theme: "final",    mood: "Тишина после бури. Terminus на дне.",
       steps: [
         { t: "Terminus", d: "Дно Бездны. Boss Rush — все боссы подряд, только после обоих финалов." },
-        { t: "Primordial Wyrm", d: "Скрытый змей глубочайшей Бездны. Добровольно." },
+        { t: "Первозданный змей", d: "Скрытый змей глубочайшей Бездны. Добровольно." },
         { t: "Коллекция", d: "Реликвии, маски, шкатулки, ноухиты, вторая катка другим классом." }
       ]}
   };
@@ -263,9 +263,9 @@
     /* Q2 */
     { q:2, name:"Wulfrum Metal Scrap", cls:"all", kind:"mat", get:"Wulfrum Drone, Rover, Gyrator, Hovercraft, Wulfrum Slime — поверхность, день", why:"45 на сет, ещё на оружие и Bastion" },
     { q:2, name:"Energy Core", cls:"all", kind:"mat", get:"Те же вульфрум-враги, реже", why:"3 на сет, по 1 на часть" },
-    { q:2, name:"Wulfrum Hat & Goggles", cls:"summoner", kind:"armor", rec:"10 Scrap + 1 Core @ наковальня", get:"Крафт", why:"Шлем сета, +5% summon" },
-    { q:2, name:"Wulfrum Jacket", cls:"summoner", kind:"armor", rec:"20 Scrap + 1 Core @ наковальня", get:"Крафт", why:"+1 миньон" },
-    { q:2, name:"Wulfrum Overalls", cls:"summoner", kind:"armor", rec:"15 Scrap + 1 Core @ наковальня", get:"Крафт", why:"+5% summon. Полный сет: Bastion (тап вниз)" },
+    { q:2, name:"Wulfrum Hat & Goggles", cls:"summoner", kind:"armor", rec:"10 × Wulfrum Metal Scrap + Energy Core", get:"Крафт", why:"Шлем сета, +5% summon" },
+    { q:2, name:"Wulfrum Jacket", cls:"summoner", kind:"armor", rec:"20 × Wulfrum Metal Scrap + Energy Core", get:"Крафт", why:"+1 миньон" },
+    { q:2, name:"Wulfrum Overalls", cls:"summoner", kind:"armor", rec:"15 × Wulfrum Metal Scrap + Energy Core", get:"Крафт", why:"+5% summon. Полный сет: Bastion (тап вниз)" },
     { q:2, name:"Wulfrum Controller", cls:"summoner", kind:"weapon", rec:"Scrap + Core @ наковальня", get:"Крафт. Есть оборонительный режим", why:"Первый нормальный миньон" },
     { q:2, name:"Wulfrum Blade / Screwdriver", cls:"melee", kind:"weapon", rec:"Scrap @ наковальня", get:"Крафт из обломков", why:"Ранний мили до моря" },
     { q:2, name:"Wulfrum Bow / Blunderbuss", cls:"ranged", kind:"weapon", rec:"Scrap @ наковальня", get:"Крафт", why:"Лучше деревянного лука" },
@@ -288,7 +288,7 @@
     { q:4, name:"Schematic (Sunken Sea)", cls:"all", kind:"tool", get:"Лаборатория в Затонувшем море", why:"Первая схема, рецепты после Aerialite" },
 
     /* Q5 */
-    { q:5, name:"Slime Crown", cls:"all", kind:"summon", rec:"Золотая/платиновая корона + 20 геля @ алтарь", get:"Крафт", why:"Призыв Короля слизней" },
+    { q:5, name:"Slime Crown", cls:"all", kind:"summon", rec:"Gold Crown + 20 × Gel", get:"Крафт", why:"Призыв Короля слизней" },
     { q:5, name:"Slimy Saddle / Hook", cls:"all", kind:"acc", get:"Дроп Короля", why:"Крюк почти обязателен, если ещё нет" },
 
     /* Q6 */
@@ -314,7 +314,7 @@
     { q:7, name:"Greatbay Pickaxe", cls:"all", kind:"tool", rec:"3 Sea Remains @ наковальня", get:"Крафт", why:"Лучше золота, копает то, что нужно до ада" },
     { q:7, name:"Reefclaw Hamaxe", cls:"all", kind:"tool", rec:"2 Sea Remains @ наковальня", get:"Крафт", why:"Топор+молот" },
     { q:7, name:"Shield of the Ocean", cls:"all", kind:"acc", rec:"5 Sea Remains + 5 Starfish @ наковальня", get:"Крафт", why:"Защита, особенно в воде" },
-    { q:7, name:"Amidias' Blessing", cls:"all", kind:"acc", get:"Бафф от NPC Sea King после Giant Clam", why:"Бесконечный воздух, пока не ударили" },
+    { q:7, name:"Amidias' Blessing", cls:"all", kind:"acc", get:"Бафф Морского короля после победы над Гигантским моллюском", why:"Бесконечный воздух, пока не ударили" },
     { q:7, name:"Amidias' Pendant / Spark", cls:"all", kind:"acc", get:"Sea King продаёт / дроп моллюска", why:"Шипы и подводный урон" },
 
     /* Q8 */
@@ -332,11 +332,15 @@
     { q:9, name:"Mushroom Plasma Root", cls:"all", kind:"potion", get:"Revengeance, сумка Крабулона. Съесть один раз", why:"+1 сек. Rage навсегда" },
 
     /* Q10 */
-    { q:10, name:"Worm Food / Bloody Spine", cls:"all", kind:"summon", rec:"Гниль+порох / позвоночник+ vertebras @ алтарь", get:"Крафт в своём зле", why:"Ванильный босс зла — СНАЧАЛА его" },
+    { q:10, name:"Worm Food", cls:"all", kind:"summon", rec:"Rotten Chunk + Vile Powder", get:"Крафт в мире с Порчей", why:"Отдельно вызывает Пожирателя миров" },
+    { q:10, name:"Bloody Spine", cls:"all", kind:"summon", rec:"Vertebra + Vicious Powder", get:"Крафт в мире с Багрянцем", why:"Отдельно вызывает Мозг Ктулху" },
+    { q:10, name:"Teratoma", cls:"all", kind:"summon", rec:"7 × Aerialite Bar + 3 × Demonite Bar + 13 × Rotten Chunk", get:"Крафт в ветке Порчи", why:"Отдельно вызывает Разум улья" },
+    { q:10, name:"Bloody Worm Food", cls:"all", kind:"summon", rec:"7 × Aerialite Bar + 3 × Crimtane Bar + 13 × Vertebra", get:"Крафт в ветке Багрянца", why:"Отдельно вызывает Перфораторов" },
+    { q:10, name:"Bloody Vein", cls:"all", kind:"summon", get:"Дроп Перфораторов или их сумки", why:"Питомец; в Get fixed boi вставляется во Взломостойку для вызова XB-∞ Гекаты" },
     { q:10, name:"Musket / The Undertaker", cls:"ranged", kind:"weapon", get:"Первая теневая сфера / багровое сердце", why:"Плюс плотник заселяется" },
     { q:10, name:"Vilethorn / Crimson Rod", cls:"mage", kind:"weapon", get:"Сферы / сердца", why:"Лучшая магия по червю / мозгу" },
     { q:10, name:"Ball O' Hurt / The Meatball", cls:"melee", kind:"weapon", get:"Сферы / крафт кримзона", why:"Флаил по сегментам" },
-    { q:10, name:"Aerialite Ore", cls:"all", kind:"mat", get:"Парящие острова и Aero Slime ПОСЛЕ Hive Mind / Perforators", why:"Aerospec и схема моря" },
+    { q:10, name:"Aerialite Ore", cls:"all", kind:"mat", get:"Парящие острова и Aero Slime после Разума улья либо Перфораторов", why:"Aerospec и схема моря" },
     { q:10, name:"Aerospec armor", cls:"all", kind:"armor", rec:"Aerialite Bar, шлем под класс @ наковальня", get:"Крафт", why:"Следующий сет после Victide" },
     { q:10, name:"Harpy Ring", cls:"all", kind:"acc", get:"Гарпии в космосе / крафт перьев", why:"Полёт и урон в воздухе" },
     { q:10, name:"Feather Crown", cls:"rogue", kind:"acc", get:"Перья гарпий @ наковальня", why:"Плут в воздухе" },
@@ -349,7 +353,7 @@
     { q:11, name:"Alchemy Table", cls:"all", kind:"tool", get:"Данж, стоит как мебель — подними", why:"Blood Orb → зелья" },
     { q:11, name:"Muramasa / Aqua Scepter / Magic Missile / Handgun", cls:"all", kind:"weapon", get:"Золотые сундуки Данжа", why:"Скачок силы своего класса" },
     { q:11, name:"Water Bolt", cls:"mage", kind:"weapon", get:"Книга на полке Данжа (ломай полки)", why:"До сих пор топ прехардмода" },
-    { q:11, name:"Decryption Computer", cls:"all", kind:"tool", rec:"Провода (Механик) + Plating/Circuitry", get:"Крафт после спасения Механика", why:"Схема планетойда" },
+    { q:11, name:"Decryption Computer", cls:"all", kind:"tool", rec:"18 × Mysterious Circuitry + 10 × Dubious Plating + 100 × Wire + 15 × Glass + 10 × Any Copper Bar", get:"Крафт после спасения Механика", why:"Схема планетойда" },
     { q:11, name:"Оружие 1 слоя Бездны", cls:"all", kind:"weapon", get:"Ancient Treasure Chest под сернистым морем после Скелетрона", why:"Сильные прехардмод пушки. Не глубже слоя 1" },
     { q:11, name:"Arctic Diving Gear", cls:"all", kind:"acc", rec:"Diving Gear + Warmth / ледяные аксессуары @ мастерская", get:"Крафт перед Бездной", why:"Воздух и свет в воде" },
 
@@ -374,7 +378,7 @@
     { q:14, name:"Essence of Havoc", cls:"all", kind:"mat", get:"Brimstone Crag, адские хардмод-враги", why:"Элементаль, клон, ядра" },
     { q:14, name:"Starblight Soot", cls:"all", kind:"mat", get:"Враги Astral Infection (новый биом хардмода)", why:"Comet Shard, Astral Chunk позже" },
     { q:14, name:"Comet Shard", cls:"mage", kind:"potion", rec:"Starblight Soot @ наковальня", get:"Крафт, съесть", why:"+60 макс. маны" },
-    { q:14, name:"Mollusk Husk", cls:"all", kind:"mat", get:"Хардмод Giant Clam в Затонувшем море", why:"Mollusk armor — танк" },
+    { q:14, name:"Mollusk Husk", cls:"all", kind:"mat", get:"Дроп Гигантского моллюска в хардмодном Затонувшем море", why:"Mollusk armor — танк" },
     { q:14, name:"Crystal Assassin armor", cls:"rogue", kind:"armor", get:"Queen Slime / связанные рецепты. В Calamity даёт стелс", why:"Мост плута" },
     { q:14, name:"Frostspark / Lightning / Terraspark Boots", cls:"all", kind:"acc", rec:"Мастерская гоблина, цепочка ванильных ботинок", get:"Собери как можно раньше", why:"Мобильность важнее урона" },
     { q:14, name:"Крылья (любые первые)", cls:"all", kind:"acc", get:"Harpy / Essence + души / Queen Slime / золотые сундуки хардмода", why:"Приоритет №1 хардмода" },
@@ -390,7 +394,11 @@
     { q:16, name:"Hallowed Bar / Hallowed armor", cls:"all", kind:"armor", rec:"Слитки мехов", get:"После мехов (при реворке стабильно после 3-го)", why:"Ванильный скачок" },
     { q:16, name:"Sanguine Tangerine", cls:"all", kind:"potion", rec:"После 3 мехов", get:"Крафт, съесть", why:"+25 HP навсегда" },
     { q:16, name:"Long Ranged Sensor Array", cls:"all", kind:"tool", rec:"Мифрил/орихалк + детали Дрейдона", get:"Крафт", why:"Схема джунглей" },
-    { q:16, name:"Soul of Sight / Might / Fright", cls:"all", kind:"mat", get:"Близнецы / Разрушитель / Прайм", why:"Халлоу, крылья, схема планетойда" },
+    { q:16, name:"Soul of Sight", cls:"all", kind:"mat", get:"Отдельный дроп Близнецов", why:"Оптические и дальнобойные рецепты" },
+    { q:16, name:"Soul of Might", cls:"all", kind:"mat", get:"Отдельный дроп Уничтожителя", why:"Тяжёлое оружие и инструменты" },
+    { q:16, name:"Soul of Fright", cls:"all", kind:"mat", get:"Отдельный дроп Скелетрона Прайма", why:"Оружие и предметы призыва" },
+    { q:16, name:"Nuclear Fuel Rod", cls:"all", kind:"acc", get:"Гарантированный дроп Трясинной пасти на втором кислотном дожде", why:"Аксессуар кислотной ветки" },
+    { q:16, name:"Spent Fuel Container", cls:"rogue", kind:"weapon", get:"Гарантированный дроп Трясинной пасти на втором кислотном дожде", why:"Оружие плута" },
 
     /* Q17 */
     { q:17, name:"Unholy Core", cls:"all", kind:"mat", rec:"3 Infernal Suevite + 2 Hellstone @ адская кузня", get:"После 1 меха, руда кратера", why:"Charred Idol и серное оружие" },
@@ -408,7 +416,8 @@
     { q:19, name:"Perennial Ore / Bar", cls:"all", kind:"mat", get:"Пещеры после Плантеры", why:"Сет, Life Alloy" },
     { q:19, name:"Core of Calamity", cls:"all", kind:"mat", rec:"Essence of Sunlight + Eleum + Havoc + Ashes of Calamity + Ectoplasm @ мифриловая", get:"После клона И Плантеры", why:"Сердце позднего HM" },
     { q:19, name:"Chlorophyte armor / оружие", cls:"all", kind:"armor", rec:"Хлорифит джунглей", get:"Копай после Плантеры", why:"Всё ещё силён" },
-    { q:19, name:"Grand Scale", cls:"all", kind:"mat", get:"Great Sand Shark в песчаной буре после Плантеры", why:"Пустынное оружие" },
+    { q:19, name:"Sandstorm's Core", cls:"all", kind:"summon", rec:"Core of Calamity + 3 × Ancient Battle Armor Material", get:"Крафт после Плантеры", why:"Отдельно вызывает Великую песчаную акулу в песчаную бурю" },
+    { q:19, name:"Grand Scale", cls:"all", kind:"mat", get:"Гарантированный дроп Великой песчаной акулы", why:"Пустынное оружие и улучшения" },
     { q:19, name:"Seedler / Pygmy Staff / Venus Magnum / Leaf Blower", cls:"all", kind:"weapon", get:"Плантера / джунгли", why:"Классовый скачок" },
 
     /* Q20 */
@@ -444,10 +453,17 @@
     { q:23, name:"Infernal Blood", cls:"all", kind:"potion", get:"Revengeance Ravager. Съесть", why:"+1 сек Rage" },
     { q:23, name:"Tsunami / Razorblade Typhoon / Tempest Staff / Flairon", cls:"all", kind:"weapon", get:"Duke Fishron (трюфельный червь, океан)", why:"Ванильный топ" },
     { q:23, name:"Empress оружия / Terraprisma", cls:"all", kind:"weapon", get:"Empress of Light. Terraprisma — только дневной ноухит", why:"Призыватель особенно" },
-    { q:23, name:"Soaring Insignia / Wings Empress", cls:"all", kind:"acc", get:"Empress", why:"Почти бесконечный полёт" },
+    { q:23, name:"Soaring Insignia / Wings Empress", cls:"all", kind:"acc", get:"Отдельные награды Императрицы света", why:"Мобильность и длительный полёт" },
+    { q:23, name:"Flying Dragon", cls:"melee", kind:"weapon", get:"Награда Бетси на седьмой волне Армии Древних III", why:"Дальнобойные волны ближнего урона" },
+    { q:23, name:"Sky Dragon's Fury", cls:"melee", kind:"weapon", get:"Награда Бетси", why:"Посох монаха с двумя режимами" },
+    { q:23, name:"Aerial Bane", cls:"ranged", kind:"weapon", get:"Награда Бетси", why:"Лук особенно силён против воздушных целей" },
+    { q:23, name:"Betsy's Wrath", cls:"mage", kind:"weapon", get:"Награда Бетси", why:"Снижает защиту и усиливает последующий урон" },
 
     /* Q24 */
-    { q:24, name:"Titan Heart", cls:"all", kind:"summon", get:"Астральные титаны в заражении", why:"Положи на Astral Beacon → Deus" },
+    { q:24, name:"Eidolon Tablet", cls:"all", kind:"summon", get:"Дроп Эйдолиста в Данже", why:"Отдельно вызывает Лунатика-культиста" },
+    { q:24, name:"Ancient Manipulator", cls:"all", kind:"tool", get:"Гарантированная награда Лунатика-культиста", why:"Станция лунных и многих Calamity-рецептов" },
+    { q:24, name:"Prelude", cls:"all", kind:"misc", get:"Первая победа над Лунатиком-культистом или крафт из его трофея", why:"Предмет истории мира" },
+    { q:24, name:"Titan Heart", cls:"all", kind:"summon", get:"Астральные титаны в заражении", why:"Положи на Астральный маяк для боя с Аструм Деусом" },
     { q:24, name:"Astral Ore / Bar", cls:"all", kind:"mat", get:"Метеорит Astral ПОСЛЕ Deus", why:"Сет и оружие" },
     { q:24, name:"Ethereal Core", cls:"all", kind:"potion", rec:"Astral материалы", get:"Крафт, съесть", why:"+50 маны" },
     { q:24, name:"Astral armor", cls:"all", kind:"armor", rec:"Astral Bar", get:"Крафт", why:"Пре-ML / ранний пост-ML" },
@@ -471,16 +487,19 @@
     { q:25, name:"Профанное оружие", cls:"all", kind:"weapon", get:"Стражи / Providence / крафт из эссенций", why:"Мост к Tarragon-пушкам" },
 
     /* Q26 */
-    { q:26, name:"Mark of Providence", cls:"all", kind:"summon", get:"Крафт / дроп Providence", why:"Weaver, Void, Signus" },
-    { q:26, name:"Armored Shell", cls:"all", kind:"mat", get:"Storm Weaver 5–9", why:"Cosmic Worm" },
-    { q:26, name:"Dark Plasma", cls:"all", kind:"mat", get:"Ceaseless Void 5–9", why:"Cosmic Worm" },
-    { q:26, name:"Twisting Nether", cls:"all", kind:"mat", get:"Signus 5–9", why:"Cosmic Worm" },
+    { q:26, name:"Mark of Providence", cls:"all", kind:"summon", rec:"40 × Unholy Essence + 3 × Lunar Bar + 5 × Fragment Solar", get:"Крафт после Провиденс", why:"В космосе вызывает Ткача бурь, в Данже — Неугасимую пустоту, в Преисподней — Сигнуса" },
+    { q:26, name:"Armored Shell", cls:"all", kind:"mat", get:"Отдельная награда Ткача бурь", why:"Космический червь и поздние рецепты" },
+    { q:26, name:"Dark Plasma", cls:"all", kind:"mat", get:"Отдельная награда Неугасимой пустоты", why:"Космический червь и поздние рецепты" },
+    { q:26, name:"Twisting Nether", cls:"all", kind:"mat", get:"Отдельная награда Сигнуса", why:"Космический червь и поздние рецепты" },
     { q:26, name:"Ruinous Soul", cls:"all", kind:"mat", get:"Polterghast 7–20", why:"Bloodflare, Omega Blue, Phantom Heart" },
     { q:26, name:"Bloodflare armor", cls:"all", kind:"armor", rec:"Bloodstone + Ruinous Soul", get:"Крафт", why:"Кровавый сет" },
     { q:26, name:"Omega Blue armor", cls:"all", kind:"armor", rec:"Бездонные зубы/души + Ruinous Soul", get:"Reaper Shark после Полтергаста капает Reaper Tooth", why:"Сет Бездны" },
     { q:26, name:"Phantom Heart", cls:"all", kind:"potion", rec:"Ruinous Soul ветка", get:"Крафт, съесть", why:"Финал маны" },
     { q:26, name:"Ectoheart", cls:"all", kind:"potion", get:"Revengeance Polterghast. Съесть", why:"Финал Adrenaline" },
     { q:26, name:"Reaper Tooth", cls:"all", kind:"mat", get:"Reaper Shark в Бездне после Полтергаста", why:"Omega Blue и бездонные пушки" },
+    { q:26, name:"Sulphuric Acid Cannon", cls:"ranged", kind:"weapon", get:"Дроп Изверга на третьем кислотном дожде", why:"Позднее кислотное оружие стрелка" },
+    { q:26, name:"Phosphorescent Gauntlet", cls:"melee", kind:"weapon", get:"Дроп Ядерного ужаса", why:"Позднее оружие воина кислотной ветки" },
+    { q:26, name:"Gamma Heart", cls:"summoner", kind:"weapon", get:"Дроп Ядерного ужаса", why:"Позднее оружие призывателя кислотной ветки" },
 
     /* Q27 */
     { q:27, name:"Cosmic Worm", cls:"all", kind:"summon", rec:"Armored Shell + Dark Plasma + Twisting Nether (+прочее)", get:"Крафт после часовых", why:"Devourer of Gods" },
@@ -504,23 +523,32 @@
     { q:28, name:"Auric Tesla armor", cls:"all", kind:"armor", rec:"Auric Bar + куски Tarragon/Bloodflare/God Slayer/Silva", get:"Крафт. Не разбирай последний сет вслепую", why:"Лучшая броня до финала" },
     { q:28, name:"Sacred Strawberry", cls:"all", kind:"potion", rec:"Auric ветка", get:"Крафт, съесть", why:"Последний +25 HP" },
     { q:28, name:"Auric Quantum Cooling Cell", cls:"all", kind:"tool", rec:"Auric + Codebreaker", get:"Крафт", why:"Звонок Дрейдону" },
-    { q:28, name:"Altar of the Accursed", cls:"all", kind:"tool", rec:"Эндгейм-блоки / пепел", get:"Крафт, поставь на арену", why:"Ashes of Calamity на алтарь = SCal" },
+    { q:28, name:"Altar of the Accursed", cls:"all", kind:"tool", rec:"Эндгейм-блоки / пепел", get:"Крафт, поставь на арену", why:"Пепел бедствия вызывает Верховную ведьму; Вкусное мясо в Get fixed boi заменяет её Пермафростом" },
     { q:28, name:"Драконье оружие Ярона", cls:"all", kind:"weapon", get:"Сумка Ярона / крафт из фрагментов души", why:"Пре-экзо арсенал" },
 
     /* Q29 */
-    { q:29, name:"Exo Prism", cls:"all", kind:"mat", get:"Exo Mechs 25–40", why:"Кузня, экзо-оружие, Shadowspec" },
-    { q:29, name:"Ashes of Annihilation", cls:"all", kind:"mat", get:"Supreme Calamitas 25–40", why:"Shadowspec" },
+    { q:29, name:"Exo Prism", cls:"all", kind:"mat", get:"Экзо-мехи; в Get fixed boi тот же материал даёт XB-∞ Геката", why:"Кузня Дрейдона, экзо-оружие и тенеспек" },
+    { q:29, name:"Ashes of Annihilation", cls:"all", kind:"mat", get:"Верховная ведьма; в Get fixed boi тот же материал даёт Пермафрост", why:"Тенеспек и финальные рецепты" },
     { q:29, name:"Draedon's Forge", cls:"all", kind:"tool", rec:"Манипулятор + Cosmic Anvil + хардмод-кузня + мастерская + Exo Prism", get:"Сборка после мехов", why:"Финальный стол" },
     { q:29, name:"Miracle Matter", cls:"all", kind:"mat", rec:"Auric + Exo Prism + Life Alloy + эссенция + фрагменты + Core of Calamity @ кузня Дрейдона", get:"Крафт", why:"Превращает лучшее оружие ветки в экзо" },
     { q:29, name:"Exo-оружие (Exoblade и др.)", cls:"all", kind:"weapon", rec:"Miracle Matter + легендарное оружие ветки", get:"Кузня Дрейдона", why:"Пик каждой ветки" },
     { q:29, name:"Shadowspec Bar", cls:"all", kind:"mat", rec:"Exo Prism + Ashes of Annihilation @ кузня", get:"Крафт после ОБОИХ финалов", why:"Demonshade и финал" },
     { q:29, name:"Demonshade armor", cls:"all", kind:"armor", rec:"Shadowspec Bar", get:"Крафт", why:"Абсолютный сет, высокий риск/сила" },
-    { q:29, name:"Зачарование ведьмы", cls:"all", kind:"acc", get:"NPC Brimstone Witch после SCal — отдай ей оружие", why:"Новые эффекты на любимых пушках" },
+    { q:29, name:"Зачарование ведьмы", cls:"all", kind:"acc", get:"Городская Каламитас после обычной победы над Верховной ведьмой", why:"Новые эффекты на любимом оружии" },
+    { q:29, name:"Lava Chicken Broth", cls:"all", kind:"potion", get:"Гарантированная награда XB-∞ Гекаты", why:"Уникальный предмет скрытой экзо-ветки" },
+    { q:29, name:"Delicious Meat", cls:"all", kind:"summon", get:"Держи при взаимодействии с Алтарём проклятых в Get fixed boi", why:"Заменяет Верховную ведьму на Верховного ультрамага Пермафроста" },
+    { q:29, name:"Coldheart Icicle", cls:"all", kind:"weapon", get:"Гарантированная награда Верховного ультрамага Пермафроста", why:"Наносит процентный урон при касании" },
 
     /* Q30 */
     { q:30, name:"Terminus", cls:"all", kind:"summon", get:"Сундук/пьедестал на ДНЕ Бездны", why:"Boss Rush" },
     { q:30, name:"Rock", cls:"all", kind:"acc", get:"Награда за прохождение Boss Rush", why:"Мемный трофей" },
-    { q:30, name:"Дроп Primordial Wyrm", cls:"all", kind:"weapon", get:"Скрытый босс глубочайшей Бездны", why:"Добровольный супербосс" }
+    { q:30, name:"Halibut Cannon", cls:"ranged", kind:"weapon", get:"Гарантированная награда Первозданного змея", why:"Главное дальнобойное оружие скрытой бездонной ветки" },
+    { q:30, name:"Eidolic Wail", cls:"mage", kind:"weapon", get:"Гарантированная награда Первозданного змея", why:"Магическое оружие скрытой бездонной ветки" },
+    { q:30, name:"Grand Dad", cls:"melee", kind:"weapon", get:"Гарантированная награда Первозданного змея", why:"Оружие воина скрытой бездонной ветки" },
+    { q:30, name:"Abyss Shell Fossil", cls:"all", kind:"summon", get:"Награда Первозданного змея или Эйдолонского змея", why:"Питомец Бездны" },
+    { q:30, name:"NO", cls:"all", kind:"summon", get:"Болдоры после двух финальных веток в Get fixed boi", why:"Отдельно вызывает THE LORDE" },
+    { q:30, name:"Suspicious Looking NO U", cls:"all", kind:"summon", get:"Гарантированная награда THE LORDE", why:"Световой питомец скрытого босса" },
+    { q:30, name:"Добыча Первозданного змея", cls:"all", kind:"weapon", get:"Отдельный скрытый босс четвёртого слоя Бездны", why:"Полный набор оружия и материалов Бездны" }
   ];
 
   const moreCrafts = [

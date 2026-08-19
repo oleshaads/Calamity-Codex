@@ -265,8 +265,13 @@ function ingredientLabel(id, displayById) {
 
 function parseRecipes(segment, displayById) {
   const recipes = [];
-  for (const match of segment.matchAll(/CreateRecipe(?:\([^;]{0,120}?\))?[\s\S]{0,4200}?Register\(\);/g)) {
+  // Register() is occasionally written without a trailing semicolon before a
+  // second alternative recipe (Cosmic Worm is one real example). Treat the
+  // semicolon as optional so two valid recipes are never flattened together.
+  for (const match of segment.matchAll(/CreateRecipe(?:\([^;]{0,120}?\))?[\s\S]{0,4200}?Register\(\)\s*;?/g)) {
     const chain = match[0];
+    const resultQuantityMatch = chain.match(/^CreateRecipe(?:\(\s*(\d+)\s*\))?/);
+    const resultQuantity = Math.max(1, Number(resultQuantityMatch?.[1] || 1));
     const ingredients = [];
     const ingredientIds = [];
     let item;
@@ -300,7 +305,7 @@ function parseRecipes(segment, displayById) {
     const tile = chain.match(/AddTile<([A-Za-z_][A-Za-z0-9_]*)>\s*\(\s*\)/)
       || chain.match(/AddTile\(\s*TileID\.([A-Za-z_][A-Za-z0-9_]*)\s*\)/);
     const stationId = tile?.[1] || "";
-    if (ingredients.length || stationId) recipes.push({ ingredients, ingredientIds, stationId });
+    if (ingredients.length || stationId) recipes.push({ ingredients, ingredientIds, stationId, resultQuantity });
   }
   return recipes;
 }
@@ -329,9 +334,11 @@ function rarityStage(segment, groupId) {
 
 function recipeText(recipe) {
   if (!recipe) return "";
-  const visible = recipe.ingredients.slice(0, 5);
-  const rest = recipe.ingredients.length - visible.length;
-  const parts = visible.join(" + ") + (rest > 0 ? ` + ещё ${rest}` : "");
+  // The compact catalog used to replace every ingredient after the fifth with
+  // “+ ещё N”. That saved very little data but made the visual recipe and its
+  // material estimate impossible to reconstruct accurately. Keep every named
+  // ingredient; minification/Brotli handle the repeated syntax efficiently.
+  const parts = recipe.ingredients.join(" + ");
   const station = STATIONS_RU[recipe.stationId] || (recipe.stationId ? `у станции «${humanizeId(recipe.stationId)}»` : "");
   if (parts && station) return `Скрафтить: ${parts} · ${station}.`;
   if (parts) return `Скрафтить из: ${parts}.`;
@@ -571,6 +578,10 @@ for (const item of items) {
   meta.set(item.id.toLocaleLowerCase("en-US"), { file, segment, recipes, stage: ownStage, image: Boolean(image) });
 }
 
+// Browser cards need one inventory frame, not the complete vertical animation
+// sheet. Frame counts are taken from the same pinned C# sources.
+execFileSync(process.execPath, [path.join(import.meta.dirname, "normalize-sprite-frames.mjs"), spriteOutput, "--skip-npcs"], { stdio: "inherit" });
+
 // Recipes built from later materials inherit the latest known progression tier.
 for (let pass = 0; pass < 5; pass += 1) {
   for (const item of items) {
@@ -612,11 +623,17 @@ try {
   // Generation still works from an exported source directory.
 }
 
+const recipeYields = publicItems.map((item) => {
+  const quantity = Number(meta.get(item.id.toLocaleLowerCase("en-US")).recipes[0]?.resultQuantity || 1);
+  return quantity > 1 ? [item.id, quantity] : null;
+}).filter(Boolean);
 const coverage = {
   tooltips: itemRecords.filter((item) => item[3]).length,
   russianDescriptions: itemRecords.filter((item) => item[7]).length,
   sprites: itemRecords.length,
   recipes: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).recipes.length).length,
+  multiOutputRecipes: recipeYields.length,
+  maxResultQuantity: Math.max(1, ...recipeYields.map(([, quantity]) => quantity)),
   sourceFiles: publicItems.filter((item) => meta.get(item.id.toLocaleLowerCase("en-US")).file).length,
   omittedWithoutSprite: items.length - publicItems.length
 };
@@ -626,9 +643,11 @@ const payload = {
   source: "CalamityTeam/CalamityModPublic",
   commit,
   sourceDate,
-  generatedAt: "2026-08-15",
+  generatedAt: "2026-08-19",
   coverage,
   groups: groupRecords,
+  // Sparse [internalId, result quantity] rows; omitted recipes produce one.
+  recipeYields,
   // name, groupId, internalId, obtain, stage, Russian description.
   // image=true is guaranteed for every published record by the filter above.
   items: itemRecords.map(([name, groupId, id, tooltip, image, obtain, stage, description]) => [name, groupId, id, obtain, stage, description])
@@ -645,4 +664,12 @@ fs.writeFileSync(output, `${banner}window.CALAMITY_ITEM_INDEX=${JSON.stringify(p
 fs.writeFileSync(tooltipOutput, `${tooltipBanner}window.CALAMITY_CATALOG_TOOLTIPS=${JSON.stringify(tooltipPayload)};\n`);
 console.log(`Wrote ${itemRecords.length} unique items across ${groupRecords.length} groups to ${output}`);
 console.log(`Wrote ${coverage.tooltips} lazy tooltip search rows to ${tooltipOutput}`);
-console.log(`Coverage: ${coverage.sprites} verified sprites, ${coverage.russianDescriptions} Russian descriptions, ${coverage.recipes} recipes, ${coverage.sourceFiles} source files; ${coverage.omittedWithoutSprite} sprite-less records omitted`);
+console.log(`Coverage: ${coverage.sprites} verified sprites, ${coverage.russianDescriptions} Russian descriptions, ${coverage.recipes} recipes (${coverage.multiOutputRecipes} batched), ${coverage.sourceFiles} source files; ${coverage.omittedWithoutSprite} sprite-less records omitted`);
+
+// Keep boss/item/craft descriptions synchronized whenever the source catalog
+// is rebuilt. The relation generator reads the freshly written compact catalog
+// and propagates direct boss materials through every recipe dependency.
+execFileSync(process.execPath, [
+  path.join(import.meta.dirname, "build-boss-relations.mjs"),
+  path.resolve(path.dirname(output), "..")
+], { stdio: "inherit" });

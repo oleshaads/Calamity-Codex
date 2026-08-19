@@ -1,0 +1,1063 @@
+{
+  "source": "CalamityTeam/CalamityModPublic@1a8cebd27ec5615316b78f71973446b5528d2b78",
+  "items": {
+    "AeroStone": {
+      "frames": 8,
+      "width": 40,
+      "sourceHeight": 400,
+      "frameHeight": 50
+    },
+    "AncientIceChunk": {
+      "frames": 6,
+      "width": 38,
+      "sourceHeight": 300,
+      "frameHeight": 50
+    },
+    "AscendantSpiritEssence": {
+      "frames": 6,
+      "width": 32,
+      "sourceHeight": 324,
+      "frameHeight": 54
+    },
+    "AshesofAnnihilation": {
+      "frames": 6,
+      "width": 56,
+      "sourceHeight": 360,
+      "frameHeight": 60
+    },
+    "AshesofCalamity": {
+      "frames": 5,
+      "width": 30,
+      "sourceHeight": 160,
+      "frameHeight": 32
+    },
+    "AstralBar": {
+      "frames": 12,
+      "width": 32,
+      "sourceHeight": 312,
+      "frameHeight": 26
+    },
+    "AuricBar": {
+      "frames": 4,
+      "width": 52,
+      "sourceHeight": 176,
+      "frameHeight": 44
+    },
+    "BaconOil": {
+      "frames": 3,
+      "width": 12,
+      "sourceHeight": 168,
+      "frameHeight": 56
+    },
+    "Baguette": {
+      "frames": 3,
+      "width": 52,
+      "sourceHeight": 120,
+      "frameHeight": 40
+    },
+    "Barberry": {
+      "frames": 3,
+      "width": 26,
+      "sourceHeight": 102,
+      "frameHeight": 34
+    },
+    "BlasphemousDonut": {
+      "frames": 3,
+      "width": 40,
+      "sourceHeight": 84,
+      "frameHeight": 28
+    },
+    "BloodOrb": {
+      "frames": 4,
+      "width": 16,
+      "sourceHeight": 112,
+      "frameHeight": 28
+    },
+    "BloodyMary": {
+      "frames": 3,
+      "width": 36,
+      "sourceHeight": 174,
+      "frameHeight": 58
+    },
+    "Calamity": {
+      "frames": 6,
+      "width": 42,
+      "sourceHeight": 588,
+      "frameHeight": 98
+    },
+    "CaribbeanRum": {
+      "frames": 3,
+      "width": 28,
+      "sourceHeight": 162,
+      "frameHeight": 54
+    },
+    "ChaliceOfTheBloodGod": {
+      "frames": 12,
+      "width": 38,
+      "sourceHeight": 864,
+      "frameHeight": 72
+    },
+    "ChaosStone": {
+      "frames": 7,
+      "width": 38,
+      "sourceHeight": 280,
+      "frameHeight": 40
+    },
+    "CinnamonRoll": {
+      "frames": 3,
+      "width": 28,
+      "sourceHeight": 150,
+      "frameHeight": 50
+    },
+    "Cometfruit": {
+      "frames": 3,
+      "width": 32,
+      "sourceHeight": 102,
+      "frameHeight": 34
+    },
+    "CosmiliteBar": {
+      "frames": 13,
+      "width": 46,
+      "sourceHeight": 442,
+      "frameHeight": 34
+    },
+    "CryoStone": {
+      "frames": 4,
+      "width": 38,
+      "sourceHeight": 128,
+      "frameHeight": 32
+    },
+    "DarkPlasma": {
+      "frames": 4,
+      "width": 30,
+      "sourceHeight": 160,
+      "frameHeight": 40
+    },
+    "DarkSpark": {
+      "frames": 4,
+      "width": 38,
+      "sourceHeight": 184,
+      "frameHeight": 46
+    },
+    "DarkSunRing": {
+      "frames": 7,
+      "width": 42,
+      "sourceHeight": 420,
+      "frameHeight": 60
+    },
+    "DarksunFragment": {
+      "frames": 8,
+      "width": 28,
+      "sourceHeight": 256,
+      "frameHeight": 32
+    },
+    "DeliciousMeat": {
+      "frames": 3,
+      "width": 30,
+      "sourceHeight": 116,
+      "frameHeight": 38
+    },
+    "DivineProvidence": {
+      "frames": 6,
+      "width": 46,
+      "sourceHeight": 312,
+      "frameHeight": 52
+    },
+    "DraedonsHeart": {
+      "frames": 11,
+      "width": 52,
+      "sourceHeight": 748,
+      "frameHeight": 68
+    },
+    "DynamoStemCells": {
+      "frames": 5,
+      "width": 68,
+      "sourceHeight": 200,
+      "frameHeight": 40
+    },
+    "EffulgentFeather": {
+      "frames": 11,
+      "width": 38,
+      "sourceHeight": 528,
+      "frameHeight": 48
+    },
+    "EndothermicEnergy": {
+      "frames": 6,
+      "width": 36,
+      "sourceHeight": 228,
+      "frameHeight": 38
+    },
+    "Everclear": {
+      "frames": 3,
+      "width": 16,
+      "sourceHeight": 162,
+      "frameHeight": 54
+    },
+    "EvergreenGin": {
+      "frames": 3,
+      "width": 36,
+      "sourceHeight": 174,
+      "frameHeight": 58
+    },
+    "Fireball": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 162,
+      "frameHeight": 54
+    },
+    "FrostFlare": {
+      "frames": 4,
+      "width": 32,
+      "sourceHeight": 136,
+      "frameHeight": 34
+    },
+    "GluttonyBlender": {
+      "frames": 3,
+      "width": 22,
+      "sourceHeight": 32,
+      "frameHeight": 10
+    },
+    "GrapeBeer": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 156,
+      "frameHeight": 52
+    },
+    "HadalStew": {
+      "frames": 3,
+      "width": 28,
+      "sourceHeight": 60,
+      "frameHeight": 20
+    },
+    "HauntedScroll": {
+      "frames": 6,
+      "width": 36,
+      "sourceHeight": 288,
+      "frameHeight": 48
+    },
+    "HeartofDarkness": {
+      "frames": 5,
+      "width": 46,
+      "sourceHeight": 330,
+      "frameHeight": 66
+    },
+    "HeartoftheElements": {
+      "frames": 8,
+      "width": 34,
+      "sourceHeight": 272,
+      "frameHeight": 34
+    },
+    "Heresy": {
+      "frames": 6,
+      "width": 48,
+      "sourceHeight": 312,
+      "frameHeight": 52
+    },
+    "HowlsHeart": {
+      "frames": 4,
+      "width": 20,
+      "sourceHeight": 152,
+      "frameHeight": 38
+    },
+    "IVDripOnTheRocks": {
+      "frames": 26,
+      "width": 58,
+      "sourceHeight": 1612,
+      "frameHeight": 62
+    },
+    "Jackfruit": {
+      "frames": 3,
+      "width": 26,
+      "sourceHeight": 108,
+      "frameHeight": 36
+    },
+    "LavaChickenBroth": {
+      "frames": 3,
+      "width": 56,
+      "sourceHeight": 156,
+      "frameHeight": 52
+    },
+    "LittleE": {
+      "frames": 14,
+      "width": 36,
+      "sourceHeight": 476,
+      "frameHeight": 34
+    },
+    "Lotus": {
+      "frames": 3,
+      "width": 26,
+      "sourceHeight": 102,
+      "frameHeight": 34
+    },
+    "Mangosteen": {
+      "frames": 3,
+      "width": 30,
+      "sourceHeight": 102,
+      "frameHeight": 34
+    },
+    "Manhattan": {
+      "frames": 3,
+      "width": 40,
+      "sourceHeight": 180,
+      "frameHeight": 60
+    },
+    "Margarita": {
+      "frames": 3,
+      "width": 42,
+      "sourceHeight": 162,
+      "frameHeight": 54
+    },
+    "MirrorBlade": {
+      "frames": 5,
+      "width": 114,
+      "sourceHeight": 640,
+      "frameHeight": 128
+    },
+    "Moonshine": {
+      "frames": 3,
+      "width": 30,
+      "sourceHeight": 152,
+      "frameHeight": 50
+    },
+    "MoscowMule": {
+      "frames": 3,
+      "width": 46,
+      "sourceHeight": 144,
+      "frameHeight": 48
+    },
+    "Murasama": {
+      "frames": 13,
+      "width": 90,
+      "sourceHeight": 1742,
+      "frameHeight": 134
+    },
+    "Necroplasm": {
+      "frames": 6,
+      "width": 24,
+      "sourceHeight": 312,
+      "frameHeight": 52
+    },
+    "NightmareFuel": {
+      "frames": 6,
+      "width": 38,
+      "sourceHeight": 216,
+      "frameHeight": 36
+    },
+    "NormalityRelocator": {
+      "frames": 7,
+      "width": 38,
+      "sourceHeight": 308,
+      "frameHeight": 44
+    },
+    "Nucleogenesis": {
+      "frames": 10,
+      "width": 50,
+      "sourceHeight": 540,
+      "frameHeight": 54
+    },
+    "OldFashioned": {
+      "frames": 3,
+      "width": 38,
+      "sourceHeight": 138,
+      "frameHeight": 46
+    },
+    "PhantomicArtifact": {
+      "frames": 7,
+      "width": 50,
+      "sourceHeight": 280,
+      "frameHeight": 40
+    },
+    "ProfanedSoulArtifact": {
+      "frames": 6,
+      "width": 36,
+      "sourceHeight": 252,
+      "frameHeight": 42
+    },
+    "ProfanedSoulCrystal": {
+      "frames": 4,
+      "width": 24,
+      "sourceHeight": 240,
+      "frameHeight": 60
+    },
+    "PurpleHaze": {
+      "frames": 3,
+      "width": 24,
+      "sourceHeight": 156,
+      "frameHeight": 52
+    },
+    "Radiance": {
+      "frames": 7,
+      "width": 50,
+      "sourceHeight": 350,
+      "frameHeight": 50
+    },
+    "RedWine": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 192,
+      "frameHeight": 64
+    },
+    "RuinousSoul": {
+      "frames": 6,
+      "width": 26,
+      "sourceHeight": 252,
+      "frameHeight": 42
+    },
+    "Rum": {
+      "frames": 3,
+      "width": 30,
+      "sourceHeight": 138,
+      "frameHeight": 46
+    },
+    "Salak": {
+      "frames": 3,
+      "width": 28,
+      "sourceHeight": 84,
+      "frameHeight": 28
+    },
+    "ScoriaBar": {
+      "frames": 6,
+      "width": 40,
+      "sourceHeight": 312,
+      "frameHeight": 52
+    },
+    "Screwdriver": {
+      "frames": 3,
+      "width": 32,
+      "sourceHeight": 144,
+      "frameHeight": 48
+    },
+    "ShadowspecBar": {
+      "frames": 8,
+      "width": 38,
+      "sourceHeight": 320,
+      "frameHeight": 40
+    },
+    "ShatteredCommunity": {
+      "frames": 5,
+      "width": 34,
+      "sourceHeight": 520,
+      "frameHeight": 104
+    },
+    "ShroomBowl": {
+      "frames": 3,
+      "width": 30,
+      "sourceHeight": 78,
+      "frameHeight": 26
+    },
+    "SigilofCalamitas": {
+      "frames": 8,
+      "width": 34,
+      "sourceHeight": 352,
+      "frameHeight": 44
+    },
+    "SoulofCryogen": {
+      "frames": 3,
+      "width": 38,
+      "sourceHeight": 114,
+      "frameHeight": 38
+    },
+    "StarBeamRye": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 168,
+      "frameHeight": 56
+    },
+    "StatisCurse": {
+      "frames": 4,
+      "width": 36,
+      "sourceHeight": 176,
+      "frameHeight": 44
+    },
+    "StatisNinjaBelt": {
+      "frames": 6,
+      "width": 30,
+      "sourceHeight": 168,
+      "frameHeight": 28
+    },
+    "StatisVoidSash": {
+      "frames": 3,
+      "width": 34,
+      "sourceHeight": 132,
+      "frameHeight": 44
+    },
+    "StormfrontRazor": {
+      "frames": 4,
+      "width": 56,
+      "sourceHeight": 264,
+      "frameHeight": 66
+    },
+    "StormlionMandible": {
+      "frames": 8,
+      "width": 36,
+      "sourceHeight": 304,
+      "frameHeight": 38
+    },
+    "TelluricGlare": {
+      "frames": 5,
+      "width": 90,
+      "sourceHeight": 630,
+      "frameHeight": 126
+    },
+    "Tequila": {
+      "frames": 3,
+      "width": 32,
+      "sourceHeight": 138,
+      "frameHeight": 46
+    },
+    "TequilaSunrise": {
+      "frames": 3,
+      "width": 34,
+      "sourceHeight": 192,
+      "frameHeight": 64
+    },
+    "TeslasAmulet": {
+      "frames": 12,
+      "width": 34,
+      "sourceHeight": 408,
+      "frameHeight": 34
+    },
+    "TheAmalgam": {
+      "frames": 6,
+      "width": 46,
+      "sourceHeight": 276,
+      "frameHeight": 46
+    },
+    "TheCommunity": {
+      "frames": 10,
+      "width": 34,
+      "sourceHeight": 640,
+      "frameHeight": 64
+    },
+    "TheEvolution": {
+      "frames": 10,
+      "width": 58,
+      "sourceHeight": 440,
+      "frameHeight": 44
+    },
+    "TheFirstShadowflame": {
+      "frames": 6,
+      "width": 32,
+      "sourceHeight": 288,
+      "frameHeight": 48
+    },
+    "TheSandwich": {
+      "frames": 3,
+      "width": 70,
+      "sourceHeight": 150,
+      "frameHeight": 50
+    },
+    "TheSponge": {
+      "frames": 30,
+      "width": 44,
+      "sourceHeight": 1680,
+      "frameHeight": 56
+    },
+    "TheStorm": {
+      "frames": 9,
+      "width": 54,
+      "sourceHeight": 810,
+      "frameHeight": 90
+    },
+    "TheTransformer": {
+      "frames": 16,
+      "width": 42,
+      "sourceHeight": 896,
+      "frameHeight": 56
+    },
+    "UnholyEssence": {
+      "frames": 7,
+      "width": 28,
+      "sourceHeight": 252,
+      "frameHeight": 36
+    },
+    "UniverseSplitter": {
+      "frames": 14,
+      "width": 52,
+      "sourceHeight": 1064,
+      "frameHeight": 76
+    },
+    "UnstableGraniteCore": {
+      "frames": 5,
+      "width": 46,
+      "sourceHeight": 240,
+      "frameHeight": 48
+    },
+    "Vodka": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 168,
+      "frameHeight": 56
+    },
+    "WarbanneroftheRighteous": {
+      "frames": 5,
+      "width": 32,
+      "sourceHeight": 390,
+      "frameHeight": 78
+    },
+    "Whiskey": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 174,
+      "frameHeight": 58
+    },
+    "WhiteWine": {
+      "frames": 3,
+      "width": 20,
+      "sourceHeight": 192,
+      "frameHeight": 64
+    }
+  },
+  "npcs": {
+    "acid-eel.png": {
+      "frames": 6,
+      "width": 18,
+      "sourceHeight": 132,
+      "frameHeight": 22
+    },
+    "anahita.png": {
+      "frames": 6,
+      "width": 200,
+      "sourceHeight": 1140,
+      "frameHeight": 190
+    },
+    "anthozoan-crab.png": {
+      "frames": 16,
+      "width": 56,
+      "sourceHeight": 672,
+      "frameHeight": 42
+    },
+    "aries.png": {
+      "frames": 8,
+      "width": 66,
+      "sourceHeight": 512,
+      "frameHeight": 64
+    },
+    "astraglomerate.png": {
+      "frames": 6,
+      "width": 38,
+      "sourceHeight": 372,
+      "frameHeight": 62
+    },
+    "astral-slime.png": {
+      "frames": 2,
+      "width": 36,
+      "sourceHeight": 62,
+      "frameHeight": 31
+    },
+    "astrum-aureus.png": {
+      "frames": 6,
+      "width": 426,
+      "sourceHeight": 2244,
+      "frameHeight": 374
+    },
+    "atlas.png": {
+      "frames": 6,
+      "width": 426,
+      "sourceHeight": 852,
+      "frameHeight": 142
+    },
+    "blinded-angler.png": {
+      "frames": 6,
+      "width": 56,
+      "sourceHeight": 264,
+      "frameHeight": 44
+    },
+    "bloatfish.png": {
+      "frames": 4,
+      "width": 62,
+      "sourceHeight": 344,
+      "frameHeight": 86
+    },
+    "brimstone-elemental.png": {
+      "frames": 12,
+      "width": 150,
+      "sourceHeight": 2160,
+      "frameHeight": 180
+    },
+    "calamitas-clone.png": {
+      "frames": 6,
+      "width": 116,
+      "sourceHeight": 1044,
+      "frameHeight": 174
+    },
+    "calamity-eye.png": {
+      "frames": 4,
+      "width": 40,
+      "sourceHeight": 112,
+      "frameHeight": 28
+    },
+    "chaotic-puffer.png": {
+      "frames": 11,
+      "width": 78,
+      "sourceHeight": 858,
+      "frameHeight": 78
+    },
+    "clam.png": {
+      "frames": 5,
+      "width": 56,
+      "sourceHeight": 190,
+      "frameHeight": 38
+    },
+    "cloud-elemental.png": {
+      "frames": 8,
+      "width": 120,
+      "sourceHeight": 1280,
+      "frameHeight": 160
+    },
+    "cnidrion.png": {
+      "frames": 10,
+      "width": 192,
+      "sourceHeight": 1120,
+      "frameHeight": 112
+    },
+    "colossal-squid.png": {
+      "frames": 11,
+      "width": 310,
+      "sourceHeight": 2112,
+      "frameHeight": 192
+    },
+    "crabulon.png": {
+      "frames": 6,
+      "width": 312,
+      "sourceHeight": 1176,
+      "frameHeight": 196
+    },
+    "cragmaw-mire.png": {
+      "frames": 2,
+      "width": 84,
+      "sourceHeight": 108,
+      "frameHeight": 54
+    },
+    "crimulan-blight-slime.png": {
+      "frames": 4,
+      "width": 70,
+      "sourceHeight": 224,
+      "frameHeight": 56
+    },
+    "cuttlefish.png": {
+      "frames": 5,
+      "width": 58,
+      "sourceHeight": 150,
+      "frameHeight": 30
+    },
+    "ebonian-blight-slime.png": {
+      "frames": 4,
+      "width": 70,
+      "sourceHeight": 224,
+      "frameHeight": 56
+    },
+    "eidolist.png": {
+      "frames": 6,
+      "width": 64,
+      "sourceHeight": 648,
+      "frameHeight": 108
+    },
+    "flak-crab.png": {
+      "frames": 7,
+      "width": 58,
+      "sourceHeight": 490,
+      "frameHeight": 70
+    },
+    "fusion-feeder.png": {
+      "frames": 4,
+      "width": 134,
+      "sourceHeight": 184,
+      "frameHeight": 46
+    },
+    "ghost-bell.png": {
+      "frames": 6,
+      "width": 54,
+      "sourceHeight": 456,
+      "frameHeight": 76
+    },
+    "giant-clam.png": {
+      "frames": 12,
+      "width": 226,
+      "sourceHeight": 1632,
+      "frameHeight": 136
+    },
+    "giant-squid.png": {
+      "frames": 5,
+      "width": 62,
+      "sourceHeight": 1130,
+      "frameHeight": 226
+    },
+    "gnasher.png": {
+      "frames": 5,
+      "width": 50,
+      "sourceHeight": 160,
+      "frameHeight": 32
+    },
+    "great-sand-shark.png": {
+      "frames": 8,
+      "width": 312,
+      "sourceHeight": 992,
+      "frameHeight": 124
+    },
+    "hadarian.png": {
+      "frames": 7,
+      "width": 82,
+      "sourceHeight": 546,
+      "frameHeight": 78
+    },
+    "heat-spirit.png": {
+      "frames": 4,
+      "width": 72,
+      "sourceHeight": 160,
+      "frameHeight": 40
+    },
+    "horrible-hog.png": {
+      "frames": 25,
+      "width": 86,
+      "sourceHeight": 1100,
+      "frameHeight": 44
+    },
+    "ice-clasper.png": {
+      "frames": 6,
+      "width": 60,
+      "sourceHeight": 540,
+      "frameHeight": 90
+    },
+    "impious-immolator.png": {
+      "frames": 4,
+      "width": 62,
+      "sourceHeight": 272,
+      "frameHeight": 68
+    },
+    "infernal-congealment.png": {
+      "frames": 2,
+      "width": 44,
+      "sourceHeight": 68,
+      "frameHeight": 34
+    },
+    "laserfish.png": {
+      "frames": 6,
+      "width": 58,
+      "sourceHeight": 192,
+      "frameHeight": 32
+    },
+    "luminous-corvina.png": {
+      "frames": 8,
+      "width": 68,
+      "sourceHeight": 464,
+      "frameHeight": 58
+    },
+    "mantis-shrimp.png": {
+      "frames": 6,
+      "width": 46,
+      "sourceHeight": 204,
+      "frameHeight": 34
+    },
+    "mantis.png": {
+      "frames": 14,
+      "width": 140,
+      "sourceHeight": 1120,
+      "frameHeight": 80
+    },
+    "mauler.png": {
+      "frames": 8,
+      "width": 204,
+      "sourceHeight": 848,
+      "frameHeight": 106
+    },
+    "mirage-jelly.png": {
+      "frames": 7,
+      "width": 78,
+      "sourceHeight": 1190,
+      "frameHeight": 170
+    },
+    "nova.png": {
+      "frames": 8,
+      "width": 114,
+      "sourceHeight": 592,
+      "frameHeight": 74
+    },
+    "nuclear-terror.png": {
+      "frames": 14,
+      "width": 211,
+      "sourceHeight": 1932,
+      "frameHeight": 138
+    },
+    "nuclear-toad.png": {
+      "frames": 5,
+      "width": 62,
+      "sourceHeight": 180,
+      "frameHeight": 36
+    },
+    "orthocera.png": {
+      "frames": 5,
+      "width": 68,
+      "sourceHeight": 250,
+      "frameHeight": 50
+    },
+    "overloaded-soldier.png": {
+      "frames": 14,
+      "width": 40,
+      "sourceHeight": 784,
+      "frameHeight": 56
+    },
+    "pestilent-slime.png": {
+      "frames": 2,
+      "width": 38,
+      "sourceHeight": 62,
+      "frameHeight": 31
+    },
+    "plague-charger.png": {
+      "frames": 4,
+      "width": 56,
+      "sourceHeight": 208,
+      "frameHeight": 52
+    },
+    "plaguechargerlarge.png": {
+      "frames": 4,
+      "width": 56,
+      "sourceHeight": 208,
+      "frameHeight": 52
+    },
+    "polterghast.png": {
+      "frames": 12,
+      "width": 90,
+      "sourceHeight": 1800,
+      "frameHeight": 150
+    },
+    "prism-back.png": {
+      "frames": 5,
+      "width": 72,
+      "sourceHeight": 290,
+      "frameHeight": 58
+    },
+    "radiator.png": {
+      "frames": 8,
+      "width": 34,
+      "sourceHeight": 192,
+      "frameHeight": 24
+    },
+    "reaper-shark.png": {
+      "frames": 4,
+      "width": 304,
+      "sourceHeight": 642,
+      "frameHeight": 160
+    },
+    "renegade-warlock.png": {
+      "frames": 4,
+      "width": 30,
+      "sourceHeight": 200,
+      "frameHeight": 50
+    },
+    "rimehound.png": {
+      "frames": 9,
+      "width": 106,
+      "sourceHeight": 522,
+      "frameHeight": 58
+    },
+    "rotdog.png": {
+      "frames": 10,
+      "width": 58,
+      "sourceHeight": 380,
+      "frameHeight": 38
+    },
+    "scorn-eater.png": {
+      "frames": 7,
+      "width": 188,
+      "sourceHeight": 1064,
+      "frameHeight": 152
+    },
+    "shockstorm-shuttle.png": {
+      "frames": 4,
+      "width": 82,
+      "sourceHeight": 184,
+      "frameHeight": 46
+    },
+    "sightseer-collider.png": {
+      "frames": 4,
+      "width": 80,
+      "sourceHeight": 160,
+      "frameHeight": 40
+    },
+    "sightseer-spitter.png": {
+      "frames": 4,
+      "width": 118,
+      "sourceHeight": 224,
+      "frameHeight": 56
+    },
+    "signus.png": {
+      "frames": 6,
+      "width": 176,
+      "sourceHeight": 1176,
+      "frameHeight": 196
+    },
+    "skyfin.png": {
+      "frames": 5,
+      "width": 56,
+      "sourceHeight": 150,
+      "frameHeight": 30
+    },
+    "slab-crab.png": {
+      "frames": 23,
+      "width": 44,
+      "sourceHeight": 736,
+      "frameHeight": 32
+    },
+    "stellar-culex.png": {
+      "frames": 4,
+      "width": 100,
+      "sourceHeight": 240,
+      "frameHeight": 60
+    },
+    "stormlion.png": {
+      "frames": 6,
+      "width": 92,
+      "sourceHeight": 264,
+      "frameHeight": 44
+    },
+    "sulphurous-skater.png": {
+      "frames": 5,
+      "width": 48,
+      "sourceHeight": 240,
+      "frameHeight": 48
+    },
+    "the-lorde.png": {
+      "frames": 7,
+      "width": 480,
+      "sourceHeight": 2016,
+      "frameHeight": 288
+    },
+    "trilobite.png": {
+      "frames": 8,
+      "width": 42,
+      "sourceHeight": 400,
+      "frameHeight": 50
+    },
+    "wulfrum-amplifier.png": {
+      "frames": 6,
+      "width": 46,
+      "sourceHeight": 276,
+      "frameHeight": 46
+    },
+    "wulfrum-drone.png": {
+      "frames": 6,
+      "width": 32,
+      "sourceHeight": 204,
+      "frameHeight": 34
+    },
+    "wulfrum-gyrator.png": {
+      "frames": 10,
+      "width": 40,
+      "sourceHeight": 420,
+      "frameHeight": 42
+    },
+    "wulfrum-hovercraft.png": {
+      "frames": 12,
+      "width": 38,
+      "sourceHeight": 528,
+      "frameHeight": 44
+    },
+    "wulfrum-rover.png": {
+      "frames": 16,
+      "width": 44,
+      "sourceHeight": 672,
+      "frameHeight": 42
+    }
+  }
+}
