@@ -28,48 +28,59 @@
         </span>
       </a>
 
-      <div class="nav-caption">Разделы</div>
       <nav class="rail-nav" id="main-nav">
         <a href="#/" data-nav="home">
           <span class="nav-icon slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span>
           <span>Главная</span>
         </a>
-        <a href="#/novice?q=1" data-nav="novice">
-          <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span>
-          <span>Путь новичка</span><em>30</em>
-        </a>
-        <a class="nav-primary" href="#/crafts" data-nav="crafts">
-          <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span>
-          <span>Полное дерево</span><em data-craft-plan-count title="Целей в плане крафта">0</em>
-        </a>
-        <a href="#/items" data-nav="items">
-          <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span>
-          <span>Предметы</span><em>2.5K</em>
-        </a>
-        <a href="#/bosses" data-nav="bosses">
-          <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span>
-          <span>Боссы</span><em>54</em>
-        </a>
-        <a href="#/useful" data-nav="useful">
-          <span class="nav-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span>
-          <span>Полезное</span><em>71</em>
-        </a>
-        <a href="#/wiki" data-nav="wiki">
-          <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" /></span>
-          <span>Справочник</span>
-        </a>
-        <a href="#/biomes" data-nav="biomes">
-          <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" /></span>
-          <span>Биомы</span>
-        </a>
-        <a href="#/favorites" data-nav="favorites">
-          <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" /></span>
-          <span>Избранное</span><em data-favorites-count>0</em>
-        </a>
-        <a href="#/lex" data-nav="lex">
-          <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" /></span>
-          <span>Словарь</span>
-        </a>
+
+        <div class="nav-group">
+          <div class="nav-group-label">Прохождение</div>
+          <a href="#/novice?q=1" data-nav="novice">
+            <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span>
+            <span>Путь новичка</span><em>30</em>
+          </a>
+          <a href="#/bosses" data-nav="bosses">
+            <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span>
+            <span>Боссы</span><em>54</em>
+          </a>
+          <a href="#/biomes" data-nav="biomes">
+            <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" /></span>
+            <span>Биомы</span>
+          </a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">Арсенал</div>
+          <a href="#/items" data-nav="items">
+            <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span>
+            <span>Предметы</span><em>2.5K</em>
+          </a>
+          <a class="nav-primary" href="#/crafts" data-nav="crafts">
+            <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span>
+            <span>Дерево крафта</span><em data-craft-plan-count title="Целей в плане крафта">0</em>
+          </a>
+          <a href="#/useful" data-nav="useful">
+            <span class="nav-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span>
+            <span>Полезное</span><em>71</em>
+          </a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">Справка</div>
+          <a href="#/wiki" data-nav="wiki">
+            <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" /></span>
+            <span>Справочник</span>
+          </a>
+          <a href="#/lex" data-nav="lex">
+            <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" /></span>
+            <span>Словарь</span>
+          </a>
+          <a href="#/favorites" data-nav="favorites">
+            <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" /></span>
+            <span>Избранное</span><em data-favorites-count>0</em>
+          </a>
+        </div>
       </nav>
 
       <div class="rail-extra" id="rail-extra"></div>
@@ -137,10 +148,9 @@
   <nav class="mobile-tabs" aria-label="Быстрая навигация">
     <a href="#/" data-nav="home"><span class="slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span><span>Главная</span></a>
     <a href="#/novice?q=1" data-nav="novice"><span class="slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span><span>Путь</span></a>
-    <a class="nav-primary" href="#/crafts" data-nav="crafts"><span class="slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span><span>Дерево</span></a>
     <a href="#/items" data-nav="items"><span class="slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span><span>Предметы</span></a>
     <a href="#/bosses" data-nav="bosses"><span class="slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span><span>Боссы</span></a>
-    <a href="#/useful" data-nav="useful"><span class="slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span><span>Полезное</span></a>
+    <a class="nav-primary" href="#/crafts" data-nav="crafts"><span class="slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span><span>Крафт</span></a>
   </nav>
 
   <button class="to-top" id="to-top" type="button" aria-label="Наверх">▲</button>

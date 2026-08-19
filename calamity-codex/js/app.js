@@ -1643,84 +1643,94 @@
     const currentQuestArt = GUIDE_ART[currentQuest?.id] || "assets/sprites/Wooden_Sword.png";
     const nextBossArt = nextBoss ? (nextBoss.art || BOSS_ART_BY_ID[nextBoss.id] || BOSS_ART[nextBoss.n] || "assets/sprites/Suspicious_Looking_Eye.png") : "assets/favicon.png";
     const bossPercent = Math.round((bossSnapshot.defeatedCount / Math.max(1, bossSnapshot.total)) * 100);
-    // На главной нужен только счётчик: не разворачиваем 2535 компактных строк
-    // каталога в объекты до первого открытия каталога или поиска.
     const itemCount = catalogItemCount().toLocaleString("ru-RU");
-    const jumps = [
-      [`#/novice?q=${currentQuest?.id || 1}`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
-      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Полное дерево", craftPlanTotal ? `${craftPlanTotal} целей рядом в плане` : "главный инструмент кодекса"],
-      ["#/items", "assets/sprites/StarterBag.png", "Предметы", `${itemCount} карточек`],
-      ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
-      ["#/useful", "assets/vanilla-sprites/1923.png", "Полезное", `${USEFUL_DATA.items?.length || 71} предмет`],
-      ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
-      ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`],
-      ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`],
-      ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`]
-    ];
     app.innerHTML = `
-      <section class="hero">
+      <section class="home-hero">
         <div class="hero-bg"></div>
-        <div class="hero-inner">
-          <div class="kicker">Terraria · Каламити ${CODEX.version} · офлайн-справочник</div>
+        <div class="home-hero-inner">
+          <div class="kicker">Каламити ${CODEX.version} · офлайн-справочник</div>
           <h1>Каламити<span>Кодекс</span></h1>
-          <p class="lede">Терминал прохождения: 30 квестов от первого дома до Верховной ведьмы, ${itemCount} предметов с настоящими спрайтами, боссы, крафты и биомы. Наведи мышь на ингредиент — увидишь, где взять и из чего собрать.</p>
+          <p class="home-hero-lede">30 квестов · ${itemCount} предметов · 54 босса · крафты и биомы</p>
           <div class="hero-actions">
             <a class="mode-btn" href="#/novice?q=${currentQuest?.id || 1}">
               <span class="slot mode-slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" decoding="async" /></span>
-              <span class="mode-copy"><b>${done.size ? "Продолжить путь" : "Путь новичка"}</b><small>${done.size} из ${total} · ${esc(currentQuest?.title || "от дома до ведьмы")}</small></span>
+              <span class="mode-copy"><b>${done.size ? "Продолжить путь" : "Начать путь"}</b><small>${done.size} из ${total} · ${esc(currentQuest?.title || "от дома до ведьмы")}</small></span>
               <span class="mode-arrow">▶</span>
             </a>
             <a class="mode-btn primary-tree" href="#/crafts">
               <span class="slot mode-slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" decoding="async" /></span>
-              <span class="mode-copy"><b>Полное дерево</b><small>любой предмет · все ветки · базовые ресурсы</small></span>
+              <span class="mode-copy"><b>Дерево крафта</b><small>все зависимости предмета</small></span>
               <span class="mode-arrow">▶</span>
             </a>
           </div>
         </div>
-        <aside class="hero-status panel" aria-label="Сводка прогресса">
-          <div class="hs-head"><span>Прогресс героя</span><b>${done.size} / ${total}</b></div>
-          <div class="hpbar"><i style="width:${percent}%"></i></div>
-          <div class="hs-stats">
-            <a href="#/bosses"><span class="slot hs-slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" decoding="async" /></span><span><b>${bossSnapshot.defeatedCount}/${bossSnapshot.total}</b><small>победы</small></span></a>
-            <a href="#/items"><span class="slot hs-slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" decoding="async" /></span><span><b>${itemCount}</b><small>предметов</small></span></a>
-            <a href="#/favorites"><span class="slot hs-slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" decoding="async" /></span><span><b>${favTotal}</b><small>в рюкзаке</small></span></a>
-            <a href="${craftPlanTotal ? "#/crafts?plan=1" : "#/crafts"}"><span class="slot hs-slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" decoding="async" /></span><span><b>${craftPlanTotal}</b><small>в плане</small></span></a>
-          </div>
-          <a class="hs-continue" href="#/novice?q=${currentQuest?.id || 1}"><span>${done.size === total ? "✓ маршрут пройден" : "▶ продолжить"}</span><b>Квест ${currentQuest?.id || 1} · ${esc(currentQuest?.title || "Начало пути")}</b></a>
+        <aside class="home-dashboard panel" aria-label="Сводка прогресса">
+          <a class="home-dash-card" href="#/novice?q=${currentQuest?.id || 1}">
+            <span class="home-dash-icon slot"><img src="${escAttr(releaseAsset(currentQuestArt))}" alt="" loading="lazy" decoding="async" /></span>
+            <div class="home-dash-info">
+              <small>Квест ${currentQuest?.id || 1}</small>
+              <b>${esc(currentQuest?.title || "Начало пути")}</b>
+              <div class="hpbar mini"><i style="width:${percent}%"></i></div>
+            </div>
+            <output>${done.size}/${total}</output>
+          </a>
+          <a class="home-dash-card" href="${nextBoss ? `#/bosses?q=${encodeURIComponent(nextBoss.name)}` : "#/bosses"}">
+            <span class="home-dash-icon slot"><img src="${escAttr(releaseAsset(nextBossArt))}" alt="" loading="lazy" decoding="async" /></span>
+            <div class="home-dash-info">
+              <small>${nextBoss ? "Следующий босс" : "Бестиарий"}</small>
+              <b>${esc(nextBoss?.name || "Все побеждены")}</b>
+              <div class="hpbar mini"><i style="width:${bossPercent}%"></i></div>
+            </div>
+            <output>${bossSnapshot.defeatedCount}/${bossSnapshot.total}</output>
+          </a>
+          <a class="home-dash-card" href="#/items">
+            <span class="home-dash-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" decoding="async" /></span>
+            <div class="home-dash-info">
+              <small>Каталог</small>
+              <b>Предметы</b>
+            </div>
+            <output>${itemCount}</output>
+          </a>
+          <a class="home-dash-card" href="${craftPlanTotal ? "#/crafts?plan=1" : "#/crafts"}">
+            <span class="home-dash-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" decoding="async" /></span>
+            <div class="home-dash-info">
+              <small>План крафта</small>
+              <b>${craftPlanTotal ? `${craftPlanTotal} целей` : "Пусто"}</b>
+            </div>
+            <output>${craftPlanRuns}</output>
+          </a>
         </aside>
-      </section>
-      <section class="home-command" aria-labelledby="home-command-title">
-        <header class="home-command-head"><div><small>личный терминал</small><h2 id="home-command-title">Что делать дальше</h2></div><p>Кодекс собрал текущий квест, ближайший непобеждённый бой и сохранённый план крафта в одном месте.</p></header>
-        <div class="home-command-grid">
-          <a class="home-command-card quest" href="#/novice?q=${currentQuest?.id || 1}">
-            <div class="home-command-card-head"><span class="slot"><img src="${escAttr(releaseAsset(currentQuestArt))}" alt="" loading="lazy" decoding="async" /></span><span><small>${done.size === total ? "маршрут завершён" : "текущий квест"}</small><b>${esc(currentQuest?.title || "Путь героя")}</b><i>Глава ${currentQuest?.id || 1}</i></span><em aria-hidden="true">→</em></div>
-            <p>${esc(ruText(currentQuest?.objective || currentQuest?.subtitle || "Открой маршрут и продолжай прохождение по сохранённому этапу."))}</p>
-            <div class="home-command-progress"><span><b>${done.size}</b> из ${total} квестов</span><output>${percent}%</output><i><u style="width:${percent}%"></u></i></div>
-          </a>
-          <a class="home-command-card boss" href="${nextBoss ? `#/bosses?q=${encodeURIComponent(nextBoss.name)}` : "#/bosses"}">
-            <div class="home-command-card-head"><span class="slot"><img src="${escAttr(releaseAsset(nextBossArt))}" alt="" loading="lazy" decoding="async" /></span><span><small>${nextBoss ? (bossSnapshot.extrasMode ? "дополнительное испытание" : "следующий босс") : "бестиарий завершён"}</small><b>${esc(nextBoss?.name || "Все боссы побеждены")}</b><i>${nextBoss ? `Глава ${nextBoss.q}${bossSnapshot.targets.length > 1 ? ` · ещё ${bossSnapshot.targets.length - 1} на этапе` : ""}` : `${bossSnapshot.total} побед`}</i></span><em aria-hidden="true">→</em></div>
-            <p>${nextBoss ? `<span>⌖ ${esc(ruText(nextBoss.where))}</span><span>✦ ${esc(ruText(nextBoss.summon))}</span>` : "Основные, скрытые и мини-боссы отмечены побеждёнными. Можно перейти к повторному фарму наград."}</p>
-            <div class="home-command-progress"><span><b>${bossSnapshot.defeatedCount}</b> из ${bossSnapshot.total} побед</span><output>${bossPercent}%</output><i><u style="width:${bossPercent}%"></u></i></div>
-          </a>
-          <a class="home-command-card plan" href="#/crafts?plan=1">
-            <div class="home-command-card-head"><span class="slot"><img src="${escAttr(releaseAsset("assets/sprites/Iron_Anvil.png"))}" alt="" loading="lazy" decoding="async" /></span><span><small>общий план крафта</small><b>${craftPlanTotal ? `${craftPlanTotal} ${craftPlanTotal === 1 ? "цель" : craftPlanTotal < 5 ? "цели" : "целей"}` : "План пока пуст"}</b><i>${craftPlanTotal ? `${recipeCraftCountLabel(craftPlanRuns)} суммарно` : "До 24 результатов"}</i></span><em aria-hidden="true">→</em></div>
-            <p>${craftPlanTotal ? "Продолжи сбор общих базовых ресурсов, проверь станции или добавь ещё один результат из визуального рецепта." : "Добавляй предметы из визуальных рецептов — кодекс объединит одинаковые материалы и рассчитает реальные партии."}</p>
-            <div class="home-command-plan-meta"><span><b>${craftPlanTotal}</b><small>целей</small></span><span><b>${craftPlanRuns}</b><small>крафтов</small></span><strong>${craftPlanTotal ? "Открыть смету" : "Создать план"}</strong></div>
-          </a>
-        </div>
       </section>
       <section class="home-strip">
         <div class="home-section-head">
-          <div><small>Быстрый доступ</small><h2>Разделы кодекса</h2></div>
-          <p>Все данные уже внутри страницы: спрайты, рецепты и описания работают без сети.</p>
+          <div><small>Навигация</small><h2>Разделы кодекса</h2></div>
         </div>
-        <div class="jump-grid">
-          ${jumps.map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+        <div class="home-nav-groups">
+          <div class="home-nav-group">
+            <h3>Прохождение</h3>
+            <div class="jump-grid jump-grid-compact">
+              <a class="jump" href="#/novice?q=${currentQuest?.id || 1}"><span class="jump-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" decoding="async" /></span><span><b>Путь новичка</b><small>${done.size} из ${CODEX.quests.length}</small></span></a>
+              <a class="jump" href="#/bosses"><span class="jump-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" decoding="async" /></span><span><b>Боссы</b><small>${bossSnapshot.defeatedCount} побед</small></span></a>
+              <a class="jump" href="#/biomes"><span class="jump-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" decoding="async" /></span><span><b>Биомы</b><small>${CODEX.biomes.length} локаций</small></span></a>
+            </div>
+          </div>
+          <div class="home-nav-group">
+            <h3>Арсенал</h3>
+            <div class="jump-grid jump-grid-compact">
+              <a class="jump" href="#/items"><span class="jump-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" decoding="async" /></span><span><b>Предметы</b><small>${itemCount} карточек</small></span></a>
+              <a class="jump" href="#/crafts"><span class="jump-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" decoding="async" /></span><span><b>Дерево крафта</b><small>${craftPlanTotal ? `${craftPlanTotal} в плане` : "все рецепты"}</small></span></a>
+              <a class="jump" href="#/useful"><span class="jump-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" decoding="async" /></span><span><b>Полезное</b><small>${USEFUL_DATA.items?.length || 71} предмет</small></span></a>
+            </div>
+          </div>
+          <div class="home-nav-group">
+            <h3>Справка</h3>
+            <div class="jump-grid jump-grid-compact">
+              <a class="jump" href="#/wiki"><span class="jump-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" decoding="async" /></span><span><b>Справочник</b><small>5 разделов</small></span></a>
+              <a class="jump" href="#/lex"><span class="jump-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" decoding="async" /></span><span><b>Словарь</b><small>${Object.keys(CODEX.lex || {}).length} терминов</small></span></a>
+              <a class="jump" href="#/favorites"><span class="jump-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" decoding="async" /></span><span><b>Избранное</b><small>${favTotal} в рюкзаке</small></span></a>
+            </div>
+          </div>
         </div>
-        <details class="secondary-shelf home-era-shelf">
-          <summary><span><i aria-hidden="true">IV</i><b>Эпохи прохождения</b><small>Краткий порядок противников и снаряжения</small></span><em>4 этапа</em></summary>
-          <div class="secondary-shelf-body"><div class="era-grid">${CODEX.eras.map((e, index) => `<article class="era-card panel" data-era="${escAttr(e.id)}"><span class="era-no" aria-hidden="true">0${index + 1}</span><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol><a class="era-link" href="#/bosses?era=${escAttr(e.id)}">Боссы эпохи →</a></article>`).join("")}</div></div>
-        </details>
       </section>
     `;
   }
