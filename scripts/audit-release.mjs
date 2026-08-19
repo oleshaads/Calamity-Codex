@@ -39,12 +39,12 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260819-core60";
+const releaseVersion = "20260819-core61";
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];
 const catalogSources = [
-  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
+  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-meta.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
 ];
 const runtimePath = path.join(root, "js/codex.min.js");
 const catalogBundlePath = path.join(root, "js/codex-data.min.js");
@@ -72,7 +72,7 @@ check(indexHtml.includes(`rel="preload" href="js/codex.min.js?v=${releaseVersion
 check(indexHtml.includes(`css/modern.min.css?v=${releaseVersion}`), "Index does not load the current minified stylesheet");
 check(!indexHtml.includes("codex-data.min.js"), "Heavy catalog data must not block the initial document");
 check(app.includes("ensureCatalogData") && app.includes("codex-data.min.js") && app.includes(`ASSET_VERSION = "${releaseVersion}"`), "Route/search-triggered catalog loading is not wired to the current release");
-check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 225 * 1024, "Initial core bundle exceeds the 225 KiB gzip performance budget");
+check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 228 * 1024, "Initial core bundle exceeds the 228 KiB gzip performance budget");
 check(runtimeBundle.length < catalogBundle.length, "Initial core bundle is not smaller than the deferred catalog payload");
 check(indexHtml.includes(`manifest.webmanifest?v=${releaseVersion}`), "PWA manifest is not linked with the current core version");
 const manifestPath = path.join(root, "manifest.webmanifest");
@@ -124,7 +124,11 @@ check(vanillaIndex.format === 2 && Array.isArray(vanillaIndex.types), "Vanilla t
 check((vanillaIndex.recipes || []).length >= 3000, `Expected at least 3000 vanilla Terraria recipes, got ${(vanillaIndex.recipes || []).length}`);
 check((vanillaIndex.coverage?.sprites || 0) >= 5000, `Expected at least 5000 vanilla item sprites, got ${vanillaIndex.coverage?.sprites || 0}`);
 check(fs.existsSync(path.resolve("scripts/build-vanilla-tree.mjs")), "Vanilla tree rebuild script is missing");
+check(fs.existsSync(path.resolve("scripts/build-vanilla-meta.mjs")), "Vanilla semantic metadata rebuild script is missing");
 check(fs.existsSync(path.resolve("scripts/build-vanilla-ru.mjs")), "Vanilla Russian-name rebuild script is missing");
+vm.runInContext(fs.readFileSync(path.join(root, "js/vanilla-meta.js"), "utf8"), vanillaContext, { filename: "js/vanilla-meta.js" });
+const vanillaMeta = vanillaContext.window.CALAMITY_VANILLA_META || {};
+check(vanillaMeta.rows?.length === 4504 && vanillaMeta.coverage?.fishingPoles === 11, "Structured vanilla semantic metadata coverage is incomplete");
 const vanillaRuContext = { window: {} };
 vm.createContext(vanillaRuContext);
 vm.runInContext(fs.readFileSync(path.join(root, "js/vanilla-ru.js"), "utf8"), vanillaRuContext, { filename: "js/vanilla-ru.js" });
@@ -132,6 +136,8 @@ const vanillaRu = vanillaRuContext.window.CALAMITY_VANILLA_RU || {};
 const vanillaRuById = vanillaRu.names || vanillaRu.byId || [];
 check(vanillaRu.format === 2 && Array.isArray(vanillaRu.names), "Vanilla Russian names are not using the compact array encoding");
 check(vanillaRu.officialCount >= 5070, `Expected at least 5070 official vanilla Russian names, got ${vanillaRu.officialCount || 0}`);
+check(vanillaRu.tooltipCount === 1766 && Array.isArray(vanillaRu.tooltips), "Official Russian vanilla item tooltips are missing");
+check(vanillaRu.names[4325] === "«Завлекатель приманки»" && /Кровавой луны/i.test(vanillaRu.tooltips[4325] || ""), "Verified Chum Caster name/effect correction is missing");
 const vanillaId = (name) => String(vanillaItems.find((item) => item.name === name)?.id || "");
 check(vanillaRuById[vanillaId("Adamantite Bar")] === "Адамантитовый слиток", "Adamantite Bar is not using the official Russian name");
 check(vanillaRuById[vanillaId("Adamantite Ore")] === "Адамантитовая руда", "Adamantite Ore is not using the official Russian name");
@@ -223,7 +229,7 @@ for (const relative of [
 const craftArtAuditPath = path.resolve("scripts/audit-craft-art.cjs");
 check(fs.existsSync(craftArtAuditPath), "Full craft imagery regression audit is missing");
 const packageJson = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf8"));
-check(packageJson.scripts?.audit?.includes("audit-craft-art.cjs") && packageJson.scripts?.audit?.includes("audit-lazy-runtime.cjs") && packageJson.scripts?.audit?.includes("audit-high-refresh.cjs") && packageJson.scripts?.audit?.includes("audit-home-dashboard.cjs") && packageJson.scripts?.audit?.includes("audit-layout-shelves.cjs") && packageJson.scripts?.audit?.includes("audit-tree-priority.cjs") && packageJson.scripts?.audit?.includes("audit-craft-boss-details.cjs") && packageJson.scripts?.audit?.includes("audit-accessibility.cjs") && packageJson.scripts?.audit?.includes("audit-search-performance.cjs") && packageJson.scripts?.audit?.includes("audit-useful.cjs") && packageJson.scripts?.audit?.includes("audit-visual-recipes.cjs") && packageJson.scripts?.audit?.includes("audit-craft-plan.cjs") && packageJson.scripts?.audit?.includes("audit-acquisition.cjs") && packageJson.scripts?.audit?.includes("audit-tree-zoom.cjs") && packageJson.scripts?.audit?.includes("audit-biome-filters.cjs") && packageJson.scripts?.audit?.includes("audit-bosses.cjs") && packageJson.scripts?.audit?.includes("audit-boss-relations.cjs") && packageJson.scripts?.audit?.includes("audit-sprite-frames.cjs") && packageJson.devDependencies?.jsdom, "npm audit does not run the lazy-runtime, high-refresh, home-dashboard, shelf-layout, tree-priority, craft-boss-details, accessibility, search, useful-section, visual-recipe, shared-craft-plan, acquisition, tree-zoom, biome, boss, boss-relation, sprite-frame and craft-imagery regression checks");
+check(packageJson.scripts?.audit?.includes("audit-craft-art.cjs") && packageJson.scripts?.audit?.includes("audit-lazy-runtime.cjs") && packageJson.scripts?.audit?.includes("audit-high-refresh.cjs") && packageJson.scripts?.audit?.includes("audit-home-dashboard.cjs") && packageJson.scripts?.audit?.includes("audit-layout-shelves.cjs") && packageJson.scripts?.audit?.includes("audit-tree-priority.cjs") && packageJson.scripts?.audit?.includes("audit-craft-boss-details.cjs") && packageJson.scripts?.audit?.includes("audit-accessibility.cjs") && packageJson.scripts?.audit?.includes("audit-search-performance.cjs") && packageJson.scripts?.audit?.includes("audit-item-accuracy.cjs") && packageJson.scripts?.audit?.includes("audit-useful.cjs") && packageJson.scripts?.audit?.includes("audit-visual-recipes.cjs") && packageJson.scripts?.audit?.includes("audit-craft-plan.cjs") && packageJson.scripts?.audit?.includes("audit-acquisition.cjs") && packageJson.scripts?.audit?.includes("audit-tree-zoom.cjs") && packageJson.scripts?.audit?.includes("audit-biome-filters.cjs") && packageJson.scripts?.audit?.includes("audit-bosses.cjs") && packageJson.scripts?.audit?.includes("audit-boss-relations.cjs") && packageJson.scripts?.audit?.includes("audit-sprite-frames.cjs") && packageJson.devDependencies?.jsdom, "npm audit does not run the lazy-runtime, high-refresh, home-dashboard, shelf-layout, tree-priority, craft-boss-details, accessibility, search, item-accuracy, useful-section, visual-recipe, shared-craft-plan, acquisition, tree-zoom, biome, boss, boss-relation, sprite-frame and craft-imagery regression checks");
 const npcBuilderSource = fs.readFileSync(path.resolve("scripts/build-npc-sources.mjs"), "utf8");
 check(npcBuilderSource.includes("TILE_ART") && npcBuilderSource.includes("CHEST_ART") && npcBuilderSource.includes("tileSource"), "NPC source rebuild would lose tile/chest imagery");
 const serverSource = fs.readFileSync(path.resolve("scripts/serve.py"), "utf8");

@@ -5730,3 +5730,9 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
   .boss-detail-overview, .boss-detail-card .tip-card-facts, .boss-detail-actions { grid-template-columns: minmax(0, 1fr); }
   .boss-detail-card .tip-card-facts > .npc-drops-fact, .boss-detail-actions .boss-defeat-btn { grid-column: 1; }
 }
+
+/* Проверенные характеристики ванильных предметов */
+.vanilla-semantic-stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 16px 2px; }
+.tip-card-body > .vanilla-semantic-stats { margin: 0 0 10px; }
+.vanilla-semantic-stats span { padding: 4px 8px; border: 1px solid #36505a; border-radius: 10px; color: #a9d5db; background: #122128; font-family: var(--mono); font-size: 9px; font-weight: 800; }
+@media (max-width: 760px) { .vanilla-semantic-stats { margin-inline: 12px; } }

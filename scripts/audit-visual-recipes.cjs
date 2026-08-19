@@ -29,7 +29,7 @@ sourceWindow.scrollTo = () => {};
 sourceWindow.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
 for (const name of [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js",
-  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
+  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-meta.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
 ]) sourceWindow.eval(`${fs.readFileSync(path.join(root, "js", name), "utf8")}\n//# sourceURL=${name}`);
 let sourceApp = appSource.replace(/\}\)\(\);\s*$/, "window.__VISUAL_RECIPE_AUDIT={indexedItems,indexedItemCard,itemCard,craftCard,usefulEntries,usefulCard,visualRecipeFor,ingredientInfo,craftTreeMaterialSummary};})();");
 check(sourceApp !== appSource, "Could not instrument app source for exhaustive recipe audit");

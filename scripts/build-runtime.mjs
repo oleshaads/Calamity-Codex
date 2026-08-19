@@ -23,6 +23,7 @@ const catalogFiles = [
   "boss-relations.js",
   "useful.js",
   "vanilla-tree.js",
+  "vanilla-meta.js",
   "vanilla-ru.js",
   "npc-sources.js",
   "npc-ru.js",

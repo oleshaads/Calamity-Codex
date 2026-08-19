@@ -7,7 +7,7 @@ const root = path.resolve(process.argv[2] || "calamity-codex");
 const fail = (message) => { throw new Error(message); };
 const scripts = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "catalog.js", "boss-relations.js",
-  "vanilla-tree.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
+  "vanilla-tree.js", "vanilla-meta.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js"
 ];
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8").replace(/<script[^>]+><\/script>/g, "");
 const virtualConsole = new VirtualConsole();

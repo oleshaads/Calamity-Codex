@@ -95,7 +95,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core60";
+  const ASSET_VERSION = "20260819-core61";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -138,6 +138,8 @@
   let ITEM_RECIPE_YIELDS = new Map((ITEM_INDEX.recipeYields || []).map(([id, quantity]) => [String(id), Math.max(1, Number(quantity || 1))]));
   let BOSS_RELATION_DATA = window.CALAMITY_BOSS_RELATIONS || { bosses: [], types: [], items: [], vanilla: [], guides: [], crafts: [], coverage: {} };
   let USEFUL_DATA = window.CALAMITY_USEFUL_ITEMS || { groups: [], items: [] };
+  let VANILLA_META_DATA = window.CALAMITY_VANILLA_META || { fields: [], categories: [], rows: [], coverage: {} };
+  let vanillaMetaById = null;
   let bossRelationIndexes = null;
   const ITEM_KIND_MARK = { weapon: "⚔", armor: "◈", acc: "◇", ammo: "➶", tool: "⚒", mat: "◆", summon: "✦", potion: "⚗", misc: "▦" };
   const CATALOG_PAGE_SIZE = 96;
@@ -152,6 +154,7 @@
     && window.CALAMITY_BOSS_RELATIONS?.items?.length
     && window.CALAMITY_USEFUL_ITEMS?.items?.length
     && window.CALAMITY_VANILLA_TREE_INDEX?.items?.length
+    && window.CALAMITY_VANILLA_META?.rows?.length
     && window.CALAMITY_VANILLA_RU?.names?.length
     && window.CALAMITY_NPC_SOURCES
     && window.CALAMITY_RU_NAMES
@@ -170,6 +173,9 @@
     bossRelationIndexes = null;
     RU_NAMES = window.CALAMITY_RU_NAMES;
     VANILLA_RU_BY_ID = window.CALAMITY_VANILLA_RU.names || window.CALAMITY_VANILLA_RU.byId || [];
+    VANILLA_RU_TOOLTIPS_BY_ID = window.CALAMITY_VANILLA_RU.tooltips || [];
+    VANILLA_META_DATA = window.CALAMITY_VANILLA_META;
+    vanillaMetaById = null;
     VANILLA_TREE_INDEX = window.CALAMITY_VANILLA_TREE_INDEX;
     VANILLA_COMPACT = VANILLA_TREE_INDEX.format === 2;
     VANILLA_MISSING_SPRITES = new Set(VANILLA_TREE_INDEX.coverage?.missingSpriteIds || []);
@@ -487,7 +493,7 @@
         : obtainRaw;
     const used = info.used || (lex && lex.used) || "";
     const when = info.when || "";
-    const type = (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
+    const type = info.typeLabel || (lex && lex.type) || KIND_RU[info.kind] || "Предмет";
     const desc = ruText(info.desc || (lex && lex.desc) || "");
     const catItem = catalogByName(name);
     const tipSources = npcSourceForItem({ id: catItem ? catItem.id : "" });
@@ -505,6 +511,7 @@
       </div>
       <div class="tip-card-body">
         ${desc ? `<p class="tip-card-desc">${esc(desc)}</p>` : ""}
+        ${info.semanticStats?.length ? `<div class="vanilla-semantic-stats">${info.semanticStats.map((stat) => `<span>${esc(stat)}</span>`).join("")}</div>` : ""}
         <div class="tip-card-facts">
           ${(obtain || tipSources) ? `<div class="fact source-fact"><span>Где взять</span>${npcSourceLines(tipSources) ? `<div class="src-list">${npcSourceLines(tipSources)}</div>` : `<p>${esc(obtain)}</p>`}</div>` : ""}
           ${used ? `<div class="fact"><span>Зачем</span><p>${esc(used)}</p></div>` : ""}
@@ -1731,6 +1738,7 @@
   }
   let RU_NAMES = window.CALAMITY_RU_NAMES || { byId: {}, byName: {}, translate: (name) => name, text: (text) => text };
   let VANILLA_RU_BY_ID = (window.CALAMITY_VANILLA_RU && (window.CALAMITY_VANILLA_RU.names || window.CALAMITY_VANILLA_RU.byId)) || [];
+  let VANILLA_RU_TOOLTIPS_BY_ID = (window.CALAMITY_VANILLA_RU && window.CALAMITY_VANILLA_RU.tooltips) || [];
   const EXACT_RU_NAMES = new Map();
   Object.values(CODEX.lex || {}).forEach((entry) => {
     [entry.en, entry.ru, ...(entry.aliases || [])].filter(Boolean).forEach((name) => EXACT_RU_NAMES.set(String(name).toLocaleLowerCase("ru"), entry.ru));
@@ -2781,8 +2789,52 @@
   const vanillaTypeName = (type) => VANILLA_TYPE_RU[String(type || "")] || "предмет";
   const isInternalVanillaName = (name) => /^n\/a\s*\(/i.test(String(name || "")) || /^format\s*:\s*[a-z]$/i.test(String(name || "").trim());
 
+  function vanillaMetaIndex() {
+    if (vanillaMetaById) return vanillaMetaById;
+    const fields = VANILLA_META_DATA.fields || [];
+    vanillaMetaById = new Map((VANILLA_META_DATA.rows || []).map(([id, categoryId, values]) => {
+      const meta = { category: VANILLA_META_DATA.categories?.[categoryId] || "" };
+      (values || []).forEach((value, index) => { if (value != null && value !== "") meta[fields[index]] = value; });
+      return [String(id), meta];
+    }));
+    return vanillaMetaById;
+  }
+  function vanillaMetaFor(item) {
+    return item?.id != null ? vanillaMetaIndex().get(String(item.id)) || null : null;
+  }
+  function vanillaTooltipRu(item) {
+    return String(VANILLA_RU_TOOLTIPS_BY_ID[String(item?.id)] || "").trim();
+  }
+  function vanillaRole(item, meta = vanillaMetaFor(item)) {
+    if (meta?.["Fishing Power"]) return "удочка";
+    if (meta?.["Pickaxe power"] && meta["Pickaxe power"] !== "0%") return "кирка";
+    if (meta?.["Axe power"] && meta["Axe power"] !== "0%" && meta?.["Hammer power"] && meta["Hammer power"] !== "0%") return "молотопор";
+    if (meta?.["Axe power"] && meta["Axe power"] !== "0%") return "топор";
+    if (meta?.["Hammer power"] && meta["Hammer power"] !== "0%") return "молот";
+    return vanillaTypeName(item?.type || "n/a").toLocaleLowerCase("ru");
+  }
+  function vanillaMetaStats(item, meta = vanillaMetaFor(item)) {
+    if (!meta) return [];
+    const stats = [];
+    if (meta["Fishing Power"]) stats.push(`сила рыбалки ${meta["Fishing Power"]}`);
+    if (meta["Bait Power"]) stats.push(`сила наживки ${meta["Bait Power"]}`);
+    if (meta["Pickaxe power"] && meta["Pickaxe power"] !== "0%") stats.push(`мощность кирки ${meta["Pickaxe power"]}`);
+    if (meta["Axe power"] && meta["Axe power"] !== "0%") stats.push(`мощность топора ${meta["Axe power"]}`);
+    if (meta["Hammer power"] && meta["Hammer power"] !== "0%") stats.push(`мощность молота ${meta["Hammer power"]}`);
+    if (meta.Damage) stats.push(`базовый урон ${meta.Damage}`);
+    if (meta.Defense) stats.push(`защита ${meta.Defense}`);
+    if (meta.Mana) stats.push(`расход маны ${meta.Mana}`);
+    if (meta.Reach) stats.push(`дальность крюка ${meta.Reach}`);
+    return stats;
+  }
   function vanillaPurpose(item) {
     if (!item) return "";
+    const meta = vanillaMetaFor(item);
+    const role = vanillaRole(item, meta);
+    if (meta?.["Fishing Power"]) return `Удочка: возьми в руку и забрось поплавок в подходящий водоём; в инвентаре должна лежать наживка. Сила рыбалки — ${meta["Fishing Power"]}.`;
+    if (meta?.["Pickaxe power"] && meta["Pickaxe power"] !== "0%") return `Кирка с мощностью ${meta["Pickaxe power"]}: используй для добычи блоков и руд, требующих не больше этого значения.`;
+    if (meta?.["Axe power"] && meta["Axe power"] !== "0%") return `${role.charAt(0).toUpperCase() + role.slice(1)}: рубит деревья и связанные деревянные объекты; мощность топора — ${meta["Axe power"]}.${meta["Hammer power"] && meta["Hammer power"] !== "0%" ? ` Мощность молота — ${meta["Hammer power"]}.` : ""}`;
+    if (meta?.["Hammer power"] && meta["Hammer power"] !== "0%") return `Молот с мощностью ${meta["Hammer power"]}: разрушает фоновые стены и изменяет форму блоков.`;
     const type = String(item.type || "n/a");
     const low = normalizeArtName(item.name);
     const uses = recipeUseCount(item.name);
@@ -2858,14 +2910,20 @@
     if (!item) return "";
     const ru = ruItemName(item.name, item);
     const uses = recipeUseCount(item.name);
-    const type = vanillaTypeName(item.type);
-    return `${ru} — ${type} из ванильной Террарии.${uses ? ` Индекс подтверждает использование в ${recipeCountText(uses)}.` : ""}`;
+    const meta = vanillaMetaFor(item);
+    const role = vanillaRole(item, meta);
+    const stats = vanillaMetaStats(item, meta);
+    const tooltip = vanillaTooltipRu(item);
+    const statText = stats.length ? ` Основные характеристики: ${stats.join(", ")}.` : "";
+    const tooltipText = tooltip ? ` Игровая подсказка: ${completeSentence(tooltip)}` : "";
+    return `${ru} — ${role} из ванильной Террарии.${statText}${tooltipText}${uses ? ` Используется в ${recipeCountText(uses)}.` : ""}`;
   }
 
   function vanillaObtain(item, recipe) {
     if (recipe && recipe.ings && recipe.ings.length) return craftStationSentence(recipe);
     if (!item) return "";
     const low = normalizeArtName(item.name);
+    if (String(item.id) === "4325") return "С шансом 1/8 (12,5%) выпадает из Блуждающего рыбоглаза и Зомби-тритона, которых можно выловить во время Кровавой луны.";
     if (low === "hellstone") return "Добывается киркой в Преисподней; руда обжигает персонажа и после разрушения оставляет лаву.";
     if (low === "obsidian") return "Образуется при соприкосновении воды с лавой и затем добывается киркой.";
     if (/^(solar|vortex|nebula|stardust) fragment$/.test(low)) return "Выпадает с соответствующей небесной башни перед Лунным лордом.";
@@ -2917,6 +2975,9 @@
     if (!item) return "";
     const low = normalizeArtName(item.name);
     const type = String(item.type || "");
+    const meta = vanillaMetaFor(item);
+    if (String(item.id) === "4325") return "Прехардмод: после начала рыбалки во время Кровавой луны; особенно полезна для повторного вызова её рыболовных противников.";
+    if (meta?.["Fishing Power"]) return "Используй после получения при рыбалке: сравни силу удочки с текущей и подготовь подходящую наживку.";
     if (/luminite|solar fragment|vortex fragment|nebula fragment|stardust fragment/.test(low)) return "Финал ванильной прогрессии: после небесных башен или победы над Лунным лордом.";
     if (/shroomite|spectre|ectoplasm|beetle husk/.test(low)) return "Поздний хардмод: после Плантеры и открытия соответствующего источника материала.";
     if (/chlorophyte|life fruit/.test(low)) return "Хардмод после победы над всеми тремя механическими боссами: источник появляется в подземных джунглях.";
@@ -3245,7 +3306,9 @@
         || (guide && guide.q ? `Глава ${guide.q} «${CODEX.quests.find((quest) => quest.id === Number(guide.q))?.title || "Маршрут"}»: используй на этом этапе перед переходом к следующей главе.` : "")
         || "После получения: используй на этапе, указанном источником и назначением предмета.";
     if (when.length < 70) when = `${completeSentence(when)} Перед переходом дальше проверь, доступен ли указанный источник и улучшает ли предмет текущую сборку.`;
-    return { name: lookupName, key: requestedName, ru, en, art, artNote: (extra && extra.artNote) || "", desc, obtain, recipe, cycleCut, compositeCraft, used, when, kind: resolvedKind, catName: cat ? cat.name : "", remoteArt, vanilla, bossLinks };
+    const typeLabel = preferVanilla ? vanillaRole(vanilla) : (KIND_RU[resolvedKind] || "Предмет");
+    const semanticStats = preferVanilla ? vanillaMetaStats(vanilla) : [];
+    return { name: lookupName, key: requestedName, ru, en, art, artNote: (extra && extra.artNote) || "", desc, obtain, recipe, cycleCut, compositeCraft, used, when, kind: resolvedKind, typeLabel, semanticStats, catName: cat ? cat.name : "", remoteArt, vanilla, bossLinks };
   }
   const isTreeEntry = (info) => Boolean(info && (info.recipe || info.vanilla || info.catName));
 
@@ -4964,7 +5027,7 @@
       <div class="craft-tree-inspector-head">
         <span class="slot craft-tree-inspector-slot">${artHTML}</span>
         <div class="craft-tree-inspector-title">
-          <small id="craft-tree-inspector-title">${esc(KIND_RU[info.kind] || (info.vanilla ? "Предмет Terraria" : "Предмет"))}</small>
+          <small id="craft-tree-inspector-title">${esc(info.typeLabel || KIND_RU[info.kind] || (info.vanilla ? "Предмет Terraria" : "Предмет"))}</small>
           <h3>${esc(info.ru)}</h3>
           ${info.en ? `<span>оригинал: ${esc(info.en)}</span>` : ""}
         </div>
@@ -4972,6 +5035,7 @@
       </div>
       <nav class="craft-tree-breadcrumb" data-tree-breadcrumb aria-label="Путь ингредиента"></nav>
       ${description ? `<p class="craft-tree-inspector-desc">${esc(ruText(description))}</p>` : ""}
+      ${info.semanticStats?.length ? `<div class="vanilla-semantic-stats" aria-label="Характеристики предмета">${info.semanticStats.map((stat) => `<span>${esc(stat)}</span>`).join("")}</div>` : ""}
       <div class="craft-tree-inspector-facts">
         ${hasRecipe && (sourceHTML || where) ? `<div class="fact source-fact"><span>Где</span><div class="craft-tree-inspector-where">${sourceHTML ? `<div class="src-list">${sourceHTML}</div>` : `<p>${esc(ruText(where))}</p>`}</div></div>` : ""}
         ${info.used ? `<div class="fact"><span>Зачем</span><p>${esc(ruText(info.used))}</p></div>` : ""}
