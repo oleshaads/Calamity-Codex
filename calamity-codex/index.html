@@ -8,9 +8,9 @@
   <title>Каламити Кодекс — путеводитель по Terraria Calamity</title>
   <meta name="description" content="Русский спутник по Terraria + Calamity: 30 квестов, 2500+ предметов, боссы, крафты и биомы." />
   <link rel="icon" href="assets/favicon.png" type="image/png" />
-  <link rel="manifest" href="manifest.webmanifest?v=20260819-core62" />
-  <link rel="preload" href="js/codex.min.js?v=20260819-core62" as="script" />
-  <link rel="stylesheet" href="css/modern.min.css?v=20260819-core62" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260819-core63" />
+  <link rel="preload" href="js/codex.min.js?v=20260819-core63" as="script" />
+  <link rel="stylesheet" href="css/modern.min.css?v=20260819-core63" />
 </head>
 <body>
   <a class="skip-link" href="#app">Перейти к содержимому</a>
@@ -24,49 +24,51 @@
         <span class="brand-art slot"><img src="assets/favicon.png" alt="" width="128" height="128" /></span>
         <span class="brand-copy">
           <b>КАЛАМИТИ КОДЕКС</b>
-          <small>терминал прохождения · 2.2.2</small>
+          <small>гид · пройти или найти</small>
         </span>
       </a>
 
-      <div class="nav-caption">Разделы</div>
-      <nav class="rail-nav" id="main-nav">
-        <a href="#/" data-nav="home">
+      <nav class="rail-nav" id="main-nav" aria-label="Разделы кодекса">
+        <p class="nav-group" data-for="play">Прохождение</p>
+        <a href="#/" data-nav="home" title="Личный ориентир: квест, босс и план">
           <span class="nav-icon slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span>
           <span>Главная</span>
         </a>
-        <a href="#/novice?q=1" data-nav="novice">
+        <a href="#/novice?q=1" data-nav="novice" title="30 шагов прохождения по порядку">
           <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span>
           <span>Путь новичка</span><em>30</em>
         </a>
-        <a class="nav-primary" href="#/crafts" data-nav="crafts">
+        <p class="nav-group" data-for="gear">Снаряжение</p>
+        <a class="nav-primary" href="#/crafts" data-nav="crafts" title="Из чего собрать любой предмет">
           <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span>
           <span>Полное дерево</span><em data-craft-plan-count title="Целей в плане крафта">0</em>
         </a>
-        <a href="#/items" data-nav="items">
+        <a href="#/items" data-nav="items" title="Найти карточку предмета">
           <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span>
           <span>Предметы</span><em>2.5K</em>
         </a>
-        <a href="#/bosses" data-nav="bosses">
+        <a href="#/bosses" data-nav="bosses" title="Кого бить дальше и как призвать">
           <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span>
           <span>Боссы</span><em>54</em>
         </a>
-        <a href="#/useful" data-nav="useful">
+        <p class="nav-group" data-for="ref">Справка</p>
+        <a href="#/useful" data-nav="useful" title="Что взять обязательно, без каталога">
           <span class="nav-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span>
           <span>Полезное</span><em>71</em>
         </a>
-        <a href="#/wiki" data-nav="wiki">
+        <a href="#/wiki" data-nav="wiki" title="Этапы, броня, материалы и механики">
           <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" /></span>
           <span>Справочник</span>
         </a>
-        <a href="#/biomes" data-nav="biomes">
+        <a href="#/biomes" data-nav="biomes" title="Куда идти и что там брать">
           <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" /></span>
           <span>Биомы</span>
         </a>
-        <a href="#/favorites" data-nav="favorites">
+        <a href="#/favorites" data-nav="favorites" title="Личный рюкзак и профиль">
           <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" /></span>
           <span>Избранное</span><em data-favorites-count>0</em>
         </a>
-        <a href="#/lex" data-nav="lex">
+        <a href="#/lex" data-nav="lex" title="Что значит термин в игре">
           <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" /></span>
           <span>Словарь</span>
         </a>
@@ -95,13 +97,13 @@
         </button>
 
         <div class="page-context" aria-live="polite">
-          <small>ПКД-9000 // раздел</small>
+          <small id="route-context">ориентир · что делать дальше</small>
           <b id="route-title">Главная</b>
         </div>
 
         <label class="search" aria-label="Глобальный поиск">
           <span class="search-prompt" aria-hidden="true">▶</span>
-          <input id="global-search" type="search" placeholder="Найти предмет, босса, крафт…" autocomplete="off" spellcheck="false" aria-controls="search-panel" aria-autocomplete="list" aria-haspopup="dialog" aria-expanded="false" />
+          <input id="global-search" type="search" placeholder="Квест, босс, предмет или рецепт…" autocomplete="off" spellcheck="false" aria-controls="search-panel" aria-autocomplete="list" aria-haspopup="dialog" aria-expanded="false" />
           <kbd>Ctrl K</kbd>
         </label>
 
@@ -225,6 +227,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
-  <script defer src="js/codex.min.js?v=20260819-core62"></script>
+  <script defer src="js/codex.min.js?v=20260819-core63"></script>
 </body>
 </html>

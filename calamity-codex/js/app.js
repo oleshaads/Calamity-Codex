@@ -4,6 +4,7 @@
   const searchInput = $("body") && $("#global-search");
   const searchPanel = $("body") && $("#search-panel");
   const routeTitle = $("body") && $("#route-title");
+  const routeContext = $("body") && $("#route-context");
   const liveRegion = $("body") && $("#live-region");
   const menuButton = $("body") && $("#menu-btn");
   const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -61,6 +62,18 @@
     crafts: "Полное дерево",
     biomes: "Биомы"
   };
+  const ROUTE_CONTEXT = {
+    home: "ориентир · что делать дальше",
+    novice: "прохождение · шаг за шагом",
+    crafts: "снаряжение · из чего собрать",
+    items: "снаряжение · найти предмет",
+    bosses: "прохождение · кого бить дальше",
+    useful: "справка · что реально нужно",
+    wiki: "справка · этапы и механики",
+    biomes: "справка · куда идти",
+    lex: "справка · термины игры",
+    favorites: "личное · рюкзак героя"
+  };
   let lastView = "";
   let lastScrollKey = "";
   let routeAnimation = null;
@@ -95,7 +108,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core62";
+  const ASSET_VERSION = "20260819-core63";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -1532,6 +1545,7 @@
       else a.removeAttribute("aria-current");
     });
     if (routeTitle) routeTitle.textContent = ROUTE_RU[view];
+    if (routeContext) routeContext.textContent = ROUTE_CONTEXT[view] || "";
     document.title = `${ROUTE_RU[view]} — Каламити Кодекс`;
     document.body.dataset.view = view;
     updateJourneyProgress();
@@ -1646,16 +1660,21 @@
     // На главной нужен только счётчик: не разворачиваем 2535 компактных строк
     // каталога в объекты до первого открытия каталога или поиска.
     const itemCount = catalogItemCount().toLocaleString("ru-RU");
-    const jumps = [
-      [`#/novice?q=${currentQuest?.id || 1}`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
-      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Полное дерево", craftPlanTotal ? `${craftPlanTotal} целей рядом в плане` : "главный инструмент кодекса"],
-      ["#/items", "assets/sprites/StarterBag.png", "Предметы", `${itemCount} карточек`],
-      ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
-      ["#/useful", "assets/vanilla-sprites/1923.png", "Полезное", `${USEFUL_DATA.items?.length || 71} предмет`],
-      ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
-      ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`],
-      ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`],
-      ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`]
+    const jumpCard = ([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`;
+    const playJumps = [
+      [`#/novice?q=${currentQuest?.id || 1}`, "assets/sprites/Wooden_Sword.png", "Путь новичка", "шаг за шагом"],
+      ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", "кого бить дальше"]
+    ];
+    const gearJumps = [
+      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Полное дерево", "из чего собрать"],
+      ["#/items", "assets/sprites/StarterBag.png", "Предметы", "найти карточку"],
+      ["#/useful", "assets/vanilla-sprites/1923.png", "Полезное", "что взять обязательно"]
+    ];
+    const helpJumps = [
+      ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "этапы и механики"],
+      ["#/biomes", "assets/sprites/Rock.png", "Биомы", "куда идти"],
+      ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", "термины игры"],
+      ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", "рюкзак героя"]
     ];
     app.innerHTML = `
       <section class="hero">
@@ -1663,7 +1682,7 @@
         <div class="hero-inner">
           <div class="kicker">Terraria · Каламити ${CODEX.version} · офлайн-справочник</div>
           <h1>Каламити<span>Кодекс</span></h1>
-          <p class="lede">Терминал прохождения: 30 квестов от первого дома до Верховной ведьмы, ${itemCount} предметов с настоящими спрайтами, боссы, крафты и биомы. Наведи мышь на ингредиент — увидишь, где взять и из чего собрать.</p>
+          <p class="lede">Сначала смотри, что делать дальше. Потом собирай снаряжение через полное дерево или ищи предмет. Справка — только если застрял.</p>
           <div class="hero-actions">
             <a class="mode-btn" href="#/novice?q=${currentQuest?.id || 1}">
               <span class="slot mode-slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" decoding="async" /></span>
@@ -1709,13 +1728,29 @@
           </a>
         </div>
       </section>
-      <section class="home-strip">
+      <section class="home-guide" aria-label="Как устроен кодекс">
+        <ol>
+          <li><small>01</small><b>Что дальше</b><span>Квест, босс и план крафта — личный ориентир сверху</span></li>
+          <li><small>02</small><b>Собрать</b><span>Полное дерево раскроет все ветки до базовых ресурсов</span></li>
+          <li><small>03</small><b>Разобраться</b><span>Справка, биомы и словарь — когда нужно понять «куда» и «зачем»</span></li>
+        </ol>
+      </section>
+      <section class="home-strip home-map">
         <div class="home-section-head">
-          <div><small>Быстрый доступ</small><h2>Разделы кодекса</h2></div>
-          <p>Все данные уже внутри страницы: спрайты, рецепты и описания работают без сети.</p>
+          <div><small>Карта кодекса</small><h2>Куда идти</h2></div>
+          <p>Разделы сгруппированы по задаче, а не списком всего подряд.</p>
         </div>
-        <div class="jump-grid">
-          ${jumps.map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+        <div class="home-map-group" data-map="play">
+          <header><small>Проходить</small><b>Шаги и бои</b><p>Иди по порядку: квест, затем ближайший босс.</p></header>
+          <div class="jump-grid">${playJumps.map(jumpCard).join("")}</div>
+        </div>
+        <div class="home-map-group" data-map="gear">
+          <header><small>Собирать</small><b>Снаряжение</b><p>Дерево, каталог и обязательный набор.</p></header>
+          <div class="jump-grid">${gearJumps.map(jumpCard).join("")}</div>
+        </div>
+        <div class="home-map-group" data-map="ref">
+          <header><small>Справляться</small><b>Справка</b><p>Этапы, места, термины и личный рюкзак.</p></header>
+          <div class="jump-grid">${helpJumps.map(jumpCard).join("")}</div>
         </div>
         <details class="secondary-shelf home-era-shelf">
           <summary><span><i aria-hidden="true">IV</i><b>Эпохи прохождения</b><small>Краткий порядок противников и снаряжения</small></span><em>4 этапа</em></summary>

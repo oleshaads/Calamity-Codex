@@ -417,7 +417,29 @@ kbd {
   letter-spacing: .22em;
   text-transform: uppercase;
 }
-.rail-nav { display: flex; flex-direction: column; gap: 4px; }
+.nav-group {
+  margin: 11px 8px 3px;
+  color: #5f6b78;
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.nav-group:first-child { margin-top: 2px; }
+body[data-view="home"] .nav-group[data-for="play"],
+body[data-view="novice"] .nav-group[data-for="play"],
+body[data-view="crafts"] .nav-group[data-for="gear"],
+body[data-view="items"] .nav-group[data-for="gear"],
+body[data-view="bosses"] .nav-group[data-for="gear"],
+body[data-view="useful"] .nav-group[data-for="ref"],
+body[data-view="wiki"] .nav-group[data-for="ref"],
+body[data-view="biomes"] .nav-group[data-for="ref"],
+body[data-view="favorites"] .nav-group[data-for="ref"],
+body[data-view="lex"] .nav-group[data-for="ref"] {
+  color: var(--gold);
+}
+.rail-nav { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; gap: 4px; scrollbar-width: thin; }
 .rail-nav a {
   position: relative;
   display: grid;
@@ -1233,6 +1255,7 @@ body[data-revengeance="1"] .search:focus-within { border-color: #6e2620; box-sha
 .jump[data-dest="biomes"] { --jump-accent: #91d47f; }
 .jump[data-dest="lex"] { --jump-accent: #c997e8; }
 .jump[data-dest="favorites"] { --jump-accent: #efc66e; }
+.jump[data-dest="useful"] { --jump-accent: #7ed6a0; }
 .jump:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--jump-accent), #56616c 32%); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 0 0 4px rgba(8,11,16,.42), 0 12px 24px rgba(0,0,0,.44), 0 0 18px color-mix(in srgb, var(--jump-accent), transparent 86%); }
 .jump:active { transform: translateY(0); }
 .jump-icon { width: 46px; height: 46px; box-shadow: inset 0 0 0 2px #4d5a68, inset 0 0 0 3px rgba(9,13,18,.85), 0 0 14px color-mix(in srgb, var(--jump-accent), transparent 70%); }
@@ -5308,7 +5331,8 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
 .brand-copy b { font-size: 11px; letter-spacing: .08em; }
 .brand-copy small { margin-top: 2px; color: #77838c; font-size: 8px; }
 .nav-caption { margin: 8px 10px 6px; color: #65727d; font-size: 8px; letter-spacing: .14em; }
-.rail-nav { gap: 3px; }
+.nav-group { margin: 10px 10px 2px; color: #65727d; font-size: 8px; letter-spacing: .14em; }
+.rail-nav { gap: 3px; overflow-y: auto; min-height: 0; }
 .rail-nav a {
   min-height: 46px;
   padding: 6px 8px;
@@ -5701,6 +5725,93 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
 .home-era-shelf { margin-top: 8px; }
 .home-era-shelf .era-grid { margin: 0; }
 .home-era-shelf .secondary-shelf-body { padding: 12px; }
+
+/* Карта кодекса и короткий гид по задачам */
+.home-guide {
+  width: min(100%, var(--content));
+  margin: 8px auto 0;
+  padding: 0 var(--pad);
+}
+.home-guide ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+.home-guide li {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #2e3b46;
+  border-radius: 9px;
+  background: #141d25;
+}
+.home-guide small {
+  display: block;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+.home-guide b {
+  display: block;
+  margin-top: 4px;
+  color: #edf0ed;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.home-guide span {
+  display: block;
+  margin-top: 5px;
+  color: #8d979f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.home-map { padding-top: 36px; }
+.home-map-group {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: 16px 22px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+.home-map-group > header small {
+  display: block;
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.home-map-group > header b {
+  display: block;
+  margin-top: 4px;
+  color: #edf0ed;
+  font-family: var(--mono);
+  font-size: 16px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.home-map-group > header p {
+  margin-top: 5px;
+  color: #88939b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.home-map .jump-grid {
+  margin-bottom: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+.home-map-group[data-map="play"] > header small { color: #e7c15c; }
+.home-map-group[data-map="gear"] > header small { color: #eea85b; }
+.home-map-group[data-map="ref"] > header small { color: #8ebbe0; }
+@media (max-width: 880px) {
+  .home-guide ol, .home-map-group { grid-template-columns: minmax(0, 1fr); }
+  .home-map-group { gap: 10px; }
+}
 
 /* Полная карточка босса поверх крафта */
 .boss-ref[data-boss-detail], .npc-tip { cursor: pointer; }
