@@ -108,7 +108,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core64";
+  const ASSET_VERSION = "20260819-core65";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -638,7 +638,7 @@
         <div class="tip-card-actions boss-detail-actions">
           ${encounter ? `<button class="boss-defeat-btn ${defeated ? "done" : ""}" type="button" data-boss-defeated="${escAttr(encounterId)}" aria-pressed="${defeated}"><span aria-hidden="true">${defeated ? "✓" : "○"}</span>${defeated ? "Победа записана" : "Отметить победу"}</button><a class="craft-catalog-link" href="#/bosses?q=${encodeURIComponent(encounter.name)}">Полная карточка босса →</a>` : ""}
           ${encounter?.q ? `<a class="craft-catalog-link" href="#/novice?q=${encounter.q}">Открыть главу ${encounter.q} →</a>` : ""}
-          <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(encounter?.en || npcName)}" target="_blank" rel="noopener noreferrer">Официальная wiki ↗</a>
+          <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/${encodeURIComponent(encounter?.en || npcName).replace(/%20/g, "_")}" target="_blank" rel="noopener noreferrer">Официальная wiki ↗</a>
         </div>
       </div>`;
     bindSprites(tipCard);
@@ -4212,18 +4212,28 @@
             </div>
             <div class="quest-pad">
             ${q.objective ? `<div class="obj-box"><strong>Сейчас</strong>${T(q.objective)}</div>` : ""}
-            ${shelf("Зачем это", "", `<p class="story" style="margin:0">${T(q.story)}</p><p class="how-tip" style="margin-top:10px">Наведи на слово — всплывёт, что это.</p>`)}
+            <section class="quest-class-bar panel" aria-label="Класс героя">
+              <div><small>влияет на советы и предметы главы</small><b>Твой класс</b></div>
+              <div class="class-pick">${CODEX.classes.map((c) => `<button data-cls="${c.id}" class="${c.id === cls ? "active" : ""}" title="${CLASS_TITLES[c.id]}">${c.name}</button>`).join("")}</div>
+              <p class="qpanel-hint">${CLASS_HINTS[cls]}</p>
+            </section>
             ${q.steps ? shelf("Шаги", q.steps.length, `<div class="steps">${q.steps.map((s, i) => `<div class="step"><div class="step-n">${i + 1}</div><div><h4>${T(s.t)}</h4><p>${T(s.d)}</p></div></div>`).join("")}</div>`, true) : ""}
-            ${shelf("Куда идти", (q.where || []).length, `<div class="cards">${q.where.map((x, i) => `<div class="info-card"><em class="pin">${i + 1}</em><b>${esc(plainName(x.t).ru)}</b><p>${T(x.d)}</p></div>`).join("")}</div>`)}
-            ${shelf("Предметы", `${counts.mine}/${counts.all}`, gearHTML)}
-            ${shelf("Крафт", (q.crafts || []).length, `<div class="craft-grid">${(q.crafts || []).map((x) => craftCard(x)).join("")}</div>`)}
-            ${shelf("Кого бить", (q.fight || []).length, q.fight.map((x) => `<div class="kill-card"><b>${esc(plainName(x.t).ru)}</b><p>${T(x.d)}</p></div>`).join(""))}
             ${shelf("Чеклист", (q.tasks || []).length, `<div class="tasks">${q.tasks.map((t, i) => {
               const key = q.id + ":" + i;
               const on = !!(tasks[key]);
               return `<label class="task ${on ? "checked" : ""}"><input type="checkbox" data-task="${key}" ${on ? "checked" : ""} /><span>${T(t)}</span></label>`;
             }).join("")}</div>`)}
-            ${shelf("Советы", "", `<div class="tips">${q.tips.map((t) => `<div class="hint">${T(t)}</div>`).join("")}</div><div class="class-note ${escAttr(cls)}"><b>${CLS_RU[cls]}:</b> ${T(q.classTips[cls])}</div>`)}
+            <details class="secondary-shelf quest-extra-shelf">
+              <summary><span><i aria-hidden="true">☰</i><b>Подробности главы</b><small>Куда идти, предметы, крафт, бой и советы</small></span><em>ещё 6 блоков</em></summary>
+              <div class="secondary-shelf-body">
+                ${shelf("Зачем это", "", `<p class="story" style="margin:0">${T(q.story)}</p><p class="how-tip" style="margin-top:10px">Наведи на слово — всплывёт, что это.</p>`)}
+                ${shelf("Куда идти", (q.where || []).length, `<div class="cards">${q.where.map((x, i) => `<div class="info-card"><em class="pin">${i + 1}</em><b>${esc(plainName(x.t).ru)}</b><p>${T(x.d)}</p></div>`).join("")}</div>`)}
+                ${shelf("Предметы", `${counts.mine}/${counts.all}`, gearHTML)}
+                ${shelf("Крафт", (q.crafts || []).length, `<div class="craft-grid">${(q.crafts || []).map((x) => craftCard(x)).join("")}</div>`)}
+                ${shelf("Кого бить", (q.fight || []).length, q.fight.map((x) => `<div class="kill-card"><b>${esc(plainName(x.t).ru)}</b><p>${T(x.d)}</p></div>`).join(""))}
+                ${shelf("Советы", "", `<div class="tips">${q.tips.map((t) => `<div class="hint">${T(t)}</div>`).join("")}</div><div class="class-note ${escAttr(cls)}"><b>${CLS_RU[cls]}:</b> ${T(q.classTips[cls])}</div>`)}
+              </div>
+            </details>
             </div>
             <div class="quest-nav">
               <button class="btn ghost" data-go="${q.id - 1}" ${q.id === 1 ? "disabled" : ""}>← Назад</button>
@@ -4290,7 +4300,9 @@
     const art = BOSS_ART_BY_ID[e.id] || "";
     const artNote = LEX_ART_NOTE[e.en || e.ru] || "";
     const wikiName = e.en || e.ru;
-    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(wikiName)}`;
+    const wikiUrl = /[A-Za-z]/.test(wikiName)
+      ? `https://calamitymod.wiki.gg/wiki/${encodeURIComponent(wikiName).replace(/%20/g, "_")}`
+      : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(wikiName)}`;
     const top = artNote ? " top" : "";
     return `<article class="card has-art lex-card">
       <div class="card-shot slot" data-kind="${escAttr(kind)}">
@@ -4328,7 +4340,7 @@
     const visible = list.slice(0, limit);
     app.innerHTML = `
       <div class="page">
-        ${mast("Словарь", "Все термины в формате карточек маршрута: изображение, смысл, источник и игровое название.")}
+        ${mast("Словарь", "Что значит термин в игре. Ищи по русскому или английскому имени.")}
         <div class="filter-bar lex-controls">
           <label class="search-wrap">
             <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
@@ -4374,7 +4386,10 @@
     const lex = CODEX.lookup ? CODEX.lookup(title) : null;
     const en = options.en || lex?.en || "";
     const desc = options.desc || lex?.desc || "";
-    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(options.wiki || en || title)}`;
+    const wikiPage = String(options.wiki || en || title).trim();
+    const wikiUrl = /[A-Za-z]/.test(wikiPage)
+      ? `https://calamitymod.wiki.gg/wiki/${encodeURIComponent(wikiPage).replace(/%20/g, "_")}`
+      : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(wikiPage)}`;
     return `<article class="card has-art wiki-card">
       <div class="card-shot slot" data-kind="${escAttr(kind)}">
         ${visualArt(title, kind, options.art || "")}
@@ -4390,37 +4405,24 @@
     </article>`;
   }
 
-  function guideReferenceCard(q) {
-    return `<article class="card has-art wiki-card guide-reference-card">
-      <div class="card-shot slot" data-kind="mechanic">
-        ${visualArt(q.title, "mechanic", GUIDE_ART[q.id] || "")}
-        <span class="kind-pill">Глава ${String(q.id).padStart(2, "0")}</span>
-        <span class="tag-cls all">${esc(({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[q.era] || "Маршрут")}</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">${esc(q.title)}<span class="en-sub">${esc(q.subtitle || "Этап прохождения")}</span></div>
-        <p class="desc">${esc(ruText(q.mood || q.story || q.subtitle || "Практический этап маршрута прохождения."))}</p>
-        <div class="facts">
-          ${q.objective ? `<div class="fact"><span>Цель</span><p>${esc(ruText(q.objective))}</p></div>` : ""}
-          <div class="fact"><span>Когда</span><p>${esc(ruText(q.subtitle || "По порядку маршрута"))}</p></div>
-          <div class="fact"><span>Дальше</span><p>Открой главу: внутри шаги, предметы, крафты, противники и чеклист.</p></div>
-        </div>
-        <div class="card-links"><a href="#/novice?q=${q.id}">Открыть полный маршрут →</a></div>
-      </div>
-    </article>`;
-  }
-
   function renderWiki(params = {}) {
     fillRail("");
     const tab = ["progress", "armor", "mats", "hp", "mech"].includes(params.tab) ? params.tab : "progress";
     const search = (params.q || "").trim().toLocaleLowerCase("ru");
     const tabs = [
-      ["progress", "Прогрессия"],
+      ["progress", "Главы"],
       ["armor", "Броня"],
       ["mats", "Материалы"],
-      ["hp", "Сердца и мана"],
+      ["hp", "Сердца"],
       ["mech", "Механики"]
     ];
+    const tabLead = {
+      progress: "Это оглавление. Сами шаги — в Пути новичка.",
+      armor: "Какой сет брать после какого босса.",
+      mats: "Откуда ресурс и на что он тратится.",
+      hp: "Постоянные апгрейды здоровья и маны.",
+      mech: "Плут, возмездие, лаборатории и зелья."
+    }[tab];
     const sources = { progress: CODEX.quests, armor: CODEX.armors, mats: CODEX.materials, hp: CODEX.hpUps, mech: CODEX.mechanics };
     const source = sources[tab] || sources.progress;
     const list = source.filter((entry) => {
@@ -4430,42 +4432,55 @@
       const blob = `${JSON.stringify(entry)} ${lex?.en || ""} ${(lex?.aliases || []).join(" ")}`.toLocaleLowerCase("ru");
       return matchesSearch(blob, search);
     });
-    let cards;
+    let bodyHTML;
     if (tab === "armor") {
-      cards = list.map((a) => wikiCard(a.name, [["Когда", a.when], ["Из", a.mat], ["Зачем", a.note]], { kind: "armor", type: "Броня", badge: a.era === "pre" ? "Прехардмод" : a.era === "hard" ? "Хардмод" : a.era === "post" ? "После Луны" : "Финал" }));
+      bodyHTML = `<div class="item-grid wiki-card-grid">${list.map((a) => wikiCard(a.name, [["Когда", a.when], ["Из", a.mat], ["Зачем", a.note]], { kind: "armor", type: "Броня", badge: a.era === "pre" ? "Прехардмод" : a.era === "hard" ? "Хардмод" : a.era === "post" ? "После Луны" : "Финал" })).join("")}</div>`;
     } else if (tab === "mats") {
-      cards = list.map((m) => wikiCard(m.name, [["Когда", m.when], ["Где", m.src], ["Зачем", m.use]], { kind: "mat", type: "Материал" }));
+      bodyHTML = `<div class="item-grid wiki-card-grid">${list.map((m) => wikiCard(m.name, [["Когда", m.when], ["Где", m.src], ["Зачем", m.use]], { kind: "mat", type: "Материал" })).join("")}</div>`;
     } else if (tab === "hp") {
-      cards = list.map((h) => wikiCard(h.name, [["Когда", h.when], ["Эффект", h.bonus], ["Зачем", "Постоянно усиливает текущего персонажа."]], { kind: "potion", type: "Усиление" }));
+      bodyHTML = `<div class="item-grid wiki-card-grid">${list.map((h) => wikiCard(h.name, [["Когда", h.when], ["Эффект", h.bonus], ["Зачем", "Постоянно усиливает текущего персонажа."]], { kind: "potion", type: "Усиление" })).join("")}</div>`;
     } else if (tab === "mech") {
-      cards = list.map((m) => wikiCard(m.name, [["Суть", m.d], ["Когда", "Учитывай механику на соответствующем этапе прохождения."]], { kind: "mechanic", type: "Механика", desc: "Ключевое правило Calamity, которое влияет на подготовку или бой.", noWiki: true }));
+      bodyHTML = `<div class="item-grid wiki-card-grid">${list.map((m) => wikiCard(m.name, [["Суть", m.d], ["Когда", "Учитывай механику на соответствующем этапе прохождения."]], { kind: "mechanic", type: "Механика", desc: "Ключевое правило Calamity, которое влияет на подготовку или бой.", noWiki: true })).join("")}</div>`;
     } else {
-      cards = list.map(guideReferenceCard);
+      const { done, current } = updateJourneyProgress();
+      const eras = [["pre", "Прехардмод"], ["hard", "Хардмод"], ["post", "После Луны"], ["end", "Финал"]];
+      bodyHTML = `<section class="wiki-progress-index">
+          <a class="wiki-progress-now" href="#/novice?q=${current?.id || 1}"><small>продолжить путь</small><b>Глава ${current?.id || 1}: ${esc(current?.title || "")}</b><span>${esc(ruText(current?.objective || current?.subtitle || ""))}</span></a>
+          ${eras.map(([id, label]) => {
+            const rows = list.filter((q) => q.era === id);
+            return rows.length ? `<section class="wiki-chapter-era"><header>${esc(label)}</header><ol>${rows.map((q) => `<li class="${done.has(q.id) ? "is-done" : ""}"><a href="#/novice?q=${q.id}"><b>${String(q.id).padStart(2, "0")}</b><span>${esc(q.title)}</span><small>${esc(q.subtitle || "")}</small></a></li>`).join("")}</ol></section>` : "";
+          }).join("")}
+        </section>`;
     }
+    const tabHash = (id) => {
+      const qs = new URLSearchParams();
+      if (id !== "progress") qs.set("tab", id);
+      if (params.q) qs.set("q", params.q);
+      return "#/wiki" + (qs.toString() ? `?${qs}` : "");
+    };
     app.innerHTML = `
-      <div class="page">
-        ${mast("Справочник", "Те же наглядные карточки маршрута: изображение, этап, источник, назначение и быстрый переход к подробностям.")}
+      <div class="page wiki-page">
+        ${mast("Справочник", "Пошаговый маршрут живёт в Пути новичка. Здесь — броня, материалы, сердца и правила мода.")}
+        <p class="wiki-tab-lead">${esc(tabLead)}</p>
         <div class="chips wiki-tabs">
-          ${tabs.map(([id, name]) => `<button class="chip ${tab === id ? "active" : ""}" data-tab="${id}">${name}<em>${sources[id].length}</em></button>`).join("")}
+          ${tabs.map(([id, name]) => `<a class="chip ${tab === id ? "active" : ""}" href="${tabHash(id)}">${name}<em>${sources[id].length}</em></a>`).join("")}
         </div>
         <label class="search-wrap wiki-search">
           <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
           <input id="wiki-s" type="search" aria-label="Поиск по справочнику" placeholder="Название, этап, источник или назначение…" value="${escAttr(params.q || "")}" />
           ${search ? `<button class="filter-clear" id="wiki-clear" type="button">Сбросить</button>` : ""}
         </label>
-        <p class="found">Раздел: ${esc(tabs.find(([id]) => id === tab)?.[1] || "Прогрессия")} · найдено ${list.length}</p>
-        ${cards.length
-          ? `<div class="item-grid wiki-card-grid">${cards.join("")}</div>`
-          : `<div class="empty-state"><span>✦</span><b>Запись не найдена</b><p>Измени запрос или открой другой раздел справочника.</p><a class="btn ghost" href="#/wiki?tab=${escAttr(tab)}">Сбросить поиск</a></div>`}
+        <p class="found">${esc(tabs.find(([id]) => id === tab)?.[1] || "Главы")} · ${list.length}</p>
+        ${list.length
+          ? bodyHTML
+          : `<div class="empty-state"><span>✦</span><b>Запись не найдена</b><p>Измени запрос или открой другой раздел справочника.</p><a class="btn ghost" href="${tabHash(tab).split("?")[0]}${tab === "progress" ? "" : `?tab=${tab}`}">Сбросить поиск</a></div>`}
       </div>
     `;
-    app.querySelectorAll("[data-tab]").forEach((button) => { button.onclick = () => { location.hash = `#/wiki?tab=${button.dataset.tab}`; }; });
     const build = (q) => {
       const qs = new URLSearchParams();
       if (tab !== "progress") qs.set("tab", tab);
       if (q) qs.set("q", q);
-      const hash = "#/wiki" + (qs.toString() ? `?${qs}` : "");
-      history.replaceState(null, "", hash);
+      history.replaceState(null, "", "#/wiki" + (qs.toString() ? `?${qs}` : ""));
       route();
     };
     const input = $("#wiki-s");
@@ -5609,7 +5624,7 @@
 
     app.innerHTML = `
       <div class="page items-page">
-        ${mast("Арсенал Каламити", "У каждого предмета есть изображение, источник, назначение и этап применения; отдельный режим сохраняет маршрут прохождения.")}
+        ${mast("Арсенал Каламити", "Сначала найди предмет поиском. Полный список — индекс, а не обязательный набор.")}
         <nav class="catalog-mode-switch" aria-label="Режим каталога предметов">
           <a class="catalog-mode ${mode === "catalog" ? "active" : ""}" href="#/items">
             <i aria-hidden="true">I</i>
@@ -6005,7 +6020,7 @@
     const danger = b.kind === "mini"
       ? ({ pre: 30, hard: 55, post: 76, end: 90 }[b.era] || 45)
       : ({ pre: 22, hard: 46, post: 72, end: 100 }[b.era] || 30);
-    const wikiUrl = `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(b.en || b.name)}`;
+    const wikiUrl = `https://calamitymod.wiki.gg/wiki/${encodeURIComponent(b.en || b.name).replace(/%20/g, "_")}`;
     const favoriteKey = b.id || String(b.n);
     const defeated = getDefeatedBosses().has(String(favoriteKey));
     const number = b.kind === "mini" ? "МИНИ" : b.kind === "hidden" ? "СКР" : `#${String(b.n).padStart(2, "0")}`;
@@ -7264,6 +7279,7 @@
     const retry = event.target.closest?.("[data-wiki-retry]");
     if (retry) {
       event.preventDefault();
+      event.stopPropagation();
       const box = retry.closest("[data-wiki-live]");
       const key = box?.dataset.wikiItem || "";
       if (!box || !key) return;
