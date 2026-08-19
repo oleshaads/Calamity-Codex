@@ -95,7 +95,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core62";
+  const ASSET_VERSION = "20260819-core63";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -1646,16 +1646,34 @@
     // На главной нужен только счётчик: не разворачиваем 2535 компактных строк
     // каталога в объекты до первого открытия каталога или поиска.
     const itemCount = catalogItemCount().toLocaleString("ru-RU");
-    const jumps = [
-      [`#/novice?q=${currentQuest?.id || 1}`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
-      ["#/crafts", "assets/sprites/Iron_Anvil.png", "Полное дерево", craftPlanTotal ? `${craftPlanTotal} целей рядом в плане` : "главный инструмент кодекса"],
-      ["#/items", "assets/sprites/StarterBag.png", "Предметы", `${itemCount} карточек`],
-      ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
-      ["#/useful", "assets/vanilla-sprites/1923.png", "Полезное", `${USEFUL_DATA.items?.length || 71} предмет`],
-      ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
-      ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`],
-      ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`],
-      ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`]
+    const jumpGroups = [
+      {
+        title: "Прохождение",
+        desc: "Маршрут, противники и мир — иди по порядку глав.",
+        links: [
+          [`#/novice?q=${currentQuest?.id || 1}`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
+          ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
+          ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`]
+        ]
+      },
+      {
+        title: "Крафт и предметы",
+        desc: "Что собрать, из чего и где взять ингредиенты.",
+        links: [
+          ["#/crafts", "assets/sprites/Iron_Anvil.png", "Полное дерево", craftPlanTotal ? `${craftPlanTotal} целей рядом в плане` : "главный инструмент кодекса"],
+          ["#/items", "assets/sprites/StarterBag.png", "Предметы", `${itemCount} карточек`],
+          ["#/useful", "assets/vanilla-sprites/1923.png", "Полезное", `${USEFUL_DATA.items?.length || 71} предмет`]
+        ]
+      },
+      {
+        title: "Справка и личное",
+        desc: "Механики, термины и твой сохранённый прогресс.",
+        links: [
+          ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
+          ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`],
+          ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`]
+        ]
+      }
     ];
     app.innerHTML = `
       <section class="hero">
@@ -1663,7 +1681,7 @@
         <div class="hero-inner">
           <div class="kicker">Terraria · Каламити ${CODEX.version} · офлайн-справочник</div>
           <h1>Каламити<span>Кодекс</span></h1>
-          <p class="lede">Терминал прохождения: 30 квестов от первого дома до Верховной ведьмы, ${itemCount} предметов с настоящими спрайтами, боссы, крафты и биомы. Наведи мышь на ингредиент — увидишь, где взять и из чего собрать.</p>
+          <p class="lede">Личный маршрут по Terraria + Calamity: кодекс сам подсказывает следующий квест, ближайшего босса и нужный крафт. Начни с «Пути новичка» — остальное подстроится под твой прогресс.</p>
           <div class="hero-actions">
             <a class="mode-btn" href="#/novice?q=${currentQuest?.id || 1}">
               <span class="slot mode-slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" decoding="async" /></span>
@@ -1712,11 +1730,27 @@
       <section class="home-strip">
         <div class="home-section-head">
           <div><small>Быстрый доступ</small><h2>Разделы кодекса</h2></div>
-          <p>Все данные уже внутри страницы: спрайты, рецепты и описания работают без сети.</p>
+          <p>Три полки вместо общей свалки: прохождение, крафт и справка. Все данные работают без сети.</p>
         </div>
-        <div class="jump-grid">
-          ${jumps.map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+        <div class="jump-groups">
+          ${jumpGroups.map((group) => `
+            <section class="jump-group" aria-label="${escAttr(group.title)}">
+              <header class="jump-group-head"><b>${esc(group.title)}</b><small>${esc(group.desc)}</small></header>
+              <div class="jump-grid">
+                ${group.links.map(([href, img, label, sub]) => `<a class="jump" data-dest="${escAttr(href.match(/^#\/([^?]+)/)?.[1] || "home")}" href="${href}"><span class="jump-icon slot"><img src="${img}" alt="" loading="lazy" decoding="async" /></span><span><small>${sub}</small><b>${label}</b></span></a>`).join("")}
+              </div>
+            </section>`).join("")}
         </div>
+        <details class="secondary-shelf home-help-shelf">
+          <summary><span><i aria-hidden="true">?</i><b>Как пользоваться кодексом</b><small>Три шага: маршрут → босс → крафт</small></span><em>3 шага</em></summary>
+          <div class="secondary-shelf-body">
+            <ol class="home-help-steps">
+              <li><b>Иди по «Пути новичка»</b><p>30 квестов ведут от первого дома до финала. Отмечай задачи — прогресс сохраняется, и главная всегда показывает, где ты остановился.</p></li>
+              <li><b>Готовься к следующему боссу</b><p>Бестиарий сам подсказывает ближайшую непобеждённую цель, место боя и предмет призыва. После победы отметь её — появится следующая.</p></li>
+              <li><b>Собирай снаряжение через «Полное дерево»</b><p>Выбери любой предмет — кодекс развернёт все ингредиенты до базовых ресурсов и соберёт общий план крафта со сметой материалов.</p></li>
+            </ol>
+          </div>
+        </details>
         <details class="secondary-shelf home-era-shelf">
           <summary><span><i aria-hidden="true">IV</i><b>Эпохи прохождения</b><small>Краткий порядок противников и снаряжения</small></span><em>4 этапа</em></summary>
           <div class="secondary-shelf-body"><div class="era-grid">${CODEX.eras.map((e, index) => `<article class="era-card panel" data-era="${escAttr(e.id)}"><span class="era-no" aria-hidden="true">0${index + 1}</span><h3>${e.title}</h3><ol>${e.items.map((i) => `<li>${i}</li>`).join("")}</ol><a class="era-link" href="#/bosses?era=${escAttr(e.id)}">Боссы эпохи →</a></article>`).join("")}</div></div>

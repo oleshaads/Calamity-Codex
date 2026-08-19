@@ -5782,3 +5782,23 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
   .boss-detail-card .tip-card-title b { font-size: 16px; }
   .boss-detail-card .tip-card-body { padding: 11px; }
 }
+
+/* Смысловые полки: навигация и главная сгруппированы по задачам, а не одним
+   сплошным списком. Подписи групп ведут читателя: прохождение → крафт → справка. */
+.rail-nav .nav-caption { margin: 13px 8px 5px; color: #6c7986; font-size: 10px; letter-spacing: .16em; }
+.rail-nav .nav-caption:first-child { margin-top: 0; }
+.jump-groups { display: grid; gap: 14px; margin-bottom: 26px; }
+.jump-group { padding: 14px; border: 1px solid #2d3a45; border-radius: 9px; background: #111922; }
+.jump-group-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 12px; }
+.jump-group-head b { color: #e9e4d8; font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.jump-group-head small { color: #8b97a1; font-size: 12.5px; }
+.jump-group .jump-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 0; }
+.home-help-shelf { margin-bottom: 0; }
+.home-help-shelf > summary i { color: #8ebbe0; border-color: #35516a; }
+.home-help-steps { display: grid; gap: 14px; margin: 0; padding: 2px 4px; list-style: none; counter-reset: help-step; }
+.home-help-steps li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 12px; counter-increment: help-step; }
+.home-help-steps li::before { content: counter(help-step); grid-row: 1 / 3; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #3c4b56; border-radius: 7px; color: #e8c46f; background: #141e27; font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.home-help-steps b { color: #e6e1d5; font-size: 14.5px; }
+.home-help-steps p { margin: 0; color: #9aa6ae; font-size: 13.5px; line-height: 1.6; }
+@media (max-width: 900px) { .jump-group .jump-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .jump-group .jump-grid { grid-template-columns: 1fr; } .jump-group { padding: 11px; } }

@@ -45,7 +45,7 @@ async function waitFor(predicate, timeout = 2000) {
   input.dispatchEvent(new window.Event("input", { bubbles: true }));
   await settle(150);
   const request = window.document.querySelector("script[data-codex-catalog]");
-  check(request && /codex-data\.min\.js\?v=20260819-core62$/.test(request.src), "First global search did not request the current lazy data bundle");
+  check(request && /codex-data\.min\.js\?v=20260819-core63$/.test(request.src), "First global search did not request the current lazy data bundle");
   window.eval(`${catalogBundle}\n//# sourceURL=codex-data.min.js`);
   request.onload();
   const htmlElement = window.document.documentElement;
