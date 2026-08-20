@@ -6322,3 +6322,37 @@ input[type="search"], input[type="text"], input[type="number"] { border-radius: 
 
 /* Иконки предметов-призыва на карточках событий */
 .mob-group-icon img { image-rendering: pixelated; }
+
+/* ============== Премиальный слой, проход 8: нативные мелочи ============== */
+
+/* Все чекбоксы (квесты, чеклисты рецептов и сметы) — золотые и крупнее */
+input[type="checkbox"] { width: 17px; height: 17px; accent-color: #e8c46f; cursor: pointer; }
+.task input[type="checkbox"] { width: 18px; height: 18px; }
+
+/* Единая зачистка стандартных маркеров details во всех браузерах */
+summary { list-style: none; }
+summary::-webkit-details-marker, summary::marker { display: none; content: ""; }
+
+/* Приложение на ощупь: без синей вспышки тапа и без «призраков» картинок */
+* { -webkit-tap-highlight-color: transparent; }
+img { -webkit-user-drag: none; user-select: none; }
+
+/* Кнопка «продолжить» в сводке героя */
+.hs-continue { border: 1px solid #6b5a33; border-radius: 9px; background: linear-gradient(180deg, #262013, #1b1710); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease; }
+.hs-continue:hover { border-color: #8a6d3b; transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 18px rgba(232, 196, 111, .1); }
+.hs-continue b { color: #f1dda1; }
+
+/* Мобильная шторка навигации: мягкое затемнение и золотая кромка */
+.rail-scrim { background: radial-gradient(600px 400px at 20% 30%, rgba(20, 15, 5, .55), rgba(2, 4, 7, .92)); }
+@media (max-width: 1060px) {
+  .rail.open { border-right: 1px solid #6b5a33; box-shadow: 24px 0 80px rgba(0, 0, 0, .65), 4px 0 24px rgba(232, 196, 111, .06); }
+}
+
+/* Числовое поле количества крафтов без системных спиннеров */
+input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Бургер-кнопка меню */
+.burger { border-radius: 9px; transition: background .13s ease, box-shadow .13s ease; }
+.burger:hover { background: rgba(232, 196, 111, .07); box-shadow: inset 0 0 0 1px #57646d; }
+.burger span { border-radius: 2px; }
