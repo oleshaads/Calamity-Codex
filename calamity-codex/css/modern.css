@@ -5972,11 +5972,27 @@ b.mob-mention:hover, b.mob-mention:focus-visible { border-bottom-style: solid; c
 .home-strip .secondary-shelf > summary b { color: #ece8dd; font-size: 12px; letter-spacing: .06em; }
 .home-strip .secondary-shelf > summary small { margin-top: 3px; color: #8b97a1; font-size: 12px; }
 .home-strip .secondary-shelf > summary em { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border: 1px solid #3c4b56; border-radius: 9px; color: #b5c0c6; background: #141d25; font-family: var(--mono); font-size: 9.5px; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.home-strip .secondary-shelf > summary em::after { content: "⌄"; color: #e8c46f; font-size: 12px; line-height: 1; transform: translateY(-1px); transition: transform .15s ease; }
-.home-strip .secondary-shelf[open] > summary em::after { transform: rotate(180deg) translateY(1px); }
 .home-strip .secondary-shelf[open] > summary { border-bottom: 1px solid #2b3842; }
 @media (max-width: 760px) {
   .home-strip .secondary-shelf > summary { min-height: 58px; padding: 11px 12px; }
   .home-strip .secondary-shelf > summary em { display: inline-flex; padding: 4px 8px; }
   .home-strip .secondary-shelf > summary em::after { font-size: 11px; }
+}
+
+/* Единый рисованный шеврон вместо текстового глифа «⌄», который в системных
+   шрифтах прижимается к низу рамки. Рисуем уголок бордерами — всегда ровно. */
+.catalog-filter-shelf > summary i, .catalog-about-shelf > summary i, .card-facts-shelf > summary i { color: transparent; }
+.catalog-filter-shelf > summary i::before, .catalog-about-shelf > summary i::before, .card-facts-shelf > summary i::before {
+  content: ""; width: 8px; height: 8px; margin-top: -3px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); border-radius: 1px; transform: rotate(45deg);
+}
+.card-facts-shelf > summary i::before { border-color: #9aa7ae; }
+
+/* Пилюли-счётчики всех сворачиваемых полок получают одинаковый золотой шеврон. */
+.secondary-shelf > summary em, .mob-group > summary em { display: inline-flex; align-items: center; gap: 7px; }
+.secondary-shelf > summary em::after, .mob-group > summary em::after {
+  content: ""; flex: none; width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid #e8c46f; border-bottom: 2px solid #e8c46f; border-radius: 1px; transform: rotate(45deg); transition: transform .15s ease;
+}
+.secondary-shelf[open] > summary em::after, .mob-group[open] > summary em::after { margin-top: 3px; transform: rotate(-135deg); }
+@media (max-width: 760px) {
+  .mob-group > summary em { display: inline-flex; }
 }
