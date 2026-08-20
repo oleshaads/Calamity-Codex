@@ -59,7 +59,8 @@
     favorites: "Избранное",
     lex: "Словарь",
     crafts: "Полное дерево",
-    biomes: "Биомы"
+    biomes: "Биомы",
+    mobs: "Мобы"
   };
   let lastView = "";
   let lastScrollKey = "";
@@ -88,14 +89,15 @@
     favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "V",    cover: "assets/headers/favorites.webp", bg: "assets/themes/dungeon.webp",  accent: "#efc66e", fx: "stars" },
     lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "VI",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.webp",      accent: "#c997e8", fx: "spores" },
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VII",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",     accent: "#eea85b", fx: "embers" },
-    biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VIII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",   accent: "#91d47f", fx: "leaves" }
+    biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VIII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",   accent: "#91d47f", fx: "leaves" },
+    mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/bosses.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" }
   };
   const KIND_RU = {
     weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core64";
+  const ASSET_VERSION = "20260819-core65";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -188,6 +190,8 @@
     detailedNameCache = null;
     catalogArtCache = null;
     artNameIndex = null;
+    mobIndexCache = null;
+    mobDropsCache = null;
     itemByIdCache = null;
     recipeIndex = null;
     visualRecipeIndex = null;
@@ -344,6 +348,10 @@
     if (view === "lex") return [[Object.keys(CODEX.lex || {}).length, "терминов"], ["RU / EN", "названия"]];
     if (view === "crafts") return [[getRecipeIndex().size, "рецептов в дереве"], [VANILLA_TREE_INDEX.items.length, "ванильных предметов"]];
     if (view === "biomes") return [[CODEX.biomes.length, "биомов"], [4, "уровня риска"]];
+    if (view === "mobs") {
+      const idx = mobIndex();
+      return [[idx.mobs.length, "существ"], [idx.mobs.filter((m) => m.src === "c").length, "из Calamity"]];
+    }
     return [];
   }
   const mast = (title, lead) => {
@@ -1489,11 +1497,11 @@
     return `<span class="badge ${cls}">${pretty[era] || label}</span>`;
   }
 
-  const CATALOG_VIEWS = new Set(["items", "crafts", "useful", "favorites"]);
+  const CATALOG_VIEWS = new Set(["items", "crafts", "useful", "favorites", "mobs"]);
   function renderCatalogLoading(view, failed = false) {
     if (!app) return;
     app.setAttribute("aria-busy", String(!failed));
-    const label = view === "crafts" ? "рецепты Terraria" : view === "useful" ? "практический набор" : view === "favorites" ? "рюкзак героя" : "полный каталог";
+    const label = view === "crafts" ? "рецепты Terraria" : view === "useful" ? "практический набор" : view === "favorites" ? "рюкзак героя" : view === "mobs" ? "бестиарий существ" : "полный каталог";
     app.innerHTML = `
       <section class="app-boot catalog-boot" aria-live="polite">
         <span class="app-boot-mark" aria-hidden="true">${failed ? "!" : "◆"}</span>
@@ -1575,6 +1583,7 @@
       else if (view === "favorites") { applySectionTheme(view); renderFavorites(); }
       else if (view === "lex") { applySectionTheme(view); renderLex(params); }
       else if (view === "biomes") { applySectionTheme(view); renderBiomes(params); }
+      else if (view === "mobs") { applySectionTheme(view); renderMobs(params); }
       versionLocalImages(app);
       enhanceCards(app);
       invalidateScrollMetrics();
@@ -1656,6 +1665,7 @@
         links: [
           [`#/novice`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
           ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
+          ["#/mobs", "assets/mob-sprites/v-zombie.png", "Мобы", "626 существ и события"],
           ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`]
         ]
       },
@@ -4310,6 +4320,174 @@
       });
     });
     bindSprites(app);
+  }
+
+  /* ===================== Мобы: бестиарий всех существ ===================== */
+  let mobIndexCache = null;
+  function mobIndex() {
+    if (mobIndexCache) return mobIndexCache;
+    const raw = window.CALAMITY_MOB_INDEX || { mobs: [], tagLabels: {} };
+    const mobs = raw.mobs.map((r) => ({
+      id: r[0], src: r[1], en: r[2], ru: r[3], kind: r[4],
+      hp: r[5] >= 0 ? r[5] : null, dmg: r[6] >= 0 ? r[6] : null, def: r[7] >= 0 ? r[7] : null,
+      tags: String(r[8] || "").split(",").filter(Boolean),
+      desc: r[9] || "", art: r[10] || "", folder: r[11] || ""
+    }));
+    mobIndexCache = { mobs, tagLabels: raw.tagLabels || {} };
+    return mobIndexCache;
+  }
+  let mobDropsCache = null;
+  function mobDropCount(en) {
+    if (!mobDropsCache) {
+      mobDropsCache = new Map();
+      for (const entry of Object.values(NPC_SOURCES)) {
+        for (const drop of entry.npcs || []) mobDropsCache.set(drop.npc, (mobDropsCache.get(drop.npc) || 0) + 1);
+      }
+    }
+    return mobDropsCache.get(en) || 0;
+  }
+  function mobTagLabel(tag) {
+    const guide = window.CALAMITY_MOB_GUIDE || {};
+    if (guide.tagRu && guide.tagRu[tag]) return guide.tagRu[tag];
+    const label = mobIndex().tagLabels[tag];
+    return label || tag.split(":").pop();
+  }
+  const MOB_KIND_RU = { enemy: "враг", critter: "зверёк", boss: "босс" };
+  function mobMatchesFilters(mob, filters) {
+    if (filters.src && mob.src !== filters.src) return false;
+    if (filters.kind && mob.kind !== filters.kind) return false;
+    return true;
+  }
+  function mobSearchBlob(mob) {
+    if (!mob.blob) mob.blob = `${mob.ru} ${mob.en} ${mob.tags.map(mobTagLabel).join(" ")}`.toLocaleLowerCase("ru");
+    return mob.blob;
+  }
+  function mobCard(mob) {
+    const stats = [
+      mob.hp !== null ? `<span><b>${mob.hp.toLocaleString("ru-RU")}</b><em>ОЗ</em></span>` : "",
+      mob.dmg !== null ? `<span><b>${mob.dmg}</b><em>урон</em></span>` : "",
+      mob.def !== null ? `<span><b>${mob.def}</b><em>защита</em></span>` : ""
+    ].filter(Boolean).join("");
+    const chips = mob.tags.slice(0, 5).map((t) => `<i>${esc(mobTagLabel(t))}</i>`).join("");
+    const drops = mob.src === "c" ? mobDropCount(mob.en) : 0;
+    const links = [
+      mob.kind === "boss" ? `<a href="#/bosses?q=${encodeURIComponent(mob.ru)}">Карточка босса →</a>` : "",
+      drops ? `<a href="#/items?s=${encodeURIComponent(mob.en)}" title="Показать предметы, которые выпадают с этого существа">Дроп: ${drops} ${drops === 1 ? "предмет" : drops < 5 ? "предмета" : "предметов"} →</a>` : ""
+    ].filter(Boolean).join("");
+    return `<article class="mob-card kind-${escAttr(mob.kind)}" data-src="${escAttr(mob.src)}">
+      <span class="slot mob-art">${mob.art ? `<img src="${escAttr(mob.art)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
+      <div class="mob-copy">
+        <div class="mob-name"><b>${esc(mob.ru)}</b>${mob.en !== mob.ru ? `<small>${esc(mob.en)}</small>` : ""}<em class="mob-kind ${escAttr(mob.kind)}">${MOB_KIND_RU[mob.kind] || mob.kind}${mob.src === "c" ? " · Calamity" : ""}</em></div>
+        ${stats ? `<div class="mob-stats">${stats}</div>` : ""}
+        ${chips ? `<div class="mob-tags">${chips}</div>` : ""}
+        ${mob.desc ? `<p class="mob-desc">${esc(mob.desc)}</p>` : ""}
+        ${links ? `<div class="mob-links">${links}</div>` : ""}
+      </div>
+    </article>`;
+  }
+  function renderMobs(params = {}) {
+    fillRail("");
+    const { mobs } = mobIndex();
+    const filters = { src: params.src === "v" || params.src === "c" ? params.src : "", kind: ["enemy", "critter", "boss"].includes(params.kind) ? params.kind : "" };
+    const query = String(params.q || "").trim().toLocaleLowerCase("ru");
+    const openGroup = String(params.g || "");
+    const filtered = mobs.filter((m) => mobMatchesFilters(m, filters));
+    const groupsWithMobs = (defs) => defs.map((def) => ({ ...def, list: filtered.filter((m) => m.tags.some((t) => def.tags.includes(t))) })).filter((g) => g.list.length);
+    const guide = window.CALAMITY_MOB_GUIDE || { events: [], biomes: [] };
+    const eventGroups = groupsWithMobs(guide.events || []);
+    const biomeGroups = groupsWithMobs(guide.biomes || []);
+    const groupedIds = new Set();
+    [...eventGroups, ...biomeGroups].forEach((g) => g.list.forEach((m) => groupedIds.add(m.id)));
+    const rest = filtered.filter((m) => !groupedIds.has(m.id));
+    if (rest.length) biomeGroups.push({ id: "other", title: "Особые существа и миньоны боссов", tags: [], list: rest, sub: "Появляются в бою с боссами, в особых местах или по особым условиям." });
+    const searchHits = query ? filtered.filter((m) => matchesSearch(mobSearchBlob(m), query)).slice(0, 150) : [];
+    const activeFilterCount = (filters.src ? 1 : 0) + (filters.kind ? 1 : 0);
+    const groupBlock = (group, type) => {
+      const icon = group.list.find((m) => m.art)?.art || "";
+      const bossCount = group.list.filter((m) => m.kind === "boss").length;
+      const isOpen = openGroup === group.id;
+      return `<details class="mob-group" id="mob-group-${escAttr(group.id)}" data-group="${escAttr(group.id)}"${isOpen ? " open" : ""}>
+        <summary>
+          <span class="slot mob-group-icon">${icon ? `<img src="${escAttr(icon)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
+          <span class="mob-group-copy"><b>${esc(group.title)}</b><small>${esc(group.sub || group.summon || `${group.list.length} ${group.list.length === 1 ? "существо" : group.list.length < 5 ? "существа" : "существ"}${bossCount ? ` · ${bossCount} босс${bossCount === 1 ? "" : bossCount < 5 ? "а" : "ов"}` : ""}`)}</small></span>
+          <em>${group.list.length}</em>
+        </summary>
+        <div class="mob-group-body" data-pending="1"></div>
+      </details>`;
+    };
+    app.innerHTML = `
+      <div class="page mobs-page">
+        ${mast("Мобы и события", "Все существа Terraria и Calamity: где живут, когда появляются, сколько у них здоровья и что с них падает. События подсказывают, как их призвать и чем закончится бой.")}
+        <div class="mob-controls panel">
+          <label class="mob-search" aria-label="Поиск существа">
+            <span aria-hidden="true">▶</span>
+            <input id="mob-search" type="search" placeholder="Найти существо: зомби, wyvern, кислотный…" autocomplete="off" spellcheck="false" value="${escAttr(params.q || "")}" />
+          </label>
+          <div class="mob-filter-row" role="group" aria-label="Источник">
+            <button class="mini ${!filters.src ? "on" : ""}" data-mob-src="">Все</button>
+            <button class="mini ${filters.src === "v" ? "on" : ""}" data-mob-src="v">Terraria</button>
+            <button class="mini ${filters.src === "c" ? "on" : ""}" data-mob-src="c">Calamity</button>
+          </div>
+          <div class="mob-filter-row" role="group" aria-label="Тип существа">
+            <button class="mini ${!filters.kind ? "on" : ""}" data-mob-kind="">Все типы</button>
+            <button class="mini ${filters.kind === "enemy" ? "on" : ""}" data-mob-kind="enemy">Враги</button>
+            <button class="mini ${filters.kind === "critter" ? "on" : ""}" data-mob-kind="critter">Зверьки</button>
+            <button class="mini ${filters.kind === "boss" ? "on" : ""}" data-mob-kind="boss">Боссы</button>
+          </div>
+          <p class="mob-controls-note">${query ? `Найдено: ${searchHits.length}` : `${filtered.length} существ${activeFilterCount ? " по фильтру" : ""} · ${eventGroups.length} событий · ${biomeGroups.length} групп биомов`}</p>
+        </div>
+        ${query ? `
+          <section class="mob-results" aria-label="Результаты поиска">
+            ${searchHits.length ? `<div class="mob-grid">${searchHits.map(mobCard).join("")}</div>` : `<div class="empty-state"><span>✦</span><b>Никого не нашли</b><p>Попробуй другое имя — работает и русское, и английское.</p><a class="btn ghost" href="#/mobs">Сбросить поиск</a></div>`}
+          </section>` : `
+          <section class="mob-section" aria-labelledby="mob-events-title">
+            <header class="home-section-head"><div><small>как призвать и что делать</small><h2 id="mob-events-title">События и вторжения</h2></div><p>Каждое событие раскрывается: условия запуска, совет и полный список участников.</p></header>
+            ${eventGroups.map((g) => groupBlock(g, "event")).join("")}
+          </section>
+          <section class="mob-section" aria-labelledby="mob-biomes-title">
+            <header class="home-section-head"><div><small>кто где живёт</small><h2 id="mob-biomes-title">Биомы</h2></div><p>От леса на поверхности до Бездны Calamity — жители каждого уголка мира.</p></header>
+            ${biomeGroups.map((g) => groupBlock(g, "biome")).join("")}
+          </section>`}
+      </div>`;
+    const groupById = new Map([...eventGroups, ...biomeGroups].map((g) => [g.id, g]));
+    const fillGroup = (details) => {
+      const body = details.querySelector(".mob-group-body");
+      if (!body || !body.dataset.pending) return;
+      delete body.dataset.pending;
+      const group = groupById.get(details.dataset.group);
+      if (!group) return;
+      const info = group.summon ? `<div class="mob-event-info"><p><b>Как начинается:</b> ${esc(group.summon)}</p>${group.tip ? `<p><b>Что делать:</b> ${esc(group.tip)}</p>` : ""}</div>` : "";
+      body.innerHTML = `${info}<div class="mob-grid">${group.list.map(mobCard).join("")}</div>`;
+      versionLocalImages(body);
+    };
+    app.querySelectorAll(".mob-group").forEach((details) => {
+      if (details.open) fillGroup(details);
+      details.addEventListener("toggle", () => { if (details.open) fillGroup(details); }, { once: false });
+    });
+    const syncUrl = (next) => {
+      const qs = new URLSearchParams();
+      if (next.q) qs.set("q", next.q);
+      if (next.src) qs.set("src", next.src);
+      if (next.kind) qs.set("kind", next.kind);
+      if (next.g) qs.set("g", next.g);
+      const hash = "#/mobs" + (qs.toString() ? `?${qs}` : "");
+      history.replaceState(null, "", hash);
+      renderMobs(Object.fromEntries(qs));
+    };
+    const current = () => ({ q: app.querySelector("#mob-search")?.value.trim() || "", src: filters.src, kind: filters.kind, g: openGroup });
+    let searchTimer = 0;
+    app.querySelector("#mob-search")?.addEventListener("input", (event) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => syncUrl({ ...current(), q: event.target.value.trim(), g: "" }), 220);
+    });
+    app.querySelectorAll("[data-mob-src]").forEach((btn) => btn.onclick = () => syncUrl({ ...current(), src: btn.dataset.mobSrc }));
+    app.querySelectorAll("[data-mob-kind]").forEach((btn) => btn.onclick = () => syncUrl({ ...current(), kind: btn.dataset.mobKind }));
+    if (openGroup) {
+      const target = document.getElementById(`mob-group-${openGroup}`);
+      if (target) requestAnimationFrame(() => target.scrollIntoView({ block: "start", behavior: "auto" }));
+    }
+    const focused = app.querySelector("#mob-search");
+    if (params.q && focused) { focused.focus(); focused.setSelectionRange(focused.value.length, focused.value.length); }
   }
 
   function lexCard(e) {

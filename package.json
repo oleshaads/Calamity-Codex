@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build:runtime": "node scripts/build-runtime.mjs",
-    "audit": "node scripts/audit-release.mjs && node scripts/audit-lazy-runtime.cjs && node scripts/audit-high-refresh.cjs && node scripts/audit-home-dashboard.cjs && node scripts/audit-layout-shelves.cjs && node scripts/audit-tree-priority.cjs && node scripts/audit-craft-boss-details.cjs && node scripts/audit-accessibility.cjs && node scripts/audit-search-performance.cjs && node scripts/audit-item-accuracy.cjs && node scripts/audit-useful.cjs && node scripts/audit-visual-recipes.cjs && node scripts/audit-craft-plan.cjs && node scripts/audit-acquisition.cjs && node scripts/audit-tree-zoom.cjs && node scripts/audit-biome-filters.cjs && node scripts/audit-bosses.cjs && node scripts/audit-boss-relations.cjs && node scripts/audit-sprite-frames.cjs && node scripts/audit-craft-art.cjs"
+    "audit": "node scripts/audit-release.mjs && node scripts/audit-lazy-runtime.cjs && node scripts/audit-high-refresh.cjs && node scripts/audit-home-dashboard.cjs && node scripts/audit-layout-shelves.cjs && node scripts/audit-tree-priority.cjs && node scripts/audit-craft-boss-details.cjs && node scripts/audit-accessibility.cjs && node scripts/audit-search-performance.cjs && node scripts/audit-item-accuracy.cjs && node scripts/audit-useful.cjs && node scripts/audit-visual-recipes.cjs && node scripts/audit-craft-plan.cjs && node scripts/audit-acquisition.cjs && node scripts/audit-tree-zoom.cjs && node scripts/audit-biome-filters.cjs && node scripts/audit-bosses.cjs && node scripts/audit-mobs.cjs && node scripts/audit-boss-relations.cjs && node scripts/audit-sprite-frames.cjs && node scripts/audit-craft-art.cjs"
   },
   "devDependencies": {
     "clean-css": "5.3.3",

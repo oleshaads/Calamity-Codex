@@ -28,7 +28,8 @@ const catalogFiles = [
   "npc-sources.js",
   "npc-ru.js",
   "npc-art.js",
-  "ru-names.js"
+  "ru-names.js",
+  "mobs.js", "mob-guide.js"
 ];
 const readSources = (files) => files
   .map((name) => fs.readFileSync(path.join(root, "js", name), "utf8"))

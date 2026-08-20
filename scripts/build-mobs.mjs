@@ -1,0 +1,347 @@
+#!/usr/bin/env node
+/*
+ * Генератор индекса мобов (вкладка «Мобы»): ваниль + Calamity.
+ *
+ * Источники (закреплённые):
+ *  - Ваниль: декомпилированный Terraria 1.4.4.1 (br4dnblehh/terraria-source-code):
+ *      NPCID.cs                    — внутренний ключ → NPC ID;
+ *      NPC.cs (SetDefaults2)       — базовые ОЗ/урон/защита;
+ *      BestiaryDatabaseNPCsPopulator.cs — биомы/события/вторжения/время бестиария;
+ *      Terraria.Localization.Content.{ru-RU,en-US}.NPCs.json — имена;
+ *      Terraria.Localization.Content.ru-RU.Game.json — описания бестиария и подписи тегов;
+ *      natan-dot-com/Terraria-Dataset — типы (враг/зверёк/босс) и спрайты.
+ *  - Calamity: CalamityTeam/CalamityModPublic @ 1a8cebd (тот же коммит, что и npc-sources):
+ *      NPCs/**\/*.cs — статы, кадры анимации, теги бестиария; PNG рядом с классом;
+ *      Localization/en-US/Mods.CalamityMod.NPCs.hjson — имена.
+ *    Русские имена: js/npc-ru.js + scripts/mob-ru-names.json (рукописный перевод).
+ *
+ * Использование:
+ *   node scripts/build-mobs.mjs [--src /tmp/src] [--skip-art]
+ */
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
+import { execFileSync } from "node:child_process";
+
+const REPO = path.resolve(import.meta.dirname, "..");
+const SRC = path.resolve(process.argv.includes("--src") ? process.argv[process.argv.indexOf("--src") + 1] : "/tmp/src");
+const SKIP_ART = process.argv.includes("--skip-art");
+const OUT_JS = path.join(REPO, "calamity-codex/js/mobs.js");
+const OUT_ART = path.join(REPO, "calamity-codex/assets/mob-sprites");
+const VAN = path.join(SRC, "vanilla");
+const CAL = path.join(SRC, "calamity");
+const DATASET = path.join(SRC, "dataset");
+
+const read = (p) => fs.readFileSync(p, "utf8");
+// Локализация Terraria — JSON с висячими запятыми; чистим перед разбором.
+const readJson = (p) => JSON.parse(read(p).replace(/,(\s*[}\]])/g, "$1"));
+const exists = fs.existsSync;
+if (!exists(VAN) || !exists(CAL) || !exists(DATASET)) {
+  console.error("Не найдены исходники в", SRC, "— нужны каталоги vanilla/, calamity/, dataset/");
+  process.exit(1);
+}
+fs.mkdirSync(OUT_ART, { recursive: true });
+
+/* ============================== ВАНИЛЬ ============================== */
+
+// 1. Внутренний ключ -> id
+const npcIdCs = read(path.join(VAN, "NPCID.cs"));
+const KEY_TO_ID = new Map();
+const ID_TO_KEY = new Map();
+for (const m of npcIdCs.matchAll(/public const short (\w+) = (-?\d+);/g)) {
+  const key = m[1]; const id = Number(m[2]);
+  if (key === "Count" || id === 0) continue;
+  KEY_TO_ID.set(key, id);
+  if (id > 0 && !ID_TO_KEY.has(id)) ID_TO_KEY.set(id, key);
+}
+
+// 2. Локализация имён
+const ruNpcNames = readJson((path.join(VAN, "Terraria.Localization.Content.ru-RU.NPCs.json"))).NPCName || {};
+const enNpcNames = readJson((path.join(VAN, "Terraria.Localization.Content.en-US.NPCs.json"))).NPCName || {};
+const ruGame = readJson((path.join(VAN, "Terraria.Localization.Content.ru-RU.Game.json")));
+const FLAVOR = ruGame.Bestiary_FlavorText || {};
+const COMMON_FLAVOR = ruGame.CommonBestiaryFlavor || {};
+const TAG_LABELS = {};
+for (const [group, prefix] of [["Bestiary_Biomes", "b"], ["Bestiary_Events", "e"], ["Bestiary_Invasions", "i"], ["Bestiary_Times", "t"]]) {
+  for (const [k, v] of Object.entries(ruGame[group] || {})) TAG_LABELS[`${prefix}:${k}`] = v;
+}
+const flavorFor = (key) => {
+  let text = FLAVOR[`npc_${key}`] || "";
+  const ref = text.match(/^\{\$CommonBestiaryFlavor\.(\w+)\}$/);
+  if (ref) text = COMMON_FLAVOR[ref[1]] || "";
+  return text.replace(/\{\$[^}]+\}/g, "").trim();
+};
+
+// EN display name -> ключ (голова червя = наименьший id)
+const EN_NAME_TO_KEY = new Map();
+for (const [key, name] of Object.entries(enNpcNames)) {
+  const id = KEY_TO_ID.get(key);
+  if (id === undefined) continue;
+  const prev = EN_NAME_TO_KEY.get(name);
+  // предпочитаем положительный и наименьший id (голова червя)
+  if (!prev) { EN_NAME_TO_KEY.set(name, key); continue; }
+  const prevId = KEY_TO_ID.get(prev);
+  if ((prevId < 0 && id > 0) || (prevId > 0 && id > 0 && id < prevId)) EN_NAME_TO_KEY.set(name, key);
+}
+// Соответствия для имён из датасета, отличающихся от локализации
+const NAME_ALIASES = {
+  "Ghost (enemy)": "Ghost", "Enchanted Sword (NPC)": "Enchanted Sword",
+  "Blue Cultist Archer": "Cultist Archer", "Lunatic Devote": "Lunatic Devotee",
+  "White Cultist Archer": "Cultist Archer"
+};
+
+// 3. Теги бестиария по id
+const pop = read(path.join(VAN, "BestiaryPopulator.cs"));
+const TAGS_BY_ID = new Map();
+{
+  const rx = /FindEntryByNPCID\((\d+)\)[\s\S]*?(?=FindEntryByNPCID|\tprivate |\tpublic )/g;
+  for (const m of pop.matchAll(rx)) {
+    const id = Number(m[1]);
+    const body = m[0];
+    const tags = TAGS_BY_ID.get(id) || new Set();
+    for (const t of body.matchAll(/CommonTags\.SpawnConditions\.(Biomes|Events|Invasions|Times)\.(\w+)/g)) {
+      const prefix = { Biomes: "b", Events: "e", Invasions: "i", Times: "t" }[t[1]];
+      tags.add(`${prefix}:${t[2]}`);
+    }
+    if (tags.size) TAGS_BY_ID.set(id, tags);
+  }
+}
+
+// 4. Статы из NPC.cs SetDefaults2 (базовые значения ветки)
+const npcCs = read(path.join(VAN, "NPC.cs"));
+const STATS_BY_ID = new Map();
+{
+  const start = npcCs.indexOf("public void SetDefaults(int Type, NPCSpawnParams");
+  const end = npcCs.indexOf("\n\t\tpublic void SetDefaultsKeepPlayerInteraction", start);
+  const seg = npcCs.slice(start, end > start ? end : start + 4_000_000);
+  const condRx = /(?:else )?if \(((?:[^()]|\([^()]*\))*(?:Type|type)(?:[^()]|\([^()]*\))*)\)\s*\n\t*\{/g;
+  let m;
+  while ((m = condRx.exec(seg))) {
+    const cond = m[1];
+    // собрать id из условия
+    const ids = new Set();
+    for (const eq of cond.matchAll(/[Tt]ype == (\d+)/g)) ids.add(Number(eq[1]));
+    const range = cond.match(/[Tt]ype >= (\d+) && [Tt]ype <= (\d+)/);
+    if (range) for (let i = Number(range[1]); i <= Number(range[2]); i++) ids.add(i);
+    if (!ids.size) continue;
+    // тело блока до балансировки скобок
+    let depth = 1; let i = condRx.lastIndex; const bodyStart = i;
+    while (depth > 0 && i < seg.length) { const ch = seg[i]; if (ch === "{") depth++; else if (ch === "}") depth--; i++; }
+    const body = seg.slice(bodyStart, i);
+    const top = body.split(/\n\t{4}(?=switch|if|for|while)/)[0];
+    const grab = (name) => { const g = top.match(new RegExp(`(?:^|\\n)\\t*${name} = (\\d+);`)); return g ? Number(g[1]) : null; };
+    const stats = { hp: grab("lifeMax"), dmg: grab("damage"), def: grab("defense") };
+    if (stats.hp === null && stats.dmg === null) continue;
+    for (const id of ids) if (!STATS_BY_ID.has(id)) STATS_BY_ID.set(id, stats);
+  }
+}
+
+// 5. Датасет: тип + спрайт
+const dataset = readJson((path.join(DATASET, "json/npc_data/npc.json")));
+const SPRITES = path.join(DATASET, "json/items_data/npc_sprites");
+const slugify = (name) => name.toLowerCase().replace(/['’.]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+const artSlug = (name) => name.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// 5.5 Кадры анимации ванильных NPC: Main.cs => npcFrameCount = new int[688] { ... }
+const VANILLA_FRAMES = [];
+{
+  const mainCs = read(path.join(VAN, "Main.cs"));
+  const arr = mainCs.match(/npcFrameCount = new int\[\d+\]\s*\{([\s\S]*?)\};/);
+  if (arr) arr[1].split(",").forEach((v, i) => { VANILLA_FRAMES[i] = Number(v.trim()) || 1; });
+}
+const cropSprite = (source, target, frames) => {
+  const [w, h] = execFileSync("identify", ["-format", "%w %h", source], { encoding: "utf8" }).trim().split(/\s+/).map(Number);
+  if (frames > 1 && h % frames === 0 && h / frames >= 8) {
+    execFileSync("convert", [source, "-crop", `${w}x${h / frames}+0+0`, "+repage", "-define", "png:exclude-chunks=date,time", target]);
+  } else {
+    fs.copyFileSync(source, target);
+  }
+};
+
+const vanillaMobs = [];
+const missingVanilla = [];
+for (const row of dataset) {
+  const en = row.Name.trim();
+  const type = row.Type;
+  if (type === "Town NPC") continue;
+  const lookup = NAME_ALIASES[en] || en.replace(/\s*\((?:enemy|NPC)\)$/i, "");
+  const key = EN_NAME_TO_KEY.get(lookup) || EN_NAME_TO_KEY.get(en);
+  if (!key) { missingVanilla.push(en); continue; }
+  const id = KEY_TO_ID.get(key);
+  const ru = ruNpcNames[key] || en;
+  const stats = STATS_BY_ID.get(id) || {};
+  const EXTRA_TAGS = {
+    "Green Slime": ["b:Surface", "t:DayTime"], "Baby Slime": ["b:Surface"], "Black Slime": ["b:TheUnderground"],
+    "Pinky": ["b:Surface", "t:DayTime"], "Purple Slime": ["b:Surface", "t:DayTime"], "Red Slime": ["b:TheUnderground"],
+    "Yellow Slime": ["b:TheUnderground"], "Jungle Slime": ["b:Jungle", "t:DayTime"]
+  };
+  const tags = [...(TAGS_BY_ID.get(id) || [])];
+  if (!tags.length && EXTRA_TAGS[en]) tags.push(...EXTRA_TAGS[en]);
+  const flavor = flavorFor(key);
+  const spriteFile = path.join(SPRITES, `${slugify(en)}.png`);
+  const NPCTEX = path.join(SRC, "npctex/Art/Terraria/images");
+  const texId = id > 0 ? id : 1; // цветные слизни — варианты текстуры синего слизня
+  const texFile = path.join(NPCTEX, `NPC_${texId}.png`);
+  let art = "";
+  if (exists(texFile)) {
+    art = `assets/mob-sprites/v-${artSlug(en)}.png`;
+    if (!SKIP_ART) cropSprite(texFile, path.join(REPO, "calamity-codex", art), VANILLA_FRAMES[texId] || 1);
+  } else if (exists(spriteFile)) {
+    art = `assets/mob-sprites/v-${artSlug(en)}.png`;
+    if (!SKIP_ART) cropSprite(spriteFile, path.join(REPO, "calamity-codex", art), id > 0 ? (VANILLA_FRAMES[id] || 1) : 1);
+  }
+  vanillaMobs.push({
+    src: "v", id: `v${id}`, en, ru, kind: type === "Boss" ? "boss" : type === "Critter" ? "critter" : "enemy",
+    hp: stats.hp ?? null, dmg: stats.dmg ?? null, def: stats.def ?? null,
+    tags, desc: flavor, art
+  });
+}
+
+// Дедупликация по игровому id (варианты вроде уток/бабочек) + важные NPC без строки локализации
+{
+  const seen = new Set();
+  const dedup = [];
+  for (const mob of vanillaMobs) { if (seen.has(mob.id)) continue; seen.add(mob.id); dedup.push(mob); }
+  vanillaMobs.length = 0; vanillaMobs.push(...dedup);
+  if (!seen.has("v471")) {
+    const stats = STATS_BY_ID.get(471) || {};
+    const sprite = path.join(SRC, "npctex/Art/Terraria/images/NPC_471.png");
+    let art = "";
+    if (exists(sprite)) { art = "assets/mob-sprites/v-goblin-summoner.png"; if (!SKIP_ART) cropSprite(sprite, path.join(REPO, "calamity-codex", art), VANILLA_FRAMES[471] || 1); }
+    vanillaMobs.push({ src: "v", id: "v471", en: "Goblin Summoner", ru: "Гоблин-призыватель", kind: "enemy", hp: stats.hp ?? null, dmg: stats.dmg ?? null, def: stats.def ?? null, tags: [...(TAGS_BY_ID.get(471) || ["i:Goblins"])], desc: flavorFor("GoblinSummoner"), art });
+  }
+}
+
+/* ============================== CALAMITY ============================== */
+
+// Имена из hjson
+const calNames = {};
+for (const m of read(path.join(CAL, "Localization/en-US/Mods.CalamityMod.NPCs.hjson"))
+  .matchAll(/^\s*"?([\w.]+)\.DisplayName"?\s*:\s*"?([^"\r\n]+?)"?\s*$/gm)) {
+  calNames[m[1].split(".").pop()] = m[2].trim();
+}
+// Короткая форма записи имени: `TinySquid: Tiny Squid`
+for (const m of read(path.join(CAL, "Localization/en-US/Mods.CalamityMod.NPCs.hjson"))
+  .matchAll(/^\s{0,4}(\w+):\s+([A-Z][^\r\n{]*?)\s*$/gm)) {
+  if (!calNames[m[1]] && !/DisplayName|Bestiary|Chat|Census/.test(m[1])) calNames[m[1]] = m[2].trim();
+}
+// Русские имена: npc-ru.js + рукописный словарь
+const ruCtx = { window: {} }; vm.createContext(ruCtx);
+vm.runInContext(read(path.join(REPO, "calamity-codex/js/npc-ru.js")), ruCtx);
+const NPC_RU = ruCtx.window.CALAMITY_NPC_RU || {};
+const manualRuPath = path.join(import.meta.dirname, "mob-ru-names.json");
+const MANUAL_RU = exists(manualRuPath) ? JSON.parse(read(manualRuPath)) : {};
+// Имена боссов и мини-боссов берём из уже переведённого бестиария кодекса.
+const BOSS_RU = {};
+const BOSS_EN_SET = new Set();
+for (const m of read(path.join(REPO, "calamity-codex/js/bosses.js")).matchAll(/name:"([^"]+)", en:"([^"]+)"/g)) {
+  if (!BOSS_RU[m[2]]) BOSS_RU[m[2]] = m[1];
+  BOSS_EN_SET.add(m[2]);
+}
+// Соответствия имён кодекса и внутренних имён Calamity
+BOSS_RU["The Perforator"] = BOSS_RU["The Perforators"] || "Перфоратор";
+BOSS_RU["Anahita"] = BOSS_RU["Anahita"] || "Анахита";
+
+// Папка -> контекст (биом/событие Calamity)
+const FOLDER_TAG = {
+  Abyss: "cb:Abyss", AcidRain: "ce:AcidRain", Astral: "cb:Astral", Crags: "cb:Crags",
+  SulphurousSea: "cb:SulphurousSea", SunkenSea: "cb:SunkenSea", PlagueEnemies: "cb:Plague",
+  NormalNPCs: "", Other: "", TownNPCs: "", VanillaNPCAIOverrides: ""
+};
+
+const isSegment = (cls) => /(Body|Tail|BodyAlt|TailAlt|Body\d|Tail\d|Segment|Arm\b|ArmLeft|ArmRight|Leg\b)/.test(cls);
+const calFiles = [];
+(function walk(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) { if (!/TownNPCs|VanillaNPCAIOverrides/.test(entry.name)) walk(p); }
+    else if (entry.name.endsWith(".cs")) calFiles.push(p);
+  }
+})(path.join(CAL, "NPCs"));
+
+const calMobs = [];
+const skipped = [];
+const missingRu = [];
+for (const file of calFiles) {
+  const src = read(file);
+  const clsMatch = src.match(/public class (\w+)\s*:\s*ModNPC/);
+  if (!clsMatch) continue;
+  const cls = clsMatch[1];
+  if (isSegment(cls)) continue;
+  let en = calNames[cls];
+  if (!en || en === "???" || /^\{\$/.test(en)) { skipped.push(cls); continue; }
+  const folder = path.relative(path.join(CAL, "NPCs"), path.dirname(file)).split(path.sep)[0] || "";
+  const grab = (name) => { const g = src.match(new RegExp(`NPC\\.${name}\\s*=\\s*(\\d+)`)); return g ? Number(g[1]) : null; };
+  const frames = Number((src.match(/Main\.npcFrameCount\[(?:NPC\.type|Type)\]\s*=\s*(\d+)/) || [])[1] || 1);
+  const boss = /NPC\.boss\s*=\s*true/.test(src);
+  const tags = new Set();
+  for (const t of src.matchAll(/CommonTags\.SpawnConditions\.(Biomes|Events|Invasions|Times)\.(\w+)/g)) {
+    tags.add(`${{ Biomes: "b", Events: "e", Invasions: "i", Times: "t" }[t[1]]}:${t[2]}`);
+  }
+  const folderTag = FOLDER_TAG[folder] ?? "";
+  if (folderTag) tags.add(folderTag);
+  if (folder === "PlagueEnemies") tags.add("cb:Plague");
+  // Текстура: рядом с классом либо переопределение
+  let texture = path.join(path.dirname(file), `${cls}.png`);
+  const texOverride = src.match(/string Texture\s*=>\s*"([^"]+)"/);
+  if (texOverride) {
+    const rel = texOverride[1].replace(/^CalamityMod\//, "");
+    texture = path.join(CAL, `${rel}.png`);
+  }
+  let art = "";
+  if (exists(texture)) {
+    art = `assets/mob-sprites/c-${artSlug(en)}.png`;
+    if (!SKIP_ART) {
+      const target = path.join(REPO, "calamity-codex", art);
+      const [w, h] = execFileSync("identify", ["-format", "%w %h", texture], { encoding: "utf8" }).trim().split(/\s+/).map(Number);
+      const frameH = Math.floor(h / Math.max(1, frames));
+      if (frames > 1 && frameH > 0) {
+        execFileSync("convert", [texture, "-crop", `${w}x${frameH}+0+0`, "+repage", "-define", "png:exclude-chunks=date,time", target]);
+      } else {
+        fs.copyFileSync(texture, target);
+      }
+    }
+  }
+  const ru = MANUAL_RU[en] || NPC_RU[en] || BOSS_RU[en] || "";
+  if (!ru) missingRu.push(en);
+  calMobs.push({
+    src: "c", id: `c-${artSlug(en)}`, en, ru: ru || en,
+    kind: boss || BOSS_EN_SET.has(en) ? "boss" : "enemy",
+    hp: grab("lifeMax"), dmg: grab("damage"), def: grab("defense"),
+    tags: [...tags], folder, desc: "", art
+  });
+}
+
+// дедупликация Calamity по имени (альтернативные классы) — оставляем запись с артом/статами
+const byName = new Map();
+for (const mob of calMobs) {
+  const prev = byName.get(mob.en);
+  if (!prev) { byName.set(mob.en, mob); continue; }
+  const score = (x) => (x.art ? 2 : 0) + (x.hp ? 1 : 0);
+  if (score(mob) > score(prev)) byName.set(mob.en, mob);
+}
+const calFinal = [...byName.values()];
+
+/* ============================== ВЫВОД ============================== */
+
+const mobs = [...vanillaMobs, ...calFinal];
+const compact = mobs.map((m) => [m.id, m.src, m.en, m.ru, m.kind, m.hp ?? -1, m.dmg ?? -1, m.def ?? -1, m.tags.join(","), m.desc, m.art, m.folder || ""]);
+const output = `/* Generated by scripts/build-mobs.mjs. Do not edit by hand.
+ * Vanilla: Terraria 1.4.4.1 decompiled source + official ru-RU localization + Terraria-Dataset sprites.
+ * Calamity: CalamityTeam/CalamityModPublic @ 1a8cebd27ec5615316b78f71973446b5528d2b78.
+ * Fields: [id, src(v|c), en, ru, kind, hp, dmg, def, tags, desc, art, folder]
+ */
+window.CALAMITY_MOB_INDEX = {
+  format: 1,
+  tagLabels: ${JSON.stringify(TAG_LABELS)},
+  mobs: ${JSON.stringify(compact)}
+};
+`;
+fs.writeFileSync(OUT_JS, output);
+
+console.log(`Ваниль: ${vanillaMobs.length} записей (${vanillaMobs.filter((m) => m.art).length} со спрайтами, ${vanillaMobs.filter((m) => m.desc).length} с описаниями, ${vanillaMobs.filter((m) => m.hp !== null).length} со статами, ${vanillaMobs.filter((m) => m.tags.length).length} с тегами)`);
+console.log(`Calamity: ${calFinal.length} записей (${calFinal.filter((m) => m.art).length} со спрайтами, ${calFinal.filter((m) => m.hp !== null).length} со статами, ${calFinal.filter((m) => m.ru !== m.en).length} с русскими именами)`);
+if (missingVanilla.length) console.log("Ваниль без соответствия локализации:", missingVanilla.length, missingVanilla.slice(0, 12).join(", "));
+if (missingRu.length) console.log("Calamity без русского имени:", missingRu.length);
+fs.writeFileSync(path.join(import.meta.dirname, "mob-missing-ru.txt"), missingRu.sort().join("\n"));
+console.log("OK ->", path.relative(REPO, OUT_JS));
