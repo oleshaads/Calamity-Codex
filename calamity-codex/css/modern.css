@@ -6656,3 +6656,35 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 0; background: r
 
 /* Кинематографичнее герой главной: фон заметнее, с мягкой маской вниз */
 .hero-bg { opacity: .48; -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .95), rgba(0, 0, 0, .25) 78%, transparent); mask-image: linear-gradient(180deg, rgba(0, 0, 0, .95), rgba(0, 0, 0, .25) 78%, transparent); }
+
+/* ==================================================================== */
+/* АПГРЕЙД: «Избранное» — трофейные плитки; фирменный экран загрузки    */
+/* ==================================================================== */
+
+/* Сводка рюкзака: три крупные трофейные плитки с золотыми цифрами */
+.favorite-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.favorite-summary > a { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 15px; align-items: center; padding: 16px 18px; border: 1px solid #2c3945; border-radius: 13px; background: linear-gradient(165deg, #182330, #121a23 62%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.favorite-summary > a:hover { transform: translateY(-2px); border-color: #8a6d3b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 12px 26px rgba(0, 0, 0, .32), 0 0 20px rgba(232, 196, 111, .08); }
+.favorite-summary > a > span:first-child { display: grid; place-items: center; width: 56px; height: 56px; border: 1px solid #6b5a33; border-radius: 12px; color: #e8c46f; background: radial-gradient(circle at 50% 36%, #2b2314, #171310 78%); font-size: 24px; text-shadow: 0 0 14px rgba(232, 196, 111, .4); }
+.favorite-summary b { display: block; color: #f0ece1; font-family: "Russo One", var(--mono), sans-serif; font-size: 27px; font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.favorite-summary small { display: block; margin-top: 3px; color: #8b97a1; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.favorites-more { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 16px; padding: 13px 16px; border: 1px dashed #34424e; border-radius: 11px; background: rgba(13, 18, 24, .5); }
+.favorites-more span { color: #8b97a1; font-size: 13px; }
+.favorites-more a { padding: 6px 12px; border: 1px solid #3c4b56; border-radius: 8px; color: #cfd7dc; background: #141d25; font-size: 12.5px; transition: border-color .13s ease, color .13s ease, background .13s ease; }
+.favorites-more a:hover { border-color: #8a6d3b; color: #f1dda1; background: #1d1913; }
+@media (max-width: 760px) {
+  .favorite-summary { grid-template-columns: 1fr; gap: 8px; }
+  .favorite-summary > a { padding: 12px 14px; }
+  .favorite-summary b { font-size: 22px; }
+}
+
+/* Экран первой загрузки и загрузки каталога — фирменный сплэш */
+.app-boot { display: grid; justify-items: center; gap: 6px; width: min(440px, 92vw); margin-inline: auto; padding: 40px 26px; text-align: center; border: 1px solid #2c3945; border-radius: 16px; background: linear-gradient(168deg, #17212c, #111923 62%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 18px 44px rgba(0, 0, 0, .35); }
+.app-boot-mark { display: grid; place-items: center; width: 66px; height: 66px; margin-bottom: 8px; border: 1px solid #6b5a33; border-radius: 16px; color: #e8c46f; background: radial-gradient(circle at 50% 36%, #2b2314, #171310 78%); font-size: 28px; text-shadow: 0 0 18px rgba(232, 196, 111, .5); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 0 34px rgba(232, 196, 111, .12); }
+.app-boot b { color: #f0ece1; font-family: "Russo One", var(--mono), sans-serif; font-size: 17px; font-weight: 400; letter-spacing: .05em; text-transform: uppercase; }
+.app-boot small { color: #8b97a1; font-size: 12.5px; }
+.app-boot i { width: min(240px, 70%); height: 6px; margin-top: 14px; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes mark-in { from { opacity: 0; transform: scale(.86); } to { opacity: 1; transform: scale(1); } }
+  .app-boot-mark { animation: mark-in .3s cubic-bezier(.2, .7, .3, 1) 1; }
+}
