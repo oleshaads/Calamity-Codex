@@ -5961,3 +5961,22 @@ b.mob-mention:hover, b.mob-mention:focus-visible { border-bottom-style: solid; c
 .home-145-note { margin-top: 11px; padding: 9px 12px; border-left: 3px solid #6b5a33; border-radius: 6px; color: #97a3ac; background: #141c24; font-size: 12.5px; line-height: 1.6; }
 .npc-drop-chip.is-new { position: relative; cursor: default; }
 .npc-drop-chip .new-mark { margin-left: 6px; padding: 1px 6px; border: 1px solid #6b5a33; border-radius: 8px; color: #e8c46f; background: #241e12; font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 700; }
+
+/* Полки главной: единый премиальный вид — одинаковые бейджи, градиент, шеврон. */
+.home-strip .secondary-shelf { margin-top: 14px; overflow: hidden; border: 1px solid #2e3b46; border-radius: 12px; background: linear-gradient(165deg, #182230, #111922 60%); transition: border-color .15s ease, box-shadow .15s ease; }
+.home-strip .secondary-shelf:hover { border-color: color-mix(in srgb, #e8c46f, #2e3b46 72%); box-shadow: 0 10px 24px rgba(0, 0, 0, .32), 0 0 18px rgba(232, 196, 111, .05); }
+.home-strip .secondary-shelf > summary { min-height: 68px; padding: 13px 16px; gap: 16px; background: transparent; }
+.home-strip .secondary-shelf > summary:hover { background: rgba(255, 255, 255, .02); }
+.home-strip .secondary-shelf > summary > span { grid-template-columns: 52px minmax(0, 1fr); column-gap: 14px; }
+.home-strip .secondary-shelf > summary i { grid-row: 1 / 3; width: 52px; height: 36px; display: grid; place-items: center; border: 1px solid #6b5a33; border-radius: 9px; color: #e8c46f; background: linear-gradient(180deg, #241e12, #181410); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); font-family: var(--mono); font-size: 11px; font-style: normal; font-weight: 700; letter-spacing: .04em; text-align: center; }
+.home-strip .secondary-shelf > summary b { color: #ece8dd; font-size: 12px; letter-spacing: .06em; }
+.home-strip .secondary-shelf > summary small { margin-top: 3px; color: #8b97a1; font-size: 12px; }
+.home-strip .secondary-shelf > summary em { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border: 1px solid #3c4b56; border-radius: 9px; color: #b5c0c6; background: #141d25; font-family: var(--mono); font-size: 9.5px; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.home-strip .secondary-shelf > summary em::after { content: "⌄"; color: #e8c46f; font-size: 12px; line-height: 1; transform: translateY(-1px); transition: transform .15s ease; }
+.home-strip .secondary-shelf[open] > summary em::after { transform: rotate(180deg) translateY(1px); }
+.home-strip .secondary-shelf[open] > summary { border-bottom: 1px solid #2b3842; }
+@media (max-width: 760px) {
+  .home-strip .secondary-shelf > summary { min-height: 58px; padding: 11px 12px; }
+  .home-strip .secondary-shelf > summary em { display: inline-flex; padding: 4px 8px; }
+  .home-strip .secondary-shelf > summary em::after { font-size: 11px; }
+}
