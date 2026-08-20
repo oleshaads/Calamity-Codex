@@ -6568,3 +6568,28 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 0; background: r
 
 /* Подписи «в игре: …» приглушены курсивом для второго плана */
 .en-sub, .tree-root-sub { font-style: italic; }
+
+/* ============== Проход 18: навигация, пустые и загрузочные состояния ============== */
+
+/* Тонкие разделители над группами навигации (кроме первой) */
+.rail-nav .nav-caption:not(:first-child) { position: relative; padding-top: 11px; }
+.rail-nav .nav-caption:not(:first-child)::before { content: ""; position: absolute; top: 0; left: 2px; right: 2px; height: 1px; background: linear-gradient(90deg, rgba(232, 196, 111, .18), rgba(255, 255, 255, .05) 45%, transparent 85%); }
+
+/* Пустой результат глобального поиска */
+.search-empty { border: 1px dashed #34424e; border-radius: 10px; margin: 8px; padding: 18px; background: rgba(13, 18, 24, .5); }
+.search-empty b { color: #e8e3d7; }
+.search-empty small { color: #8b97a1; }
+
+/* Метка типа в результатах поиска — единая пилюля */
+.search-hit em, .search-hit .hit-type { border: 1px solid #33404c; border-radius: 8px; padding: 2px 8px; background: #121a23; font-style: normal; }
+
+/* Загрузка каталога: золотая сканирующая полоса вместо простого пульса */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes boot-scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+  .app-boot i { position: relative; overflow: hidden; border-radius: 6px; background: #1a2430; }
+  .app-boot i::after { content: ""; position: absolute; inset: 0; width: 30%; border-radius: 6px; background: linear-gradient(90deg, transparent, #e8c46f, transparent); animation: boot-scan 1.1s ease-in-out infinite; }
+}
+
+/* Галерея биомов: счётчик и подпись */
+#biome-modal-count { padding: 5px 12px; border: 1px solid #33404c; border-radius: 9px; color: #e8c46f; background: #121a23; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.biome-modal-figure figcaption { border-left: 3px solid color-mix(in srgb, #91d47f, transparent 40%); border-radius: 6px; background: rgba(13, 18, 24, .6); }
