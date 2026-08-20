@@ -6356,3 +6356,39 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .burger { border-radius: 9px; transition: background .13s ease, box-shadow .13s ease; }
 .burger:hover { background: rgba(232, 196, 111, .07); box-shadow: inset 0 0 0 1px #57646d; }
 .burger span { border-radius: 2px; }
+
+/* ============== Премиальный слой, проход 9: справочник, избранное, план ============== */
+
+/* Справочник и словарь: строка поиска и счётчик найденного */
+.search-wrap { border-radius: 10px; }
+.search-wrap input { border-radius: 9px; }
+.found { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid #33404c; border-radius: 9px; color: #9fb3bd; background: #121a23; font-family: var(--mono); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.card-toggle { border-radius: 8px; transition: color .13s ease, background .13s ease, border-color .13s ease; }
+.card-toggle:hover { color: #f1dda1; background: rgba(232, 196, 111, .07); }
+
+/* Избранное: карточки сводки и сейф профиля */
+.favorite-summary { gap: 12px; }
+.favorite-summary > * { border-radius: 12px; }
+.hero-save { border: 1px solid #6b5a33; border-radius: 13px; background: linear-gradient(165deg, #201a10 0%, #14171d 62%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 10px 26px rgba(0, 0, 0, .3); }
+.hero-save-copy b { color: #f1dda1; }
+.hero-save-actions { gap: 8px; }
+
+/* Опасные действия — сдержанный багрянец */
+.btn.danger { border-color: #6b3340; color: #f2949f; background: linear-gradient(180deg, #2a1418, #1f0f13); }
+.btn.danger:hover { border-color: #8a4353; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 16px rgba(240, 108, 115, .12); }
+
+/* План крафта: шапка, пустое состояние, добавление целей */
+.craft-plan { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035); }
+.craft-plan-head { border-bottom: 1px solid #2b3842; background: linear-gradient(90deg, rgba(232, 196, 111, .05), transparent 60%); }
+.craft-plan-heading b { color: #f1dda1; }
+.craft-plan-empty { border: 1px dashed #34424e; border-radius: 11px; background: rgba(13, 18, 24, .5); }
+.craft-plan-card-add, [data-craft-plan-add] { transition: border-color .13s ease, color .13s ease, background .13s ease, transform .13s ease; }
+.craft-plan-card-add:hover, [data-craft-plan-add]:hover { transform: translateY(-1px); }
+.craft-plan-card-add.saved, [data-craft-plan-add].saved { border-color: #2f6b45; color: #9fe8bd; background: linear-gradient(180deg, #12271b, #0e1f16); }
+
+/* Окно арта справочных карточек */
+.shot-window { border-radius: 9px; box-shadow: inset 0 0 0 1px #2e3b46, inset 0 -14px 20px rgba(0, 0, 0, .28); }
+
+/* Копирующие кнопки (смета, рецепты) */
+[data-copy-recipe], .plan-copy, .copy-btn { transition: border-color .13s ease, color .13s ease, background .13s ease; }
+[data-copy-recipe]:hover, .plan-copy:hover, .copy-btn:hover { border-color: #8a6d3b; color: #f1dda1; background: rgba(232, 196, 111, .06); }
