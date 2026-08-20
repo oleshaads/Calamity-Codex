@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core92";
+  const ASSET_VERSION = "20260819-core93";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -4870,11 +4870,11 @@
     const tab = ["progress", "armor", "mats", "hp", "mech"].includes(params.tab) ? params.tab : "progress";
     const search = (params.q || "").trim().toLocaleLowerCase("ru");
     const tabs = [
-      ["progress", "Прогрессия"],
-      ["armor", "Броня"],
-      ["mats", "Материалы"],
-      ["hp", "Сердца и мана"],
-      ["mech", "Механики"]
+      ["progress", "Прогрессия", "assets/sprites/Wooden_Sword.png"],
+      ["armor", "Броня", "assets/sprites/VictideBreastplate.png"],
+      ["mats", "Материалы", "assets/sprites/WulfrumMetalScrap.png"],
+      ["hp", "Сердца и мана", "assets/vanilla-sprites/29.png"],
+      ["mech", "Механики", "assets/sprites/AdvancedDisplay.png"]
     ];
     const sources = { progress: CODEX.quests, armor: CODEX.armors, mats: CODEX.materials, hp: CODEX.hpUps, mech: CODEX.mechanics };
     const source = sources[tab] || sources.progress;
@@ -4901,7 +4901,7 @@
       <div class="page">
         ${mast("Справочник", "Те же наглядные карточки маршрута: изображение, этап, источник, назначение и быстрый переход к подробностям.")}
         <div class="chips wiki-tabs">
-          ${tabs.map(([id, name]) => `<button class="chip ${tab === id ? "active" : ""}" data-tab="${id}">${name}<em>${sources[id].length}</em></button>`).join("")}
+          ${tabs.map(([id, name, icon]) => `<button class="chip ${tab === id ? "active" : ""}" data-tab="${id}"><span class="slot wiki-tab-art"><img src="${icon}" alt="" loading="lazy" decoding="async" /></span><span class="wiki-tab-copy">${name}<em>${sources[id].length}</em></span></button>`).join("")}
         </div>
         <label class="search-wrap wiki-search">
           <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
