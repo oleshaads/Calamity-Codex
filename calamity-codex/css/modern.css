@@ -6498,3 +6498,31 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 0; background: r
 
 /* Цветные метки классов чуть заметнее на тёмном */
 .tag-cls.melee, .tag-cls.ranged, .tag-cls.mage, .tag-cls.summoner, .tag-cls.rogue { border-color: color-mix(in srgb, currentColor, #2e3b46 62%); background: color-mix(in srgb, currentColor, #10181f 92%); }
+
+/* ============== Проход 15: корень графа, чеклисты, словарные термины ============== */
+
+/* Корневой узел дерева крафта выделен золотым кольцом — точка отсчёта видна сразу */
+[data-tree-surface] > .tnode > .tnode-card { border-color: #806b40; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 0 1px rgba(232, 196, 111, .18), 0 8px 20px rgba(0, 0, 0, .3); }
+[data-tree-surface] > .tnode > .tnode-card:hover { border-color: #a8894a; }
+
+/* Словарные термины: тёплая подсветка при наведении */
+.tip { transition: background .12s ease, border-color .12s ease; border-radius: 3px; }
+.tip:hover { background: rgba(255, 217, 122, .1); border-bottom-style: solid; }
+
+/* Прогресс чеклистов рецепта и сметы — глянец в общем стиле */
+.recipe-check-progress { overflow: hidden; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5); }
+.recipe-check-progress i { border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 0 10px rgba(104, 201, 130, .3); }
+
+/* Иконки заголовков в карточках — золото */
+.h3-ico { color: #e8c46f; }
+
+/* Горизонтальные ленты фильтров на телефоне — без полосы прокрутки */
+@media (max-width: 760px) {
+  .chips { scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+}
+
+/* Кол-во крафтов: капсула со знаками +/- в едином стиле */
+.recipe-quantity span { border: 1px solid #38464f; border-radius: 9px; background: #151e28; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+.recipe-quantity button { transition: color .12s ease, background .12s ease; }
+.recipe-quantity button:hover:not(:disabled) { color: #f1dda1; background: rgba(232, 196, 111, .08); }
