@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core78";
+  const ASSET_VERSION = "20260819-core79";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -4723,7 +4723,11 @@
     app.querySelectorAll("[data-mob-kind]").forEach((btn) => btn.onclick = () => syncUrl({ ...current(), kind: btn.dataset.mobKind }));
     if (openGroup) {
       const target = document.getElementById(`mob-group-${openGroup}`);
-      if (target) requestAnimationFrame(() => target.scrollIntoView({ block: "start", behavior: "auto" }));
+      if (target) requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "start", behavior: "auto" });
+        target.classList.add("flash-target");
+        target.addEventListener("animationend", () => target.classList.remove("flash-target"), { once: true });
+      });
     }
     const focused = app.querySelector("#mob-search");
     if (params.q && focused) { focused.focus(); focused.setSelectionRange(focused.value.length, focused.value.length); }
