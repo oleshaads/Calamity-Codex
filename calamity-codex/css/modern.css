@@ -6392,3 +6392,8 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 /* Копирующие кнопки (смета, рецепты) */
 [data-copy-recipe], .plan-copy, .copy-btn { transition: border-color .13s ease, color .13s ease, background .13s ease; }
 [data-copy-recipe]:hover, .plan-copy:hover, .copy-btn:hover { border-color: #8a6d3b; color: #f1dda1; background: rgba(232, 196, 111, .06); }
+
+/* Полосы «Пути героя» и «Мести» в боковой панели — глянец как у остальных */
+.ragebar { overflow: hidden; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5); }
+.ragebar i { border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 0 10px rgba(240, 108, 115, .25); }
+.sound-toggle[aria-pressed="true"] { color: #e8c46f; }

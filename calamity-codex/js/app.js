@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core82";
+  const ASSET_VERSION = "20260819-core83";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -1701,7 +1701,7 @@
         links: [
           [`#/novice`, "assets/sprites/Wooden_Sword.png", "Путь новичка", `${done.size} из ${CODEX.quests.length} пройдено`],
           ["#/bosses", "assets/sprites/Suspicious_Looking_Eye.png", "Боссы", `${bossSnapshot.defeatedCount} из ${bossSnapshot.total} побед`],
-          ["#/mobs", "assets/mob-sprites/v-zombie.png", "Мобы", "626 существ и события"],
+          ["#/mobs", "assets/mob-sprites/v-zombie.png", "Мобы", "635 существ и события"],
           ["#/biomes", "assets/sprites/Rock.png", "Биомы", `${CODEX.biomes.length} локаций`]
         ]
       },
@@ -7071,7 +7071,7 @@
       if (matchesSearch(`${x.name} ${title} ${ruText(x.ings)} ${x.why} ${bosses}`, q))
         hits.push({ href: `#/crafts?item=${encodeURIComponent(x.name)}`, title, sub: ruText(x.ings), type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
     });
-    // Мобы: 626 существ бестиария; боссы уже покрыты карточками выше.
+    // Мобы: 635 существ бестиария; боссы уже покрыты карточками выше.
     if (window.CALAMITY_MOB_INDEX) {
       const mobMatches = [];
       mobIndex().mobs.forEach((m) => {
