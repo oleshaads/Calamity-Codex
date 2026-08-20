@@ -46,7 +46,7 @@ const visibleFocusable = (root) => [...root.querySelectorAll(FOCUSABLE)]
   const itemIntent = homeDocument.querySelector('#main-nav a[href="#/items"]');
   itemIntent.dispatchEvent(new home.window.MouseEvent("pointerover", { bubbles: true }));
   const prefetch = homeDocument.querySelector('link[data-codex-prefetch]');
-  check(prefetch && /codex-data\.min\.js\?v=20260819-core86$/.test(prefetch.href), "Catalog intent did not create the current versioned prefetch hint");
+  check(prefetch && /codex-data\.min\.js\?v=20260819-core87$/.test(prefetch.href), "Catalog intent did not create the current versioned prefetch hint");
   check(!home.window.CALAMITY_ITEM_INDEX, "Catalog prefetch executed the heavy payload instead of only warming the cache");
 
   const menuButton = homeDocument.getElementById("menu-btn");
@@ -81,7 +81,7 @@ const visibleFocusable = (root) => [...root.querySelectorAll(FOCUSABLE)]
   const itemDocument = items.window.document;
   const baguetteCard = [...itemDocument.querySelectorAll(".catalog-item-card")].find((card) => card.textContent.includes("Baguette"));
   const baguetteSprite = baguetteCard?.querySelector("img.item-art");
-  check(baguetteSprite?.getAttribute("src") === "assets/item-sprites/Baguette.png?v=20260819-core86", "Catalog still renders a stale unversioned Baguette animation sheet URL");
+  check(baguetteSprite?.getAttribute("src") === "assets/item-sprites/Baguette.png?v=20260819-core87", "Catalog still renders a stale unversioned Baguette animation sheet URL");
   // Full tree is intentionally a full-page primary link now. Create a focused
   // quick-preview trigger to regression-test the still-supported ingredient
   // modal without adding another competing control to every catalog card.
