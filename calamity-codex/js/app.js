@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core65";
+  const ASSET_VERSION = "20260819-core66";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -192,6 +192,8 @@
     artNameIndex = null;
     mobIndexCache = null;
     mobDropsCache = null;
+    mobByNameCache = null;
+    mobMentionPatternCache = null;
     itemByIdCache = null;
     recipeIndex = null;
     visualRecipeIndex = null;
@@ -542,6 +544,7 @@
         </div>
       </div>`;
     bindSprites(tipCard);
+    linkifyMobMentions(tipCard);
     if (wikiProfile) enrichWikiSource(tipCard, info);
   }
   function routeBossArt(boss) {
@@ -559,12 +562,14 @@
   function renderNpcCard(npcName) {
     if (!tipCard) return;
     const info = NPC_DATA[npcName] || {};
+    const mob = mobByName(npcName);
     const lex = exactLexLookup(npcName);
     const boss = bossRecordForName(npcName);
     const mini = boss ? null : miniRecordForName(npcName);
     const encounter = boss || mini;
-    const ru = boss ? boss.name : mini ? mini.name : npcRuName(npcName);
-    const type = boss ? (boss.kind === "hidden" ? "Скрытый босс" : `Босс · ${boss.type || "Каламити"}`) : mini ? "Мини-босс · Каламити" : "Противник";
+    const genericRu = npcRuName(npcName);
+    const ru = boss ? boss.name : mini ? mini.name : (genericRu !== npcName ? genericRu : (mob?.ru || genericRu));
+    const type = boss ? (boss.kind === "hidden" ? "Скрытый босс" : `Босс · ${boss.type || "Каламити"}`) : mini ? "Мини-босс · Каламити" : mob ? `${mob.kind === "critter" ? "Мирный зверёк" : mob.kind === "boss" ? "Босс" : "Противник"} · ${mob.src === "c" ? "Каламити" : "Terraria"}` : "Противник";
     const eraLabel = encounter ? ({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[encounter.era] || encounter.era : "";
     const encounterId = encounter ? String(encounter.id || encounter.n) : "";
     const defeated = encounterId ? getDefeatedBosses().has(encounterId) : false;
@@ -579,7 +584,11 @@
     const artHTML = localArt
       ? `<img class="item-art" src="${escAttr(releaseAsset(localArt))}" alt="" loading="lazy" decoding="async" data-kind="boss" />`
       : `<b class="npc-mono" aria-hidden="true">${escAttr(String(ru || npcName).trim().charAt(0).toUpperCase())}</b>`;
-    const desc = ruText((encounter && encounter.tip) || NPC_BESTIARY_RU[npcName] || ((lex && lex.desc) || ""));
+    const desc = ruText((encounter && encounter.tip) || NPC_BESTIARY_RU[npcName] || (mob && mob.desc) || ((lex && lex.desc) || ""));
+    const descFooter = encounter ? "совет кодекса" : (mob && mob.src === "v" && mob.desc && !NPC_BESTIARY_RU[npcName]) ? "бестиарий игры · официальная локализация" : "бестиарий игры · перевод кодекса";
+    const mobStats = mob && (mob.hp !== null || mob.dmg !== null || mob.def !== null)
+      ? `<section class="mob-detail-overview" aria-label="Характеристики существа">${mob.hp !== null ? `<span><small>Здоровье</small><b>${mob.hp.toLocaleString("ru-RU")}</b></span>` : ""}${mob.dmg !== null ? `<span><small>Урон</small><b>${mob.dmg}</b></span>` : ""}${mob.def !== null ? `<span><small>Защита</small><b>${mob.def}</b></span>` : ""}</section>`
+      : "";
     const facts = [];
     if (boss) {
       if (boss.where) facts.push(`<div class="fact"><span>Где бой</span><p>${esc(bossFactText(boss, "where"))}</p></div>`);
@@ -594,6 +603,7 @@
     } else {
       const npcWhere = npcWhereForName(npcName);
       if (npcWhere) facts.push(`<div class="fact"><span>Где</span><p>${esc(npcWhere)}</p></div>`);
+      if (mob && mob.tags.length) facts.push(`<div class="fact"><span>Биомы и время</span><p>${esc(mob.tags.map(mobTagLabel).join(" · "))}</p></div>`);
       if (info.time) facts.push(`<div class="fact"><span>Когда</span><p>${esc(ruText(info.time))}</p></div>`);
       if (info.req) facts.push(`<div class="fact"><span>Требования</span><p>${esc(ruText(info.req))}</p></div>`);
       if (info.source) facts.push(`<div class="fact"><span>Как встретить</span><p>${esc(ruText(info.source))}</p></div>`);
@@ -628,15 +638,18 @@
       </div>
       <div class="tip-card-body">
         ${encounter ? `<section class="boss-detail-overview" aria-label="Сводка босса"><span><small>Этап</small><b>${esc(eraLabel)}</b></span><span><small>Глава пути</small><b>${encounter.q || "—"}</b></span><span><small>Опасность</small><b>${danger}%</b></span></section><div class="boss-detail-danger"><i style="width:${danger}%"></i></div>` : ""}
-        ${desc ? `<blockquote class="npc-lore">${esc(desc)}<footer>${encounter ? "совет кодекса" : "бестиарий игры · перевод кодекса"}</footer></blockquote>` : ""}
+        ${mobStats}
+        ${desc ? `<blockquote class="npc-lore">${esc(desc)}<footer>${descFooter}</footer></blockquote>` : ""}
         <div class="tip-card-facts">${facts.join("")}${dropsHTML}</div>
         <div class="tip-card-actions boss-detail-actions">
           ${encounter ? `<button class="boss-defeat-btn ${defeated ? "done" : ""}" type="button" data-boss-defeated="${escAttr(encounterId)}" aria-pressed="${defeated}"><span aria-hidden="true">${defeated ? "✓" : "○"}</span>${defeated ? "Победа записана" : "Отметить победу"}</button><a class="craft-catalog-link" href="#/bosses?q=${encodeURIComponent(encounter.name)}">Полная карточка босса →</a>` : ""}
           ${encounter?.q ? `<a class="craft-catalog-link" href="#/novice?q=${encounter.q}">Открыть главу ${encounter.q} →</a>` : ""}
-          <a class="craft-catalog-link" href="https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(encounter?.en || npcName)}" target="_blank" rel="noopener noreferrer">Официальная wiki ↗</a>
+          ${!encounter && mob ? `<a class="craft-catalog-link" href="#/mobs?q=${encodeURIComponent(mob.ru)}">Открыть в бестиарии мобов →</a>` : ""}
+          <a class="craft-catalog-link" href="${!encounter && mob && mob.src === "v" ? `https://terraria.wiki.gg/ru/wiki/Special:Search?search=${encodeURIComponent(npcName)}` : `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(encounter?.en || npcName)}`}" target="_blank" rel="noopener noreferrer">Официальная wiki ↗</a>
         </div>
       </div>`;
     bindSprites(tipCard);
+    linkifyMobMentions(tipCard);
   }
   function showCatalogTipLoading(anchorEl, pin, label) {
     if (!tipCard) return;
@@ -1208,6 +1221,7 @@
         if (active && row.scrollWidth > row.clientWidth) row.scrollLeft = Math.max(0, active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2);
       });
     });
+    linkifyMobMentions(root);
     root.querySelectorAll(".item-grid .card, .craft-grid .card").forEach((card) => {
       // ВАЖНО: маркер карточки НЕ должен совпадать с атрибутом кнопки —
       // иначе e.target.closest() найдёт карточку и сворачивание сработает
@@ -3439,6 +3453,8 @@
     const apply = (text, cachedResult = false, language = "ru") => {
       if (!paragraph || !text) return;
       paragraph.textContent = text;
+      delete paragraph.dataset.mobLinked;
+      linkifyMobMentions(paragraph);
       box.hidden = false;
       box.classList.remove("failed");
       box.classList.add("loaded");
@@ -3589,6 +3605,8 @@
     if (boss) return routeBossArt(boss);
     const mini = miniRecordForName(name);
     if (mini) return mini.art || BOSS_ART_BY_ID[mini.id] || "";
+    const mob = mobByName(name);
+    if (mob && mob.art) return mob.art;
     const lex = exactLexLookup(name);
     return (lex && (LEX_ART[lex.en] || BOSS_ART_BY_ID[lex.id])) || resolveArt(name) || "";
   }
@@ -4345,6 +4363,86 @@
       }
     }
     return mobDropsCache.get(en) || 0;
+  }
+  /* Поиск моба по русскому или английскому имени: связывает крафты и бестиарий. */
+  let mobByNameCache = null;
+  function mobByName(name) {
+    if (!window.CALAMITY_MOB_INDEX) return null;
+    if (!mobByNameCache) {
+      mobByNameCache = new Map();
+      mobIndex().mobs.forEach((m) => {
+        [m.en, m.ru].forEach((key) => {
+          const lower = String(key || "").trim().toLocaleLowerCase("ru");
+          if (lower && !mobByNameCache.has(lower)) mobByNameCache.set(lower, m);
+        });
+      });
+    }
+    return mobByNameCache.get(String(name || "").trim().toLocaleLowerCase("ru")) || null;
+  }
+  /* Упоминания мобов в текстах получения/источников становятся кликабельными:
+     клик открывает ту же карточку существа, что и в структурированных источниках. */
+  let mobMentionPatternCache = null;
+  const MOB_MENTION_SELECTOR = ".tsrc, .tree-root-src, .fact p, .wiki-source-live p";
+  function mobMentionPattern() {
+    if (mobMentionPatternCache !== null) return mobMentionPatternCache;
+    if (!window.CALAMITY_MOB_INDEX) return null;
+    const names = new Map();
+    mobIndex().mobs.forEach((m) => {
+      [m.ru, m.en].forEach((raw) => {
+        const name = String(raw || "").trim();
+        if (name.length < 4) return; // короткие имена дают ложные срабатывания
+        const lower = name.toLocaleLowerCase("ru");
+        if (!names.has(lower)) names.set(lower, m.en);
+      });
+    });
+    if (!names.size) { mobMentionPatternCache = false; return mobMentionPatternCache; }
+    const escapeRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const alternatives = [...names.keys()].sort((a, b) => b.length - a.length).map(escapeRx).join("|");
+    mobMentionPatternCache = { rx: new RegExp(`(^|[^A-Za-zА-Яа-яЁё-])(${alternatives})(?=[^A-Za-zА-Яа-яЁё-]|$)`, "giu"), names };
+    return mobMentionPatternCache;
+  }
+  function linkifyMobMentions(root) {
+    if (!root || !window.CALAMITY_MOB_INDEX) return;
+    const pattern = mobMentionPattern();
+    if (!pattern) return;
+    const targets = root.matches?.(MOB_MENTION_SELECTOR)
+      ? [root, ...root.querySelectorAll(MOB_MENTION_SELECTOR)]
+      : [...root.querySelectorAll(MOB_MENTION_SELECTOR)];
+    targets.forEach((el) => {
+      if (el.dataset.mobLinked) return;
+      el.dataset.mobLinked = "1";
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.parentElement && node.parentElement.closest("a, button, .npc-tip, [data-boss-detail]")) continue;
+        nodes.push(node);
+      }
+      nodes.forEach((node) => {
+        const text = node.nodeValue || "";
+        pattern.rx.lastIndex = 0;
+        if (!pattern.rx.test(text)) return;
+        pattern.rx.lastIndex = 0;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        let match;
+        while ((match = pattern.rx.exec(text))) {
+          const start = match.index + match[1].length;
+          if (start > last) frag.appendChild(document.createTextNode(text.slice(last, start)));
+          const mention = document.createElement("b");
+          mention.className = "npc-tip mob-mention";
+          mention.dataset.npc = pattern.names.get(match[2].toLocaleLowerCase("ru")) || match[2];
+          mention.setAttribute("role", "button");
+          mention.tabIndex = 0;
+          mention.title = "Показать карточку существа";
+          mention.textContent = match[2];
+          frag.appendChild(mention);
+          last = start + match[2].length;
+        }
+        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+      });
+    });
   }
   function mobTagLabel(tag) {
     const guide = window.CALAMITY_MOB_GUIDE || {};
@@ -5527,6 +5625,7 @@
       body.dataset.treeSurface = "inline";
       body.innerHTML = treeNodeHTML(craftTreeRoot, 0, new Set());
       bindSprites(body);
+      linkifyMobMentions(body);
     } else {
       body.className = "craft-tree-empty";
       body.removeAttribute("data-tree-surface");
@@ -7313,6 +7412,7 @@
       </section>
       ${basePlanHTML}`;
     bindSprites(recipeContent);
+    linkifyMobMentions(recipeContent);
     return true;
   }
   function openRecipeModal(name) {
@@ -7762,6 +7862,7 @@
     const seen = new Set();
     treeBody.innerHTML = treeNodeHTML(name, 0, seen);
     bindSprites(treeBody);
+    linkifyMobMentions(treeBody);
     applyModalTreeZoom();
   }
 

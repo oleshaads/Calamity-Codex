@@ -83,8 +83,23 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   await settle(150);
   const note = document.querySelector(".mob-controls-note");
   check(note && /по фильтру/.test(note.textContent), "Source/kind filters are not applied");
+  // Интеграция с крафтами: упоминания мобов кликабельны и открывают карточку существа
+  window.location.hash = "#/crafts?item=catalog%3AWulfrumBattery";
+  await settle(250);
+  const mentions = [...document.querySelectorAll(".npc-tip")];
+  check(mentions.length >= 5 && document.querySelectorAll("b.mob-mention").length >= 5, "Craft tree does not auto-link mob mentions");
+  const wulfrum = mentions.find((tip) => /^Wulfrum/.test(tip.dataset.npc || ""));
+  check(wulfrum, "Craft sources lost their clickable mob names");
+  wulfrum.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await settle(150);
+  const tip = document.getElementById("tip-card");
+  check(tip && !tip.hidden, "Clicking a mob mention did not open the creature card");
+  check(/Противник · Каламити/.test(tip.querySelector(".tip-card-title small")?.textContent || ""), "Creature card lacks its kind/source label");
+  check(tip.querySelector(".mob-detail-overview"), "Creature card lacks HP/damage/defense stats from the mob index");
+  check([...tip.querySelectorAll(".fact span")].some((s) => s.textContent === "Биомы и время"), "Creature card lacks biome/time tags");
+  check(tip.querySelector('a[href^="#/mobs?q="]'), "Creature card does not link back to the mob bestiary");
   check(errors.length === 0, `Mobs page emitted runtime errors: ${errors.join("\n")}`);
-  console.log(`PASS: ${mobs.length} mobs (${vanilla.length} vanilla + ${calamity.length} Calamity) render with local sprites, Russian names, event summon guides and biome groups`);
+  console.log(`PASS: ${mobs.length} mobs (${vanilla.length} vanilla + ${calamity.length} Calamity) render with local sprites, Russian names, event summon guides, biome groups and clickable craft mentions`);
   dom.window.close();
 })().catch((error) => {
   console.error(error.stack || error);
