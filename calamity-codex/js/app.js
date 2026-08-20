@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core79";
+  const ASSET_VERSION = "20260819-core80";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -4615,7 +4615,7 @@
     return `<article class="mob-card kind-${escAttr(mob.kind)}" data-src="${escAttr(mob.src)}">
       <em class="mob-kind ${escAttr(mob.kind)}">${MOB_KIND_RU[mob.kind] || mob.kind}${mob.src === "c" ? " · Calamity" : ""}</em>
       <div class="mob-card-head">
-        <span class="slot mob-art">${mob.art ? `<img src="${escAttr(mob.art)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
+        <span class="slot mob-art">${mob.art ? `<img src="${escAttr(mob.art)}" alt="" loading="lazy" decoding="async" />` : (mob.src === "v" && /^v\d+$/.test(mob.id) && Number(mob.id.slice(1)) >= 688 ? `<i class="art-145" aria-hidden="true" title="Новинка Terraria 1.4.5 — спрайт появится после публикации дампа текстур">◆</i>` : `<i aria-hidden="true">◆</i>`)}</span>
         <div class="mob-name"><b class="npc-tip mob-card-name" data-npc="${escAttr(mob.en)}" role="button" tabindex="0" title="Открыть карточку существа">${esc(mob.ru)}</b>${mob.en !== mob.ru ? `<small>${esc(mob.en)}</small>` : ""}${stats ? `<div class="mob-stats">${stats}</div>` : ""}</div>
       </div>
       ${chips ? `<div class="mob-tags">${chips}</div>` : ""}
@@ -4642,7 +4642,7 @@
     const searchHits = query ? filtered.filter((m) => matchesSearch(mobSearchBlob(m), query)).slice(0, 150) : [];
     const activeFilterCount = (filters.src ? 1 : 0) + (filters.kind ? 1 : 0);
     const groupBlock = (group, type) => {
-      const icon = group.list.find((m) => m.art)?.art || "";
+      const icon = group.icon || group.list.find((m) => m.art)?.art || "";
       const bossCount = group.list.filter((m) => m.kind === "boss").length;
       const isOpen = openGroup === group.id;
       return `<details class="mob-group" id="mob-group-${escAttr(group.id)}" data-group="${escAttr(group.id)}"${isOpen ? " open" : ""}>

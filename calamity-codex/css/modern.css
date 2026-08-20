@@ -6315,3 +6315,10 @@ input[type="search"], input[type="text"], input[type="number"] { border-radius: 
   @keyframes target-flash { 0% { box-shadow: 0 0 0 3px rgba(232, 196, 111, .55), 0 0 30px rgba(232, 196, 111, .25); } 100% { box-shadow: 0 0 0 3px rgba(232, 196, 111, 0), 0 0 30px rgba(232, 196, 111, 0); } }
   .flash-target { animation: target-flash 1.4s ease-out 1; }
 }
+
+/* Честный плейсхолдер для существ 1.4.5 без опубликованных текстур */
+.mob-art i.art-145 { position: relative; color: #e8c46f; background: radial-gradient(circle at 50% 36%, rgba(232, 196, 111, .12), transparent 70%); font-size: 18px; }
+.mob-art i.art-145::after { content: "1.4.5"; position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); padding: 1px 6px; border: 1px solid #6b5a33; border-radius: 7px; color: #e8c46f; background: #1d1913; font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: .04em; }
+
+/* Иконки предметов-призыва на карточках событий */
+.mob-group-icon img { image-rendering: pixelated; }
