@@ -33,8 +33,19 @@ const CAL = path.join(SRC, "calamity");
 const DATASET = path.join(SRC, "dataset");
 
 const read = (p) => fs.readFileSync(p, "utf8");
+// Декомпил 1.4.5 использует CRLF, комментарии /*0x..*/, префиксы this. и byte.MaxValue.
+const readCs = (p) => read(p)
+  .replace(/\r/g, "")
+  .replace(/\/\*[^*]*\*\//g, "")
+  .replace(/\(int\) byte\.MaxValue|byte\.MaxValue/g, "255")
+  .replace(/[ \t]+;/g, ";");
+const methodEnd = (source, start) => {
+  const candidates = ["\n\t\tpublic ", "\n\t\tprivate ", "\n  public ", "\n  private "]
+    .map((needle) => source.indexOf(needle, start + 200)).filter((i) => i > start);
+  return candidates.length ? Math.min(...candidates) : source.length;
+};
 // Локализация Terraria — JSON с висячими запятыми; чистим перед разбором.
-const readJson = (p) => JSON.parse(read(p).replace(/,(\s*[}\]])/g, "$1"));
+const readJson = (p) => JSON.parse(read(p).replace(/^\uFEFF/, "").replace(/,(\s*[}\]])/g, "$1"));
 const exists = fs.existsSync;
 if (!exists(VAN) || !exists(CAL) || !exists(DATASET)) {
   console.error("Не найдены исходники в", SRC, "— нужны каталоги vanilla/, calamity/, dataset/");
@@ -45,7 +56,7 @@ fs.mkdirSync(OUT_ART, { recursive: true });
 /* ============================== ВАНИЛЬ ============================== */
 
 // 1. Внутренний ключ -> id
-const npcIdCs = read(path.join(VAN, "NPCID.cs"));
+const npcIdCs = readCs(path.join(VAN, "NPCID.cs"));
 const KEY_TO_ID = new Map();
 const ID_TO_KEY = new Map();
 for (const m of npcIdCs.matchAll(/public const short (\w+) = (-?\d+);/g)) {
@@ -91,10 +102,10 @@ const NAME_ALIASES = {
 };
 
 // 3. Теги бестиария по id
-const pop = read(path.join(VAN, "BestiaryPopulator.cs"));
+const pop = readCs(path.join(VAN, "BestiaryPopulator.cs"));
 const TAGS_BY_ID = new Map();
 {
-  const rx = /FindEntryByNPCID\((\d+)\)[\s\S]*?(?=FindEntryByNPCID|\tprivate |\tpublic )/g;
+  const rx = /FindEntryByNPCID\((\d+)\)[\s\S]*?(?=FindEntryByNPCID|\n[ \t]+(?:private|public) )/g;
   for (const m of pop.matchAll(rx)) {
     const id = Number(m[1]);
     const body = m[0];
@@ -108,15 +119,15 @@ const TAGS_BY_ID = new Map();
 }
 
 // 4. Статы из NPC.cs SetDefaults2 (базовые значения ветки)
-const npcCs = read(path.join(VAN, "NPC.cs"));
+const npcCs = readCs(path.join(VAN, "NPC.cs"));
 const STATS_BY_ID = new Map();
 const TINT_BY_TYPE = new Map();   // положительный type -> [r,g,b] из color = new Color(...)
 const NETID_INFO = new Map();     // отрицательный netID -> статы и тинт варианта
+const BODY_BY_ID = new Map();     // тело ветки SetDefaults (для флагов townNPC/friendly)
 {
   const start = npcCs.indexOf("public void SetDefaults(int Type, NPCSpawnParams");
-  const end = npcCs.indexOf("\n\t\tpublic void SetDefaultsKeepPlayerInteraction", start);
-  const seg = npcCs.slice(start, end > start ? end : start + 4_000_000);
-  const condRx = /(?:else )?if \(((?:[^()]|\([^()]*\))*(?:Type|type)(?:[^()]|\([^()]*\))*)\)\s*\n\t*\{/g;
+  const seg = npcCs.slice(start, methodEnd(npcCs, start));
+  const condRx = /(?:else )?if \(((?:[^()]|\([^()]*\))*(?:Type|type)(?:[^()]|\([^()]*\))*)\)\s*\n[ \t]*\{/g;
   let m;
   while ((m = condRx.exec(seg))) {
     const cond = m[1];
@@ -130,24 +141,36 @@ const NETID_INFO = new Map();     // отрицательный netID -> ста�
     let depth = 1; let i = condRx.lastIndex; const bodyStart = i;
     while (depth > 0 && i < seg.length) { const ch = seg[i]; if (ch === "{") depth++; else if (ch === "}") depth--; i++; }
     const body = seg.slice(bodyStart, i);
-    const top = body.split(/\n\t{4}(?=switch|if|for|while)/)[0];
-    const grab = (name) => { const g = top.match(new RegExp(`(?:^|\\n)\\t*${name} = (\\d+);`)); return g ? Number(g[1]) : null; };
+    const grab = (name) => { const g = body.match(new RegExp(`(?:^|\\n)[ \\t]*(?:this\\.)?${name} = (\\d+);`)); return g ? Number(g[1]) : null; };
     const stats = { hp: grab("lifeMax"), dmg: grab("damage"), def: grab("defense") };
-    const tintMatch = top.match(/color = new Color\((\d+), (\d+), (\d+)/);
+    const tintMatch = body.match(/(?:this\.)?color = new Color\((\d+), (\d+), (\d+)/);
     if (tintMatch) for (const id of ids) if (!TINT_BY_TYPE.has(id)) TINT_BY_TYPE.set(id, [Number(tintMatch[1]), Number(tintMatch[2]), Number(tintMatch[3])]);
+    for (const id of ids) if (!BODY_BY_ID.has(id)) BODY_BY_ID.set(id, body);
     if (stats.hp === null && stats.dmg === null) continue;
     for (const id of ids) if (!STATS_BY_ID.has(id)) STATS_BY_ID.set(id, stats);
   }
+  // Декомпил 1.4.5 часть групп оформляет как switch/case по this.type.
+  for (const c of seg.matchAll(/((?:[ \t]*case \d+:\n)+)([\s\S]*?)(?=\n[ \t]*case |\n[ \t]*default:|\n[ \t]*\})/g)) {
+    const ids = [...c[1].matchAll(/case (\d+):/g)].map((x) => Number(x[1]));
+    const body = c[2];
+    const grab = (name) => { const g = body.match(new RegExp(`(?:^|\\n)[ \\t]*(?:this\\.)?${name} = (\\d+);`)); return g ? Number(g[1]) : null; };
+    const stats = { hp: grab("lifeMax"), dmg: grab("damage"), def: grab("defense") };
+    if (stats.hp === null) continue;
+    for (const id of ids) {
+      if (!STATS_BY_ID.has(id)) STATS_BY_ID.set(id, stats);
+      if (!BODY_BY_ID.has(id)) BODY_BY_ID.set(id, body);
+    }
+  }
   // Отрицательные netID (цветные слизни и другие варианты): статы и игровой тинт.
-  const netStart = npcCs.indexOf("private void SetDefaultsFromNetId");
-  const netSeg = npcCs.slice(netStart, npcCs.indexOf("\n\t\tpublic", netStart + 100));
+  const netStart = npcCs.indexOf("void SetDefaultsFromNetId");
+  const netSeg = npcCs.slice(netStart, methodEnd(npcCs, netStart));
   for (const c of netSeg.matchAll(/case (-\d+):([\s\S]*?)break;/g)) {
     const id = Number(c[1]);
     const body = c[2];
     const num = (rx) => { const g = body.match(rx); return g ? Number(g[1]) : null; };
-    const tint = body.match(/color = new Color\((\d+), (\d+), (\d+)/);
+    const tint = body.match(/(?:this\.)?color = new Color\((\d+), (\d+), (\d+)/);
     NETID_INFO.set(id, {
-      hp: num(/\n\t+life = (\d+);/), dmg: num(/\n\t+damage = (\d+);/), def: num(/\n\t+defense = (\d+);/),
+      hp: num(/\n[ \t]+(?:this\.)?life = (\d+);/), dmg: num(/\n[ \t]+(?:this\.)?damage = (\d+);/), def: num(/\n[ \t]+(?:this\.)?defense = (\d+);/),
       tint: tint ? [Number(tint[1]), Number(tint[2]), Number(tint[3])] : null
     });
   }
@@ -162,7 +185,7 @@ const artSlug = (name) => name.toLowerCase().replace(/['’]/g, "").replace(/[^a
 // 5.5 Кадры анимации ванильных NPC: Main.cs => npcFrameCount = new int[688] { ... }
 const VANILLA_FRAMES = [];
 {
-  const mainCs = read(path.join(VAN, "Main.cs"));
+  const mainCs = readCs(path.join(VAN, "Main.cs"));
   const arr = mainCs.match(/npcFrameCount = new int\[\d+\]\s*\{([\s\S]*?)\};/);
   if (arr) arr[1].split(",").forEach((v, i) => { VANILLA_FRAMES[i] = Number(v.trim()) || 1; });
 }
@@ -217,9 +240,14 @@ for (const row of dataset) {
     art = `assets/mob-sprites/v-${artSlug(en)}.png`;
     if (!SKIP_ART) cropSprite(spriteFile, path.join(REPO, "calamity-codex", art), id > 0 ? (VANILLA_FRAMES[id] || 1) : 1, tint);
   }
+  // Terraria 1.4.5: Марсианская тарелка больше не числится боссом бестиария.
+  const KIND_OVERRIDES = { "Martian Saucer": "enemy" };
+  const kindResolved = KIND_OVERRIDES[en] || (type === "Boss" ? "boss" : type === "Critter" ? "critter" : "enemy");
+  // Ловимые зверьки в коде игры используют общий дефолт: 5 ОЗ, без урона и защиты.
+  const critterDefaults = kindResolved === "critter" && stats.hp == null ? { hp: 5, dmg: 0, def: 0 } : {};
   vanillaMobs.push({
-    src: "v", id: `v${id}`, en, ru, kind: type === "Boss" ? "boss" : type === "Critter" ? "critter" : "enemy",
-    hp: stats.hp ?? null, dmg: stats.dmg ?? null, def: stats.def ?? null,
+    src: "v", id: `v${id}`, en, ru, kind: kindResolved,
+    hp: stats.hp ?? critterDefaults.hp ?? null, dmg: stats.dmg ?? critterDefaults.dmg ?? null, def: stats.def ?? critterDefaults.def ?? null,
     tags, desc: flavor, art
   });
 }
@@ -236,6 +264,42 @@ for (const row of dataset) {
     let art = "";
     if (exists(sprite)) { art = "assets/mob-sprites/v-goblin-summoner.png"; if (!SKIP_ART) cropSprite(sprite, path.join(REPO, "calamity-codex", art), VANILLA_FRAMES[471] || 1); }
     vanillaMobs.push({ src: "v", id: "v471", en: "Goblin Summoner", ru: "Гоблин-призыватель", kind: "enemy", hp: stats.hp ?? null, dmg: stats.dmg ?? null, def: stats.def ?? null, tags: [...(TAGS_BY_ID.get(471) || ["i:Goblins"])], desc: flavorFor("GoblinSummoner"), art });
+  }
+}
+
+// Новые NPC Terraria 1.4.5 (отсутствуют в датасете 1.4.4). Текстур 1.4.5 в
+// закреплённых дампах пока нет — такие записи честно выходят без спрайта.
+{
+  const seen = new Set(vanillaMobs.map((m) => Number(m.id.slice(1))));
+  // Имена-ссылки на предметы ({$ItemName.X}) и намеренно «замаскированные» мимики.
+  const itemNamesEn = (readJson(path.join(VAN, "en-Items.json")).ItemName) || {};
+  const itemNamesRu = (readJson(path.join(VAN, "ru-Items.json")).ItemName) || {};
+  const resolveName = (value, table) => String(value || "").replace(/^\{\$ItemName\.(\w+)\}$/, (_, k) => table[k] || "");
+  const NEW_NPC_OVERRIDES = {
+    OwlMimic: { en: "Owl Mimic", ru: "Сова-мимик", kind: "enemy" },
+    StatueMimic: { en: "Statue Mimic", ru: "Статуя-мимик", kind: "enemy" }
+  };
+  for (const [key, id] of KEY_TO_ID) {
+    if (id < 688 || seen.has(id)) continue;
+    const override = NEW_NPC_OVERRIDES[key] || {};
+    const en = override.en || resolveName(enNpcNames[key], itemNamesEn);
+    if (!en) continue;
+    const body = BODY_BY_ID.get(id) || "";
+    if (/(?:this\.)?townNPC = true/.test(body)) continue;
+    const stats = STATS_BY_ID.get(id) || {};
+    const kind = override.kind || (/(?:this\.)?friendly = true/.test(body) || ((stats.dmg ?? 0) === 0 && (stats.hp ?? 99) <= 6) ? "critter" : "enemy");
+    const texFile = path.join(SRC, `npctex/Art/Terraria/images/NPC_${id}.png`);
+    let art = "";
+    if (exists(texFile)) {
+      art = `assets/mob-sprites/v-${artSlug(en)}.png`;
+      if (!SKIP_ART) cropSprite(texFile, path.join(REPO, "calamity-codex", art), VANILLA_FRAMES[id] || 1, TINT_BY_TYPE.get(id) || null);
+    }
+    vanillaMobs.push({
+      src: "v", id: `v${id}`, en, ru: override.ru || resolveName(ruNpcNames[key], itemNamesRu) || en, kind,
+      hp: stats.hp ?? null, dmg: stats.dmg ?? null, def: stats.def ?? null,
+      tags: [...(TAGS_BY_ID.get(id) || [])], desc: flavorFor(key), art
+    });
+    seen.add(id);
   }
 }
 
@@ -354,7 +418,7 @@ const calFinal = [...byName.values()];
 const mobs = [...vanillaMobs, ...calFinal];
 const compact = mobs.map((m) => [m.id, m.src, m.en, m.ru, m.kind, m.hp ?? -1, m.dmg ?? -1, m.def ?? -1, m.tags.join(","), m.desc, m.art, m.folder || ""]);
 const output = `/* Generated by scripts/build-mobs.mjs. Do not edit by hand.
- * Vanilla: Terraria 1.4.4.1 decompiled source + official ru-RU localization + Terraria-Dataset sprites.
+ * Vanilla: Terraria 1.4.5.0 decompiled source + official ru-RU localization; sprites from the 1.4.4 texture dump (new 1.4.5 NPCs are honestly rendered without art until a pinned dump exists).
  * Calamity: CalamityTeam/CalamityModPublic @ 1a8cebd27ec5615316b78f71973446b5528d2b78.
  * Fields: [id, src(v|c), en, ru, kind, hp, dmg, def, tags, desc, art, folder]
  */

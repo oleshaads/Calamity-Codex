@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core68";
+  const ASSET_VERSION = "20260819-core69";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -627,10 +627,15 @@
       ? (VANILLA_DROPS.npc[String(mobGameId)] || (mobGameId < 0 ? VANILLA_DROPS.npc["1"] : null) || [])
       : [];
     const vanillaDropChips = vanillaDropRows.map(([itemId, den, min, max, flags]) => {
-      const ruName = VANILLA_RU_BY_ID[String(itemId)] || `Предмет №${itemId}`;
+      const nameEntry = (VANILLA_DROPS.names || {})[String(itemId)] || (VANILLA_DROPS.names || {})[itemId];
+      const ruName = (nameEntry && nameEntry[0]) || VANILLA_RU_BY_ID[String(itemId)] || `Предмет №${itemId}`;
       const label = vanillaDropChanceLabel({ den, min, max, flags });
-      const artOk = !VANILLA_MISSING_SPRITES.has(Number(itemId));
-      return `<a class="craft-chip npc-drop-chip" href="#/crafts?item=vanilla%3A${itemId}" aria-label="Открыть предмет: ${escAttr(ruName)}" title="Открыть в полном дереве">${artOk ? `<img class="ings-icon" src="assets/vanilla-sprites/${itemId}.png" alt="" loading="lazy" decoding="async" />` : ""}<em>${esc(label)}</em><b>${esc(ruName)}</b></a>`;
+      const artOk = nameEntry ? Boolean(nameEntry[1]) : !VANILLA_MISSING_SPRITES.has(Number(itemId));
+      const known = Boolean(VANILLA_RU_BY_ID[String(itemId)]);
+      const inner = `${artOk ? `<img class="ings-icon" src="assets/vanilla-sprites/${itemId}.png" alt="" loading="lazy" decoding="async" />` : ""}<em>${esc(label)}</em><b>${esc(ruName)}</b>`;
+      return known
+        ? `<a class="craft-chip npc-drop-chip" href="#/crafts?item=vanilla%3A${itemId}" aria-label="Открыть предмет: ${escAttr(ruName)}" title="Открыть в полном дереве">${inner}</a>`
+        : `<span class="craft-chip npc-drop-chip is-new" title="Новинка Terraria 1.4.5 — полная карточка появится после обновления каталога предметов">${inner}<i class="new-mark">1.4.5</i></span>`;
     }).join("");
     const dropsHTML = drops.length
       ? `<div class="fact npc-drops-fact"><span>Что дропает</span><div class="craft-chips">${drops.map((d) => `<span class="craft-chip npc-drop-chip" data-ing="${escAttr(d.name)}" role="button" tabindex="0" aria-label="Открыть предмет: ${escAttr(itemRuById(d.id))}" title="Открыть предмет"><img class="ings-icon" src="assets/item-sprites/${encodeURIComponent(d.id)}.png" alt="" loading="lazy" decoding="async" /><em>${esc(d.chance || "")}${d.qty ? ` · ${esc(d.qty)}` : ""}</em><b>${esc(itemRuById(d.id))}</b></span>`).join("")}</div></div>`
@@ -1723,7 +1728,7 @@
       <section class="hero">
         <div class="hero-bg"></div>
         <div class="hero-inner">
-          <div class="kicker">Terraria · Каламити ${CODEX.version} · офлайн-справочник</div>
+          <div class="kicker">Terraria 1.4.5 · Каламити ${CODEX.version} · офлайн-справочник</div>
           <h1>Каламити<span>Кодекс</span></h1>
           <p class="lede">Личный маршрут по Terraria + Calamity: кодекс сам подсказывает следующий квест, ближайшего босса и нужный крафт. Начни с «Пути новичка» — остальное подстроится под твой прогресс.</p>
           <div class="hero-actions">
@@ -1785,6 +1790,34 @@
               </div>
             </section>`).join("")}
         </div>
+        <details class="secondary-shelf home-145-shelf">
+          <summary><span><i aria-hidden="true">1.4.5</i><b>Что нового в Terraria 1.4.5 «Bigger &amp; Boulder»</b><small>Крупное обновление января 2026 · сейчас 1.4.5.7</small></span><em>обзор</em></summary>
+          <div class="secondary-shelf-body">
+            <div class="home-145-grid">
+              <section><h4>Крафт и инвентарь</h4><ul>
+                <li>Крафт берёт материалы из соседних сундуков; ПКМ по станции открывает её рецепты.</li>
+                <li>Почти все предметы складываются до 9999 — включая оружие с префиксами.</li>
+                <li>Массовая покупка и крафт партиями по 10 с зажатым Shift.</li>
+              </ul></section>
+              <section><h4>Бои и события</h4><ul>
+                <li>Пилоны работают во время боссов и вторжений; мешки боссов видны на миникарте.</li>
+                <li>Король и Королева слизней телепортируются на платформы; шиммер-неуязвимость не спасает от боссов.</li>
+                <li>Команда /bossdamage показывает урон каждого игрока за бой; новая музыка у 8 боссов.</li>
+              </ul></section>
+              <section><h4>Новое содержимое</h4><ul>
+                <li>Кроссовер Dead Cells: оружие всех классов, костюм Обезглавленного и Фонтан здоровья.</li>
+                <li>Новые кнуты и префиксы призывателя, трансформации-маунты (мышь, крыса…), RC-машинка.</li>
+                <li>Новые существа — Мох-зомби, Косатка, Рыба фугу, скелет-библиотекарь и мимики — уже в бестиарии кодекса.</li>
+              </ul></section>
+              <section><h4>Мир и удобство</h4><ul>
+                <li>Дом больше не требует цельного блока; миньоны восстанавливаются после смерти.</li>
+                <li>Грозы с молниями, новые фоны биомов, северное сияние и видимая рыба при рыбалке.</li>
+                <li>Марсианская тарелка больше не числится боссом бестиария.</li>
+              </ul></section>
+            </div>
+            <p class="home-145-note">Бестиарий мобов и лут-таблицы кодекса пересобраны по коду Terraria 1.4.5.0; каталог предметов и рецептов пока сверен с 1.4.4.9 — Calamity ${CODEX.version} остаётся модом для 1.4.4 и обновится вместе с tModLoader.</p>
+          </div>
+        </details>
         <details class="secondary-shelf home-help-shelf">
           <summary><span><i aria-hidden="true">?</i><b>Как пользоваться кодексом</b><small>Три шага: маршрут → босс → крафт</small></span><em>3 шага</em></summary>
           <div class="secondary-shelf-body">

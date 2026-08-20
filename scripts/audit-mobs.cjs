@@ -121,8 +121,11 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   zombieCard.querySelector(".mob-card-name").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await settle(150);
   const zombieTip = document.getElementById("tip-card");
-  const zombieChips = [...zombieTip.querySelectorAll('.npc-drop-chip[href^="#/crafts?item=vanilla%3A"]')];
+  const zombieChips = [...zombieTip.querySelectorAll(".npc-drop-chip")];
   check(zombieChips.length >= 3 && zombieChips.every((chip) => /[А-Яа-яЁё]/.test(chip.textContent)), "Vanilla creature card does not list its game drop table in Russian");
+  check(zombieTip.querySelector('.npc-drop-chip[href^="#/crafts?item=vanilla%3A"]'), "Known vanilla drops do not link to the full craft tree");
+  // Новинки 1.4.5 без карточки в каталоге помечаются честной биркой, а не битой ссылкой
+  check([...zombieTip.querySelectorAll(".npc-drop-chip.is-new .new-mark")].length >= 1, "New 1.4.5 drops are not labeled honestly");
   check(errors.length === 0, `Mobs page emitted runtime errors: ${errors.join("\n")}`);
   console.log(`PASS: ${mobs.length} mobs (${vanilla.length} vanilla + ${calamity.length} Calamity) render with local sprites, Russian names, event summon guides, biome groups and clickable craft mentions`);
   dom.window.close();
