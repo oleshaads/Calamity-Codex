@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core91";
+  const ASSET_VERSION = "20260819-core92";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -1500,8 +1500,15 @@
     if (extra) extra.innerHTML = html || "";
   }
 
+  function mixHexDark(hex, base = [10, 14, 20], share = 0.2) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+    if (!m) return "#0a0e14";
+    const c = [0, 1, 2].map((i) => parseInt(m[1].slice(i * 2, i * 2 + 2), 16));
+    return `#${c.map((v, i) => Math.round(v * share + base[i] * (1 - share)).toString(16).padStart(2, "0")).join("")}`;
+  }
   function applyTheme(q) {
     const accent = (q && q.accent) || "#ffd97a";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", mixHexDark(accent));
     const fx = (q && q.fx) || "embers";
     document.body.style.setProperty("--accent", accent);
     const themeImage = q && q.bg ? new URL(q.bg, document.baseURI).href : "";
@@ -6973,10 +6980,17 @@
     };
     store.set({ searchRecent: [row, ...recentSearchHits().filter((item) => item.href !== row.href)].slice(0, 6) });
   }
-  function globalSearchLinkHTML(hit, className = "search-hit", remember = false) {
+  function markSearchMatch(value, query) {
+    const text = String(value || "");
+    if (!query) return esc(text);
+    const index = text.toLocaleLowerCase("ru").indexOf(query);
+    if (index === -1) return esc(text);
+    return `${esc(text.slice(0, index))}<mark>${esc(text.slice(index, index + query.length))}</mark>${esc(text.slice(index + query.length))}`;
+  }
+  function globalSearchLinkHTML(hit, className = "search-hit", remember = false, query = "") {
     return `<a class="${className}" href="${escAttr(hit.href)}"${remember ? " data-search-result" : ""}>
       <span class="search-hit-art slot">${hit.art ? `<img src="${escAttr(hit.art)}" alt="" loading="lazy" decoding="async" />` : `<b>${esc(hit.mark || "◆")}</b>`}</span>
-      <span><b>${esc(hit.title)}</b><small>${esc(hit.sub || "")}</small></span>
+      <span><b>${markSearchMatch(hit.title, query)}</b><small>${markSearchMatch(hit.sub || "", query)}</small></span>
       ${className === "search-hit" ? `<span class="search-hit-type">${esc(hit.type || "")}</span>` : ""}
     </a>`;
   }
@@ -7103,7 +7117,7 @@
     const shown = hits.slice(0, 24);
     searchPanel.classList.remove("hidden");
     searchPanel.innerHTML = hits.length
-      ? `<div class="search-drop-head"><span>Найдено: ${hits.length}</span><kbd>Esc</kbd></div>${shown.map((hit) => globalSearchLinkHTML(hit, "search-hit", true)).join("")}`
+      ? `<div class="search-drop-head"><span>Найдено: ${hits.length}</span><kbd>Esc</kbd></div>${shown.map((hit) => globalSearchLinkHTML(hit, "search-hit", true, q)).join("")}`
       : `<div class="search-empty"><b>Ничего не найдено</b><small>Попробуй «виктайд», «скория» или «морские останки»</small></div>`;
     searchPanel.querySelectorAll("a[data-search-result]").forEach((link, index) => { link.onclick = () => {
       rememberSearchHit(shown[index]);

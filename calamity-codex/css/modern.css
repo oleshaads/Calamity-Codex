@@ -6593,3 +6593,66 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 0; background: r
 /* Галерея биомов: счётчик и подпись */
 #biome-modal-count { padding: 5px 12px; border: 1px solid #33404c; border-radius: 9px; color: #e8c46f; background: #121a23; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; }
 .biome-modal-figure figcaption { border-left: 3px solid color-mix(in srgb, #91d47f, transparent 40%); border-radius: 6px; background: rgba(13, 18, 24, .6); }
+
+/* Подсветка совпадения запроса в результатах поиска */
+.search-drop mark { padding: 0 1px; border-radius: 3px; color: #ffe9b0; background: rgba(232, 196, 111, .26); }
+.search-drop mark::selection { background: rgba(232, 196, 111, .45); }
+
+/* ==================================================================== */
+/* ГЛОБАЛЬНЫЙ АПГРЕЙД А: командная палитра поиска вместо выпадашки      */
+/* ==================================================================== */
+@media (min-width: 761px) {
+  .search-drop {
+    position: fixed; left: 50%; top: 10vh; transform: translateX(-50%);
+    width: min(780px, 94vw); max-height: 70vh; overflow-y: auto;
+    padding: 12px; border: 1px solid #3a4853; border-radius: 16px;
+    background: linear-gradient(170deg, #161f2a, #10161e 62%);
+    box-shadow: 0 0 0 100vmax rgba(4, 7, 11, .66), 0 44px 100px rgba(0, 0, 0, .62), inset 0 1px 0 rgba(255, 255, 255, .05);
+  }
+}
+@media (min-width: 761px) and (prefers-reduced-motion: no-preference) {
+  @keyframes palette-in { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+  .search-drop:not(.hidden) { animation: palette-in .18s cubic-bezier(.2, .7, .3, 1) 1; }
+}
+.search-drop-head { position: sticky; top: -12px; z-index: 2; margin: -12px -12px 8px; padding: 12px 16px; border-bottom: 1px solid #26313c; background: rgba(16, 22, 30, .97); }
+.search-drop-head span { color: #9fb3bd; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.search-drop-head kbd { padding: 2px 8px; border: 1px solid #38464f; border-bottom-width: 2px; border-radius: 6px; color: #9fb3bd; background: #161f29; font-size: 10px; }
+.search-hit { padding: 10px 12px; }
+.search-hit-art { width: 44px; height: 44px; }
+.search-hit-type { border: 1px solid #33404c; border-radius: 8px; padding: 3px 9px; background: #121a23; font-variant-numeric: tabular-nums; }
+
+/* ==================================================================== */
+/* ГЛОБАЛЬНЫЙ АПГРЕЙД Б: страница квеста — стекло вместо HUD-рамок      */
+/* ==================================================================== */
+.quest { overflow: hidden; border: 1px solid #2c3945; border-radius: 16px; background: linear-gradient(168deg, #151f2a, #101821 58%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 18px 44px rgba(0, 0, 0, .34); }
+.quest-hero { border-bottom: 1px solid color-mix(in srgb, var(--accent, #e8c46f), transparent 62%); }
+.quest-hero .inner h2 { text-shadow: 0 4px 26px rgba(0, 0, 0, .65), 0 0 30px color-mix(in srgb, var(--accent, #e8c46f), transparent 72%); }
+.quest .shelf { margin-top: 12px; border: 1px solid #2c3945; border-radius: 12px; background: linear-gradient(168deg, #17212c, #121a23 60%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035); }
+.quest .shelf > summary { min-height: 58px; padding: 13px 16px; }
+.quest .shelf[open] > summary { border-bottom: 1px solid #26323d; background: linear-gradient(90deg, color-mix(in srgb, var(--accent, #e8c46f), transparent 93%), transparent 55%); }
+.shelf-t { font-family: "Russo One", var(--mono), sans-serif; font-weight: 400; font-size: 13px; letter-spacing: .05em; }
+.quest .shelf-n { border: 1px solid #3c4b56; background: #121a23; color: color-mix(in srgb, var(--accent, #e8c46f), #cfd7dc 40%); }
+
+/* Шаги квеста — вертикальный таймлайн с линией прогрессии */
+.steps { position: relative; }
+.steps::before { content: ""; position: absolute; left: 17px; top: 14px; bottom: 14px; width: 2px; border-radius: 2px; background: linear-gradient(180deg, color-mix(in srgb, var(--accent, #e8c46f), transparent 55%), rgba(232, 196, 111, .07)); }
+.step .step-n { background: linear-gradient(180deg, #241e12, #14100c); }
+.step:hover .step-n { border-color: #a8894a; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 14px rgba(232, 196, 111, .18); }
+
+/* Карточки «Куда идти» и «Кого бить» — в общем стеклянном языке */
+.info-card, .kill-card { border: 1px solid #2c3945; border-radius: 11px; background: linear-gradient(168deg, #16202b, #111923 62%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03); transition: border-color .14s ease, transform .14s ease; }
+.info-card:hover, .kill-card:hover { border-color: color-mix(in srgb, var(--accent, #e8c46f), #2c3945 55%); transform: translateY(-1px); }
+.info-card .pin { border: 1px solid #6b5a33; border-radius: 8px; color: #e8c46f; background: linear-gradient(180deg, #241e12, #181410); font-family: var(--mono); font-weight: 700; }
+
+/* Навигация квеста: «Завершить» — главное золотое действие */
+.quest-nav { border-top: 1px solid #26323d; background: linear-gradient(180deg, transparent, rgba(9, 13, 18, .5)); }
+.quest-nav .btn[data-finish] { min-width: 220px; border-color: #6b5a33; color: #f1dda1; background: linear-gradient(180deg, #2c2414, #201a10); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
+.quest-nav .btn[data-finish]:hover { border-color: #8a6d3b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 0 20px rgba(232, 196, 111, .14); }
+.quest-nav .btn.done[data-finish] { border-color: #2f6b45; color: #9fe8bd; background: linear-gradient(180deg, #12271b, #0e1f16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 16px rgba(47, 169, 84, .14); }
+
+/* Совет класса и подсказки */
+.class-note { border-radius: 10px; border-left-width: 3px; }
+.hint { border-radius: 10px; }
+
+/* Кинематографичнее герой главной: фон заметнее, с мягкой маской вниз */
+.hero-bg { opacity: .48; -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .95), rgba(0, 0, 0, .25) 78%, transparent); mask-image: linear-gradient(180deg, rgba(0, 0, 0, .95), rgba(0, 0, 0, .25) 78%, transparent); }
