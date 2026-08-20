@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core67";
+  const ASSET_VERSION = "20260819-core68";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -2078,6 +2078,13 @@
     const loot = Array.isArray(b.loot) ? b.loot : String(b.loot || "").split(/,\s*/).filter(Boolean);
     const d = String(b.danger || "");
     const lvl = b.dangerLvl || (/смерт/i.test(d) ? "dead" : /высок/i.test(d) ? "high" : /средн/i.test(d) ? "mid" : "low");
+    const MOB_GROUP_BY_BIOME = {
+      "Затонувшее море": "sunken-sea", "Сернистое море": "sulphur-sea", "Бездна": "abyss",
+      "Серный кратер": "crags", "Астральная инфекция": "astral", "Пустыня": "desert",
+      "Чистый океан": "ocean", "Данж": "dungeon", "Ад": "underworld", "Джунгли": "jungle",
+      "Снега": "snow", "Порча и багрянец": "corruption", "Святые земли": "hallow", "Грибной биом": "mushroom"
+    };
+    const mobGroupId = MOB_GROUP_BY_BIOME[b.name] || "";
     return `<article class="card biome-card">
       <button class="biome-shot lazy-bg" type="button" data-bg="${escAttr(b.img || "assets/hero.webp")}" data-biome-view="${escAttr(b.name)}" style="filter:${b.filter || "none"}" aria-label="Открыть изображение биома: ${escAttr(b.name)}">
         <span class="danger-pill ${lvl}">${esc(d)}</span>
@@ -2094,6 +2101,7 @@
           ${b.need ? `<div class="fact"><span>Бери</span><p>${esc(ruText(b.need))}</p></div>` : ""}
           ${b.tip ? `<div class="fact"><span>Совет</span><p>${esc(ruText(b.tip))}</p></div>` : ""}
         </div>
+        ${mobGroupId ? `<div class="card-links"><a href="#/mobs?g=${escAttr(mobGroupId)}">Жители биома в бестиарии →</a></div>` : ""}
       </div>
     </article>`;
   }
@@ -4476,7 +4484,7 @@
   /* Упоминания мобов в текстах получения/источников становятся кликабельными:
      клик открывает ту же карточку существа, что и в структурированных источниках. */
   let mobMentionPatternCache = null;
-  const MOB_MENTION_SELECTOR = ".tsrc, .tree-root-src, .fact p, .wiki-source-live p";
+  const MOB_MENTION_SELECTOR = ".tsrc, .tree-root-src, .fact p, .wiki-source-live p, .kill-card b, .kill-card p, .info-card p, .step p";
   function mobMentionPattern() {
     if (mobMentionPatternCache !== null) return mobMentionPatternCache;
     if (!window.CALAMITY_MOB_INDEX) return null;
@@ -4509,7 +4517,7 @@
       const nodes = [];
       while (walker.nextNode()) {
         const node = walker.currentNode;
-        if (node.parentElement && node.parentElement.closest("a, button, .npc-tip, [data-boss-detail]")) continue;
+        if (node.parentElement && node.parentElement.closest("a, button, .npc-tip, .tip, [data-boss-detail]")) continue;
         nodes.push(node);
       }
       nodes.forEach((node) => {
@@ -4589,14 +4597,15 @@
     const query = String(params.q || "").trim().toLocaleLowerCase("ru");
     const openGroup = String(params.g || "");
     const filtered = mobs.filter((m) => mobMatchesFilters(m, filters));
-    const groupsWithMobs = (defs) => defs.map((def) => ({ ...def, list: filtered.filter((m) => m.tags.some((t) => def.tags.includes(t))) })).filter((g) => g.list.length);
+    const byPower = (a, b) => ((a.hp ?? -1) - (b.hp ?? -1)) || a.ru.localeCompare(b.ru, "ru");
+    const groupsWithMobs = (defs) => defs.map((def) => ({ ...def, list: filtered.filter((m) => m.tags.some((t) => def.tags.includes(t))).sort(byPower) })).filter((g) => g.list.length);
     const guide = window.CALAMITY_MOB_GUIDE || { events: [], biomes: [] };
     const eventGroups = groupsWithMobs(guide.events || []);
     const biomeGroups = groupsWithMobs(guide.biomes || []);
     const groupedIds = new Set();
     [...eventGroups, ...biomeGroups].forEach((g) => g.list.forEach((m) => groupedIds.add(m.id)));
     const rest = filtered.filter((m) => !groupedIds.has(m.id));
-    if (rest.length) biomeGroups.push({ id: "other", title: "Особые существа и миньоны боссов", tags: [], list: rest, sub: "Появляются в бою с боссами, в особых местах или по особым условиям." });
+    if (rest.length) biomeGroups.push({ id: "other", title: "Особые существа и миньоны боссов", tags: [], list: [...rest].sort(byPower), sub: "Появляются в бою с боссами, в особых местах или по особым условиям." });
     const searchHits = query ? filtered.filter((m) => matchesSearch(mobSearchBlob(m), query)).slice(0, 150) : [];
     const activeFilterCount = (filters.src ? 1 : 0) + (filters.kind ? 1 : 0);
     const groupBlock = (group, type) => {
@@ -7025,6 +7034,26 @@
       if (matchesSearch(`${x.name} ${title} ${ruText(x.ings)} ${x.why} ${bosses}`, q))
         hits.push({ href: `#/crafts?item=${encodeURIComponent(x.name)}`, title, sub: ruText(x.ings), type: "Крафт", mark: "⚒", art: resolveArt(x.name) || "" });
     });
+    // Мобы: 626 существ бестиария; боссы уже покрыты карточками выше.
+    if (window.CALAMITY_MOB_INDEX) {
+      const mobMatches = [];
+      mobIndex().mobs.forEach((m) => {
+        if (m.kind === "boss") return;
+        if (!matchesSearch(mobSearchBlob(m), q)) return;
+        const ru = m.ru.toLocaleLowerCase("ru");
+        const en = m.en.toLocaleLowerCase("en");
+        mobMatches.push({ m, score: ru === q || en === q ? 0 : ru.startsWith(q) || en.startsWith(q) ? 1 : 2 });
+      });
+      mobMatches.sort((a, b) => a.score - b.score || a.m.ru.localeCompare(b.m.ru, "ru"));
+      mobMatches.slice(0, 6).forEach(({ m }) => {
+        hits.push({
+          href: `#/mobs?q=${encodeURIComponent(m.ru)}`,
+          title: m.ru,
+          sub: `${m.kind === "critter" ? "Мирный зверёк" : "Противник"}${m.src === "c" ? " · Каламити" : " · Terraria"}${m.tags.length ? ` · ${m.tags.slice(0, 2).map(mobTagLabel).join(", ")}` : ""}`,
+          type: "Моб", mark: "⚔", art: m.art || ""
+        });
+      });
+    }
     const rank = (hit) => {
       const title = String(hit.title || "").toLocaleLowerCase("ru");
       const sub = String(hit.sub || "").toLocaleLowerCase("ru");
