@@ -6194,3 +6194,59 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 /* Тонкая линия под заголовками секций главной */
 .home-section-head { position: relative; padding-bottom: 12px; }
 .home-section-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, rgba(232, 196, 111, .35), rgba(232, 196, 111, .06) 40%, transparent 75%); }
+
+/* ============== Премиальный слой, проход 4: инструменты и хром ============== */
+
+/* Всплывающая подсказка ингредиента */
+.tt { border-radius: 11px; border: 1px solid #3a4853; box-shadow: 0 18px 44px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .05); background: linear-gradient(168deg, #172230, #111a24 62%); }
+
+/* Инспектор дерева крафта и легенда */
+.craft-tree-inspector { border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 14px 32px rgba(0, 0, 0, .38); }
+.tree-legend { border-radius: 0 0 10px 10px; background: linear-gradient(90deg, rgba(232, 196, 111, .05), transparent 55%); }
+.tree-legend b { color: #e8c46f; }
+.craft-tree-picker { box-shadow: inset 0 -12px 22px rgba(0, 0, 0, .22); }
+.craft-tree-search:focus-within { border-color: #b3924c; box-shadow: 0 0 0 3px rgba(232, 196, 111, .1); }
+.craft-tree-choice-grid button { border-radius: 9px; transition: border-color .13s ease, background .13s ease, transform .13s ease; }
+.craft-tree-choice-grid button:hover { transform: translateY(-1px); }
+.craft-tree-zoom-controls { border: 1px solid #33404c; border-radius: 9px; background: #121a23; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+.craft-tree-zoom-controls button { transition: color .13s ease, background .13s ease; }
+.craft-tree-zoom-controls button:hover { color: #f1dda1; background: rgba(232, 196, 111, .07); }
+
+/* Выпадающие списки сортировки/фильтров */
+select { padding: 7px 30px 7px 11px; border: 1px solid #38464f; border-radius: 8px; color: #cfd7dc; background: #151e28 url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23e8c46f' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center; appearance: none; -webkit-appearance: none; font-size: 12.5px; cursor: pointer; transition: border-color .14s ease, box-shadow .14s ease; }
+select:hover { border-color: #57646d; }
+select:focus { border-color: #b3924c; box-shadow: 0 0 0 3px rgba(232, 196, 111, .1); outline: none; }
+
+/* Текстовые поля */
+input[type="search"], input[type="text"], input[type="number"] { border-radius: 8px; transition: border-color .14s ease, box-shadow .14s ease; }
+
+/* Хром шапки: рюкзак, звук, мини-квест */
+.journey-mini { border: 1px solid #33404c; border-radius: 9px; background: linear-gradient(180deg, #17212c, #121a23); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); transition: border-color .14s ease, box-shadow .14s ease; }
+.journey-mini:hover { border-color: #8a6d3b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 16px rgba(232, 196, 111, .08); }
+.favorite-mini, .sound-toggle { transition: box-shadow .14s ease, border-color .14s ease; }
+.favorite-mini:hover, .sound-toggle:hover { box-shadow: inset 0 0 0 1px #57646d, inset 0 -10px 14px rgba(0, 0, 0, .25), 0 0 14px rgba(232, 196, 111, .08); }
+.favorite-count { border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
+
+/* Низ боковой панели: прогресс и установка */
+.rail-footer { border-top: 1px solid #222d38; background: linear-gradient(180deg, transparent, rgba(9, 13, 18, .5)); }
+.install-app { border: 1px solid #6b5a33; border-radius: 9px; color: #f1dda1; background: linear-gradient(180deg, #262013, #1b1710); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); transition: border-color .14s ease, box-shadow .14s ease; }
+.install-app:hover { border-color: #8a6d3b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 16px rgba(232, 196, 111, .1); }
+.rail-status .status-dot { box-shadow: 0 0 8px currentColor; }
+
+/* Вкладки справочника и словаря */
+.chips .chip { border-radius: 9px; transition: border-color .13s ease, background .13s ease, color .13s ease, transform .13s ease; }
+.chips .chip:hover { transform: translateY(-1px); }
+.chips .chip em { border-radius: 7px; }
+
+/* Кнопка «наверх» */
+.to-top { border: 1px solid #3a4853; border-radius: 10px; background: linear-gradient(180deg, #1c2733, #151e28); box-shadow: 0 10px 24px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .05); transition: border-color .14s ease, transform .14s ease, box-shadow .14s ease; }
+.to-top:hover { border-color: #8a6d3b; color: #f1dda1; transform: translateY(-2px); }
+
+/* Сетка выбора результата в дереве: активная плитка золотая */
+.craft-tree-choice-grid button[aria-pressed="true"], .craft-tree-choice-grid .is-active { border-color: #8a6d3b; background: linear-gradient(180deg, #2c2414, #221c11); }
+
+/* Шапка модального дерева */
+.tree-head { background: linear-gradient(165deg, #1b1710 0%, #131c26 55%); border-bottom: 1px solid #3e3b2d; }
+.tree-root-slot { box-shadow: inset 0 0 0 1px #6b5a33, inset 0 -14px 20px rgba(0, 0, 0, .3), 0 0 20px rgba(232, 196, 111, .08); }
+.tree-nav-btn { border-radius: 8px; transition: color .13s ease, background .13s ease, border-color .13s ease; }
+.tree-nav-btn:hover { color: #f1dda1; background: rgba(232, 196, 111, .08); }
