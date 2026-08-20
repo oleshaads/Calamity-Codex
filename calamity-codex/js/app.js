@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core96";
+  const ASSET_VERSION = "20260819-core97";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -8253,4 +8253,38 @@
     syncRevengeanceUI(true);
     FX.set("fire");
   }
+
+  /* Световой курсор: мягкое золотое пятно следует за мышью (только точный
+     указатель, без reduced-motion). Один rAF, только transform — компоузер. */
+  (() => {
+    if (!window.matchMedia) return;
+    if (!matchMedia("(pointer: fine)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const glow = document.createElement("div");
+    glow.className = "cursor-glow";
+    glow.setAttribute("aria-hidden", "true");
+    document.body.appendChild(glow);
+    let x = innerWidth / 2, y = innerHeight / 3, raf = 0;
+    const paint = () => { raf = 0; glow.style.transform = `translate3d(${x - 320}px, ${y - 320}px, 0)`; };
+    addEventListener("pointermove", (event) => {
+      x = event.clientX; y = event.clientY;
+      if (!raf) raf = requestAnimationFrame(paint);
+    }, { passive: true });
+    paint();
+  })();
+
+  /* Тактильная золотая рябь на кнопках и чипах (одноразовая анимация) */
+  document.addEventListener("click", (e) => {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const control = e.target.closest && e.target.closest(".btn, .chip, .mini, .mode-btn, .qmap-continue, .boss-defeat-btn");
+    if (!control) return;
+    const rect = control.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    ripple.className = "tap-ripple";
+    const size = Math.max(rect.width, rect.height) * 2;
+    ripple.style.width = ripple.style.height = `${size}px`;
+    ripple.style.left = `${(e.clientX || rect.left + rect.width / 2) - rect.left - size / 2}px`;
+    ripple.style.top = `${(e.clientY || rect.top + rect.height / 2) - rect.top - size / 2}px`;
+    control.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+  });
 })();

@@ -6720,3 +6720,13 @@ body {
 @media (min-width: 1061px) {
   body::after { content: ""; position: fixed; inset: 9px; z-index: 40; border: 1px solid rgba(232, 196, 111, .13); border-radius: 18px; pointer-events: none; }
 }
+
+/* ==================================================================== */
+/* ГЛОБАЛЬНЫЙ АПГРЕЙД: свет за курсором и тактильная рябь               */
+/* ==================================================================== */
+.cursor-glow { position: fixed; left: 0; top: 0; z-index: 1; width: 640px; height: 640px; border-radius: 50%; background: radial-gradient(circle, rgba(232, 196, 111, .05), rgba(232, 196, 111, .015) 42%, transparent 62%); pointer-events: none; will-change: transform; }
+.btn, .chip, .mini, .mode-btn, .qmap-continue, .boss-defeat-btn { position: relative; overflow: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes tap-ripple { from { opacity: .9; transform: scale(0); } to { opacity: 0; transform: scale(1); } }
+  .tap-ripple { position: absolute; z-index: 0; border-radius: 50%; background: radial-gradient(circle, rgba(232, 196, 111, .3), rgba(232, 196, 111, .08) 55%, transparent 70%); pointer-events: none; animation: tap-ripple .5s ease-out 1; }
+}
