@@ -90,14 +90,14 @@
     lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "VI",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.webp",      accent: "#c997e8", fx: "spores" },
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VII",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",     accent: "#eea85b", fx: "embers" },
     biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VIII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",   accent: "#91d47f", fx: "leaves" },
-    mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/bosses.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" }
+    mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/mobs.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" }
   };
   const KIND_RU = {
     weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core83";
+  const ASSET_VERSION = "20260819-core84";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
