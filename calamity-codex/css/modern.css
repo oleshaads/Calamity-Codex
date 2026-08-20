@@ -5952,7 +5952,8 @@ b.mob-mention:hover, b.mob-mention:focus-visible { border-bottom-style: solid; c
 .boss-detail-card .mob-detail-overview { margin-top: 10px; }
 
 /* Обзор обновления Terraria 1.4.5 на главной + бирки новинок в дропе */
-.home-145-shelf > summary i { width: auto; padding: 0 8px; color: #e8c46f; border-color: #6b5a33; font-family: var(--mono); font-size: 10px; font-weight: 700; }
+.home-145-shelf > summary > span { grid-template-columns: 46px minmax(0, 1fr); }
+.home-145-shelf > summary i { width: 46px; padding: 0; color: #e8c46f; border-color: #6b5a33; font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .02em; text-align: center; }
 .home-145-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
 .home-145-grid section { padding: 11px 13px; border: 1px solid #2d3a45; border-radius: 8px; background: #121b24; }
 .home-145-grid h4 { margin-bottom: 7px; color: #e8c46f; font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
