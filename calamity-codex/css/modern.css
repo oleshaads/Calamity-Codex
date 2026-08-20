@@ -5981,9 +5981,9 @@ b.mob-mention:hover, b.mob-mention:focus-visible { border-bottom-style: solid; c
 
 /* Единый рисованный шеврон вместо текстового глифа «⌄», который в системных
    шрифтах прижимается к низу рамки. Рисуем уголок бордерами — всегда ровно. */
-.catalog-filter-shelf > summary i, .catalog-about-shelf > summary i, .card-facts-shelf > summary i { color: transparent; }
+.catalog-filter-shelf > summary i, .catalog-about-shelf > summary i, .card-facts-shelf > summary i { position: relative; color: transparent; }
 .catalog-filter-shelf > summary i::before, .catalog-about-shelf > summary i::before, .card-facts-shelf > summary i::before {
-  content: ""; width: 8px; height: 8px; margin-top: -3px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); border-radius: 1px; transform: rotate(45deg);
+  content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); border-radius: 1px; transform: translate(-50%, -68%) rotate(45deg);
 }
 .card-facts-shelf > summary i::before { border-color: #9aa7ae; }
 
