@@ -6250,3 +6250,35 @@ input[type="search"], input[type="text"], input[type="number"] { border-radius: 
 .tree-root-slot { box-shadow: inset 0 0 0 1px #6b5a33, inset 0 -14px 20px rgba(0, 0, 0, .3), 0 0 20px rgba(232, 196, 111, .08); }
 .tree-nav-btn { border-radius: 8px; transition: color .13s ease, background .13s ease, border-color .13s ease; }
 .tree-nav-btn:hover { color: #f1dda1; background: rgba(232, 196, 111, .08); }
+
+/* ============== Премиальный слой, проход 5: живое появление ============== */
+
+/* Одноразовый мягкий подъём карточек при отрисовке (без бесконечных анимаций) */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .jump, .home-command-card, .mob-card, .qmap-card, .era-card, .boss-card, .biome-card, .lex-card, .useful-card, .catalog-item-card, .boss-next-card, .search-hit { animation: rise-in .26s cubic-bezier(.2, .7, .3, 1) backwards; }
+  .jump-grid > :nth-child(1), .mob-grid > :nth-child(1), .qmap-grid > :nth-child(1), .home-command-grid > :nth-child(1) { animation-delay: .02s; }
+  .jump-grid > :nth-child(2), .mob-grid > :nth-child(2), .qmap-grid > :nth-child(2), .home-command-grid > :nth-child(2) { animation-delay: .05s; }
+  .jump-grid > :nth-child(3), .mob-grid > :nth-child(3), .qmap-grid > :nth-child(3), .home-command-grid > :nth-child(3) { animation-delay: .08s; }
+  .jump-grid > :nth-child(4), .mob-grid > :nth-child(4), .qmap-grid > :nth-child(4) { animation-delay: .11s; }
+  .jump-grid > :nth-child(5), .mob-grid > :nth-child(5), .qmap-grid > :nth-child(5) { animation-delay: .14s; }
+  .jump-grid > :nth-child(6), .mob-grid > :nth-child(6), .qmap-grid > :nth-child(6) { animation-delay: .17s; }
+}
+
+/* Табличные цифры: счётчики не «прыгают» по ширине */
+.mob-stats b, .page-head-facts b, .hs-stats b, .qmap-progress i, .rail-progress i, .shelf-n, [data-craft-plan-count], [data-favorites-count], .mob-group > summary em, .secondary-shelf > summary em, .journey-mini b { font-variant-numeric: tabular-nums; }
+
+/* Полки квеста: плюс золотом и отклик на курсор */
+.shelf { border-radius: 11px; overflow: hidden; }
+.shelf > summary { transition: background .13s ease; }
+.shelf > summary:hover { background: rgba(255, 255, 255, .025); }
+.shelf-plus { color: #e8c46f; }
+.shelf-n { border-radius: 8px; }
+
+/* Пилюли счётчиков навигации */
+.rail-nav em { transition: color .13s ease, border-color .13s ease; }
+.rail-nav a.active em { border-color: #6b5a33; color: #e8c46f; background: #1d1913; }
+
+/* Свечение за героем главной */
+.hero-inner { position: relative; }
+.hero-inner::before { content: ""; position: absolute; left: -60px; top: -70px; width: 340px; height: 240px; border-radius: 50%; background: radial-gradient(closest-side, rgba(232, 196, 111, .09), transparent); pointer-events: none; }
