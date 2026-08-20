@@ -6125,3 +6125,72 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 
 /* Свечение иконок быстрых разделов */
 .jump:hover .jump-icon { box-shadow: inset 0 0 0 2px #4d5a68, inset 0 0 0 3px rgba(9, 13, 18, .85), 0 0 18px color-mix(in srgb, var(--jump-accent), transparent 55%); }
+
+/* ============== Премиальный слой, проход 3: витрины и модалки ============== */
+
+/* Арт-зона карточек: мягкий свет за спрайтом, пилюли поверх аккуратнее */
+.card-shot { background: radial-gradient(circle at 50% 42%, #202c38 0%, #121a23 74%); box-shadow: inset 0 0 0 1px #2e3b46, inset 0 -18px 26px rgba(0, 0, 0, .3); }
+.card:hover .card-shot img.item-art, .card:hover .card-shot img.boss-art { filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .5)); }
+.kind-pill, .stage-pill, .tag-cls, .danger-pill { border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 2px 6px rgba(0, 0, 0, .35); }
+
+/* Бестиарий боссов: маршрут и карточки встреч */
+.boss-next-card { border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 8px 20px rgba(0, 0, 0, .26); }
+.boss-card.is-defeated { filter: saturate(.72); }
+.boss-card.is-defeated .card-shot::after { content: "✓"; position: absolute; top: 8px; left: 8px; display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #2f6b45; border-radius: 50%; color: #9fe8bd; background: rgba(14, 31, 22, .9); font-size: 13px; font-weight: 700; }
+.mini-boss-card .card-shot { box-shadow: inset 0 0 0 1px #2c5f57, inset 0 -18px 26px rgba(0, 0, 0, .3); }
+.hidden-boss-card .card-shot { box-shadow: inset 0 0 0 1px #553a6b, inset 0 -18px 26px rgba(0, 0, 0, .3); }
+
+/* Атлас биомов: изображение с виньеткой и плавным приближением */
+.biome-shot { overflow: hidden; border-radius: 10px 10px 0 0; }
+.biome-shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(8, 12, 17, .55)); pointer-events: none; }
+.biome-shot { transition: filter .2s ease; }
+.biome-card:hover .biome-shot { filter: brightness(1.08) saturate(1.05); }
+.biome-zoom { border: 1px solid rgba(255, 255, 255, .18); border-radius: 8px; background: rgba(10, 14, 20, .55); }
+
+/* Модалка рецепта: формула как витрина */
+.recipe-equation { border-radius: 12px; }
+.recipe-ingredient-side, .recipe-result-side { border-radius: 11px; background: linear-gradient(168deg, #16202b, #111923 60%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035); }
+.recipe-ingredient-side header span, .recipe-result-side header span { border: 1px solid #6b5a33; border-radius: 8px; color: #e8c46f; background: linear-gradient(180deg, #241e12, #181410); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
+.recipe-result-art { box-shadow: inset 0 0 0 1px #6b5a33, inset 0 -14px 20px rgba(0, 0, 0, .3), 0 0 24px rgba(232, 196, 111, .1); }
+.recipe-station-chain { border-radius: 10px; }
+.recipe-checklist { border-radius: 11px; }
+
+/* Полный каталог: заголовки и подписи */
+.card-title { letter-spacing: .01em; }
+.en-sub { opacity: .85; }
+
+/* «Полезное»: ответы карточки */
+.useful-card { border-radius: 12px; }
+.useful-card h3 { letter-spacing: .01em; }
+.useful-obtain { border-left: 3px solid #4d7d68; border-radius: 8px; }
+
+/* Эпохи на главной: номер и ссылка */
+.era-card { position: relative; overflow: hidden; }
+.era-no { color: rgba(232, 196, 111, .16); }
+.era-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid #3c4b56; border-radius: 8px; color: #cfd7dc; background: #141d25; font-size: 12px; transition: border-color .14s ease, color .14s ease, background .14s ease; }
+.era-link:hover { border-color: #8a6d3b; color: #f1dda1; background: #1d1913; }
+
+/* Карта квестов: продолжение и текущий шаг */
+.qmap-continue { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 20px rgba(0, 0, 0, .26); transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.qmap-continue:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 12px 26px rgba(0, 0, 0, .32), 0 0 22px rgba(232, 196, 111, .08); }
+.qmap-card.current { background: linear-gradient(165deg, color-mix(in srgb, var(--qa), #182330 88%), #121a23 65%); }
+.qmap-flag { box-shadow: 0 3px 10px rgba(0, 0, 0, .4); }
+
+/* Группы мобов: подсветка при наведении и заголовки событий */
+.mob-group { transition: border-color .15s ease, box-shadow .15s ease; }
+.mob-group:hover { border-color: #46545f; box-shadow: 0 8px 20px rgba(0, 0, 0, .26); }
+.mob-group-icon { box-shadow: inset 0 0 0 1px #33404c, inset 0 -10px 14px rgba(0, 0, 0, .28); border-radius: 9px; }
+.mob-event-info { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+
+/* Словарь и избранное */
+.lex-card .card-title { color: #f0ece1; }
+.art-provenance { border-radius: 7px; background: rgba(10, 14, 20, .78); }
+
+/* План крафта и чеклисты */
+.craft-plan { border-radius: 11px; }
+.craft-chip { border-radius: 9px; transition: border-color .13s ease, background .13s ease, transform .13s ease; }
+.craft-chip:hover { transform: translateY(-1px); }
+
+/* Тонкая линия под заголовками секций главной */
+.home-section-head { position: relative; padding-bottom: 12px; }
+.home-section-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: linear-gradient(90deg, rgba(232, 196, 111, .35), rgba(232, 196, 111, .06) 40%, transparent 75%); }
