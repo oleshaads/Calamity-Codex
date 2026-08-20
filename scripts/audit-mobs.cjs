@@ -40,6 +40,20 @@ for (const g of [...guide.events, ...guide.biomes]) {
   check(g.tags.every((t) => tagSet.has(t) || t.startsWith("e:SlimeRain")), `Guide group ${g.id} references unknown tags: ${g.tags.join(",")}`);
 }
 
+// Цветные слизни — не одинаковые серые копии: игровые тинты применены к кадрам.
+const spriteBytes = (name) => fs.readFileSync(path.join(root, "assets/mob-sprites", name));
+check(!spriteBytes("v-green-slime.png").equals(spriteBytes("v-blue-slime.png")), "Green Slime sprite is not tinted (identical to Blue Slime)");
+check(!spriteBytes("v-pinky.png").equals(spriteBytes("v-blue-slime.png")), "Pinky sprite is not tinted");
+
+// Ванильные лут-таблицы из ItemDropDatabase.cs
+vm.runInContext(fs.readFileSync(path.join(root, "js/vanilla-drops.js"), "utf8"), ctx);
+const dropsIndex = ctx.window.CALAMITY_VANILLA_DROPS;
+check(dropsIndex && dropsIndex.npc && Object.keys(dropsIndex.npc).length >= 300, "Vanilla drop tables are missing or too small");
+const dropPairs = Object.values(dropsIndex.npc).reduce((sum, rows) => sum + rows.length, 0);
+check(dropPairs >= 1200, `Expected at least 1200 vanilla NPC→item drops, got ${dropPairs}`);
+check((dropsIndex.npc["243"] || []).some((row) => row[0] === 1519), "Ice Golem is missing its Frost Core drop");
+check((dropsIndex.npc["3"] || []).some((row) => row[0] === 216 && row[1] === 50), "Zombie is missing its 1/50 Shackle drop");
+
 const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 check(/data-nav="mobs"/.test(htmlSource), "Mobs section is missing from navigation");
 const html = htmlSource.replace(/<script\b[^>]*src=[^>]*><\/script>/g, "");
@@ -98,6 +112,17 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   check(tip.querySelector(".mob-detail-overview"), "Creature card lacks HP/damage/defense stats from the mob index");
   check([...tip.querySelectorAll(".fact span")].some((s) => s.textContent === "Биомы и время"), "Creature card lacks biome/time tags");
   check(tip.querySelector('a[href^="#/mobs?q="]'), "Creature card does not link back to the mob bestiary");
+  // Ванильный моб: карточка существа показывает локальные лут-таблицы игры
+  window.location.hash = "#/mobs?g=night";
+  await settle(200);
+  const night = document.getElementById("mob-group-night");
+  const zombieCard = [...night.querySelectorAll(".mob-card")].find((card) => card.querySelector(".mob-card-name")?.dataset.npc === "Zombie");
+  check(zombieCard && zombieCard.querySelector(".mob-drop-link"), "Vanilla mob card lacks its local drop counter");
+  zombieCard.querySelector(".mob-card-name").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await settle(150);
+  const zombieTip = document.getElementById("tip-card");
+  const zombieChips = [...zombieTip.querySelectorAll('.npc-drop-chip[href^="#/crafts?item=vanilla%3A"]')];
+  check(zombieChips.length >= 3 && zombieChips.every((chip) => /[А-Яа-яЁё]/.test(chip.textContent)), "Vanilla creature card does not list its game drop table in Russian");
   check(errors.length === 0, `Mobs page emitted runtime errors: ${errors.join("\n")}`);
   console.log(`PASS: ${mobs.length} mobs (${vanilla.length} vanilla + ${calamity.length} Calamity) render with local sprites, Russian names, event summon guides, biome groups and clickable craft mentions`);
   dom.window.close();

@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core66";
+  const ASSET_VERSION = "20260819-core67";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -182,6 +182,7 @@
     VANILLA_COMPACT = VANILLA_TREE_INDEX.format === 2;
     VANILLA_MISSING_SPRITES = new Set(VANILLA_TREE_INDEX.coverage?.missingSpriteIds || []);
     NPC_SOURCES = window.CALAMITY_NPC_SOURCES || {};
+    VANILLA_DROPS = window.CALAMITY_VANILLA_DROPS || { npc: {} };
     NPC_DATA = window.CALAMITY_NPCS || {};
     NPC_RU_EXTRA = window.CALAMITY_NPC_RU || {};
     NPC_BESTIARY_RU = window.CALAMITY_NPC_BESTIARY_RU || {};
@@ -194,6 +195,8 @@
     mobDropsCache = null;
     mobByNameCache = null;
     mobMentionPatternCache = null;
+    mobByGameIdCache = null;
+    vanillaItemSourcesCache = null;
     itemByIdCache = null;
     recipeIndex = null;
     visualRecipeIndex = null;
@@ -515,7 +518,8 @@
     const desc = ruText(info.desc || (lex && lex.desc) || "");
     const catItem = catalogByName(name);
     const tipSources = npcSourceForItem({ id: catItem ? catItem.id : "" });
-    const wikiProfile = !recipe ? officialWikiProfile(info) : null;
+    const hasLocalVanillaDrops = Boolean(info.vanilla && vanillaItemSources(info.vanilla.id).length);
+    const wikiProfile = !recipe && !hasLocalVanillaDrops ? officialWikiProfile(info) : null;
     tipCard.innerHTML = `
       <div class="tip-card-head">
         <span class="slot tip-card-slot">${art ? `<img class="item-art" src="${escAttr(art)}" alt="" loading="lazy" decoding="async" data-kind="${escAttr(info.kind || "mat")}">` : unavailableArt(info.kind)}</span>
@@ -568,7 +572,7 @@
     const mini = boss ? null : miniRecordForName(npcName);
     const encounter = boss || mini;
     const genericRu = npcRuName(npcName);
-    const ru = boss ? boss.name : mini ? mini.name : (genericRu !== npcName ? genericRu : (mob?.ru || genericRu));
+    const ru = boss ? boss.name : mini ? mini.name : (mob?.ru && /[А-Яа-яЁё]/.test(mob.ru) ? mob.ru : (genericRu !== npcName ? genericRu : (mob?.ru || genericRu)));
     const type = boss ? (boss.kind === "hidden" ? "Скрытый босс" : `Босс · ${boss.type || "Каламити"}`) : mini ? "Мини-босс · Каламити" : mob ? `${mob.kind === "critter" ? "Мирный зверёк" : mob.kind === "boss" ? "Босс" : "Противник"} · ${mob.src === "c" ? "Каламити" : "Terraria"}` : "Противник";
     const eraLabel = encounter ? ({ pre: "Прехардмод", hard: "Хардмод", post: "После Луны", end: "Финал" })[encounter.era] || encounter.era : "";
     const encounterId = encounter ? String(encounter.id || encounter.n) : "";
@@ -617,9 +621,22 @@
         }
       });
     });
+    // Ванильные лут-таблицы: предметы, падающие с этого существа
+    const mobGameId = mob && mob.src === "v" ? Number(mob.id.slice(1)) : null;
+    const vanillaDropRows = mobGameId !== null
+      ? (VANILLA_DROPS.npc[String(mobGameId)] || (mobGameId < 0 ? VANILLA_DROPS.npc["1"] : null) || [])
+      : [];
+    const vanillaDropChips = vanillaDropRows.map(([itemId, den, min, max, flags]) => {
+      const ruName = VANILLA_RU_BY_ID[String(itemId)] || `Предмет №${itemId}`;
+      const label = vanillaDropChanceLabel({ den, min, max, flags });
+      const artOk = !VANILLA_MISSING_SPRITES.has(Number(itemId));
+      return `<a class="craft-chip npc-drop-chip" href="#/crafts?item=vanilla%3A${itemId}" aria-label="Открыть предмет: ${escAttr(ruName)}" title="Открыть в полном дереве">${artOk ? `<img class="ings-icon" src="assets/vanilla-sprites/${itemId}.png" alt="" loading="lazy" decoding="async" />` : ""}<em>${esc(label)}</em><b>${esc(ruName)}</b></a>`;
+    }).join("");
     const dropsHTML = drops.length
       ? `<div class="fact npc-drops-fact"><span>Что дропает</span><div class="craft-chips">${drops.map((d) => `<span class="craft-chip npc-drop-chip" data-ing="${escAttr(d.name)}" role="button" tabindex="0" aria-label="Открыть предмет: ${escAttr(itemRuById(d.id))}" title="Открыть предмет"><img class="ings-icon" src="assets/item-sprites/${encodeURIComponent(d.id)}.png" alt="" loading="lazy" decoding="async" /><em>${esc(d.chance || "")}${d.qty ? ` · ${esc(d.qty)}` : ""}</em><b>${esc(itemRuById(d.id))}</b></span>`).join("")}</div></div>`
-      : "";
+      : vanillaDropChips
+        ? `<div class="fact npc-drops-fact"><span>Что дропает</span><div class="craft-chips">${vanillaDropChips}</div></div>`
+        : "";
     tipCard.classList.toggle("boss-detail-card", Boolean(encounter));
     tipCard.dataset.encounterKind = encounter?.kind || "";
     tipCard.dataset.encounterEra = encounter?.era || "";
@@ -3009,6 +3026,8 @@
     if (type === "Ore") return "Добывается киркой из залежей этой руды в мире Террарии.";
     if (type === "Gem") return "Добывается в подземных слоях либо извлекается из подходящих блоков и самоцветных деревьев.";
     if (type === "Pylon") return "Покупается у довольных NPC в соответствующем биоме и размещается в поселении.";
+    const dropText = vanillaDropObtainText(item.id);
+    if (dropText) return dropText;
     const byType = {
       "Weapon": "Получается без крафта: выпадает с противника, находится в сундуке либо выдаётся за событие или задание.",
       "Accessory": "Получается без крафта: ищи в сундуках, дропе противников, наградах заданий или ассортименте NPC.",
@@ -3415,6 +3434,7 @@
         url: `https://terraria.wiki.gg/ru/wiki/${encodeURIComponent(ruTitle || enTitle).replace(/%20/g, "_")}`,
         requests: [
           ["https://terraria.wiki.gg/ru/api.php", ruTitle, "ru"],
+          ["https://terraria.wiki.gg/ru/api.php", enTitle !== ruTitle ? enTitle : "", "ru"],
           ["https://terraria.wiki.gg/api.php", enTitle, "en"]
         ].filter((entry) => entry[1])
       };
@@ -3425,26 +3445,46 @@
       key: `calamity:${title.toLocaleLowerCase("en")}`,
       label: "официальная Calamity Mod Wiki",
       url: `https://calamitymod.wiki.gg/wiki/Special:Search?search=${encodeURIComponent(title)}`,
-      requests: [["https://calamitymod.wiki.gg/api.php", title, "en"]]
+      requests: [
+        ["https://calamitymod.wiki.gg/ru/api.php", title, "ru"],
+        ["https://calamitymod.wiki.gg/api.php", title, "en"]
+      ]
     };
   }
   async function requestWikiExtract(apiUrl, pageTitle, language) {
-    const api = new URL(apiUrl);
-    api.search = new URLSearchParams({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", redirects: "1", titles: pageTitle, format: "json", origin: "*" });
-    const response = await fetch(api, { mode: "cors", credentials: "omit" });
-    if (!response.ok) throw new Error(`wiki ${response.status}`);
-    const payload = await response.json();
-    const page = Object.values(payload?.query?.pages || {})[0];
-    const extract = String(page?.extract || "").trim();
-    if (!extract || page?.missing !== undefined || /содержимое на этой странице отсутствует/i.test(extract)) throw new Error("no wiki extract");
-    let text = extract.split(/\n\s*\n/)[0].replace(/\s+/g, " ").slice(0, 1400);
-    if (language === "ru") text = ruText(text.replace(/\(\s*англ\.\s*[^)]+\)/gi, "").replace(/\s+/g, " ").trim());
-    return { text, language };
+    const clean = (raw) => {
+      let text = String(raw || "").trim().split(/\n\s*\n/)[0].replace(/\s+/g, " ").slice(0, 1400);
+      if (language === "ru") text = ruText(text.replace(/\(\s*англ\.\s*[^)]+\)/gi, "").replace(/\s+/g, " ").trim());
+      return text;
+    };
+    const call = async (params) => {
+      const api = new URL(apiUrl);
+      api.search = new URLSearchParams({ format: "json", origin: "*", ...params });
+      const response = await fetch(api, { mode: "cors", credentials: "omit" });
+      if (!response.ok) throw new Error(`wiki ${response.status}`);
+      return response.json();
+    };
+    try {
+      const payload = await call({ action: "query", prop: "extracts", exintro: "1", explaintext: "1", redirects: "1", titles: pageTitle });
+      const page = Object.values(payload?.query?.pages || {})[0];
+      const extract = String(page?.extract || "").trim();
+      if (extract && page?.missing === undefined && !/содержимое на этой странице отсутствует/i.test(extract)) {
+        return { text: clean(extract), language };
+      }
+    } catch { /* пробуем поисковый сниппет того же зеркала */ }
+    // Резерв: TextExtracts может быть отключён или страница переименована —
+    // берём точный поисковый сниппет той же официальной wiki.
+    const found = await call({ action: "query", list: "search", srsearch: pageTitle, srlimit: "1", srprop: "snippet" });
+    const hit = (found?.query?.search || [])[0];
+    const snippet = String(hit?.snippet || "").replace(/<[^>]+>/g, "").replace(/&\w+;/g, " ").trim();
+    if (!snippet || !hit?.title) throw new Error("no wiki extract");
+    return { text: clean(`${hit.title}: ${snippet}`), language };
   }
   async function enrichWikiSource(root, info) {
     const box = root?.querySelector?.("[data-wiki-live]");
     const profile = officialWikiProfile(info);
     if (!box || !profile || visualRecipeFor(info.key || info.name)) return;
+    if (info.vanilla && vanillaItemSources(info.vanilla.id).length) { box.hidden = true; return; }
     const cached = getWikiSourceCache()[profile.key];
     const paragraph = box.querySelector("p");
     const label = box.querySelector("small");
@@ -3488,6 +3528,7 @@
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
   let NPC_SOURCES = window.CALAMITY_NPC_SOURCES || {};
+  let VANILLA_DROPS = window.CALAMITY_VANILLA_DROPS || { npc: {} };
   let NPC_DATA = window.CALAMITY_NPCS || {};
   let NPC_RU_EXTRA = window.CALAMITY_NPC_RU || {};
   let NPC_BESTIARY_RU = window.CALAMITY_NPC_BESTIARY_RU || {};
@@ -4379,6 +4420,59 @@
     }
     return mobByNameCache.get(String(name || "").trim().toLocaleLowerCase("ru")) || null;
   }
+  let mobByGameIdCache = null;
+  function mobByGameId(npcId) {
+    if (!window.CALAMITY_MOB_INDEX) return null;
+    if (!mobByGameIdCache) {
+      mobByGameIdCache = new Map();
+      mobIndex().mobs.forEach((m) => {
+        if (m.src === "v" && /^v-?\d+$/.test(m.id)) mobByGameIdCache.set(Number(m.id.slice(1)), m);
+      });
+    }
+    return mobByGameIdCache.get(Number(npcId)) || null;
+  }
+  /* Ванильные лут-таблицы из кода игры: предмет -> с кого падает. */
+  let vanillaItemSourcesCache = null;
+  function vanillaItemSources(itemId) {
+    if (!vanillaItemSourcesCache) {
+      vanillaItemSourcesCache = new Map();
+      for (const [npcId, rows] of Object.entries(VANILLA_DROPS.npc || {})) {
+        (rows || []).forEach(([item, den, min, max, flags]) => {
+          const list = vanillaItemSourcesCache.get(item) || [];
+          list.push({ npcId: Number(npcId), den, min, max, flags });
+          vanillaItemSourcesCache.set(item, list);
+        });
+      }
+    }
+    return vanillaItemSourcesCache.get(Number(itemId)) || [];
+  }
+  function vanillaDropChanceLabel(source) {
+    const extras = [];
+    if (source.den > 1) extras.push(`1 из ${source.den}`);
+    if (source.max > 1) extras.push(source.min === source.max ? `×${source.max}` : `×${source.min}–${source.max}`);
+    if (source.flags & 1) extras.push("мастер-режим");
+    else if (source.flags & 2) extras.push("мешок босса");
+    if (source.flags & 8) extras.push("один из набора");
+    else if (source.flags & 4) extras.push("особое условие");
+    return extras.join(", ");
+  }
+  function vanillaDropObtainText(itemId, limit = 6) {
+    const sources = [...vanillaItemSources(itemId)].sort((a, b) => (a.den - b.den) || (a.flags - b.flags));
+    if (!sources.length) return "";
+    const parts = [];
+    const seen = new Set();
+    for (const source of sources) {
+      const mob = mobByGameId(source.npcId);
+      if (!mob || seen.has(mob.ru)) continue;
+      seen.add(mob.ru);
+      const label = vanillaDropChanceLabel(source);
+      parts.push(`${mob.ru}${label ? ` (${label})` : ""}`);
+      if (parts.length >= limit) break;
+    }
+    if (!parts.length) return "";
+    const restCount = new Set(sources.map((x) => x.npcId)).size - seen.size;
+    return `Падает с: ${parts.join(", ")}${restCount > 0 ? ` и ещё ${restCount}` : ""}. Данные лут-таблиц Terraria 1.4.4; имена кликабельны.`;
+  }
   /* Упоминания мобов в текстах получения/источников становятся кликабельными:
      клик открывает ту же карточку существа, что и в структурированных источниках. */
   let mobMentionPatternCache = null;
@@ -4462,25 +4556,30 @@
   }
   function mobCard(mob) {
     const stats = [
-      mob.hp !== null ? `<span><b>${mob.hp.toLocaleString("ru-RU")}</b><em>ОЗ</em></span>` : "",
-      mob.dmg !== null ? `<span><b>${mob.dmg}</b><em>урон</em></span>` : "",
-      mob.def !== null ? `<span><b>${mob.def}</b><em>защита</em></span>` : ""
+      mob.hp !== null ? `<span class="ms-hp"><i>ОЗ</i><b>${mob.hp.toLocaleString("ru-RU")}</b></span>` : "",
+      mob.dmg !== null ? `<span class="ms-dmg"><i>Урон</i><b>${mob.dmg}</b></span>` : "",
+      mob.def !== null ? `<span class="ms-def"><i>Защита</i><b>${mob.def}</b></span>` : ""
     ].filter(Boolean).join("");
     const chips = mob.tags.slice(0, 5).map((t) => `<i>${esc(mobTagLabel(t))}</i>`).join("");
-    const drops = mob.src === "c" ? mobDropCount(mob.en) : 0;
+    const gameId = mob.src === "v" && /^v-?\d+$/.test(mob.id) ? Number(mob.id.slice(1)) : null;
+    const drops = mob.src === "c"
+      ? mobDropCount(mob.en)
+      : gameId !== null ? ((VANILLA_DROPS.npc[String(gameId)] || (gameId < 0 ? VANILLA_DROPS.npc["1"] : null) || []).length) : 0;
+    const dropsLabel = drops ? `Дроп: ${drops} ${drops === 1 ? "предмет" : drops < 5 ? "предмета" : "предметов"}` : "";
     const links = [
       mob.kind === "boss" ? `<a href="#/bosses?q=${encodeURIComponent(mob.ru)}">Карточка босса →</a>` : "",
-      drops ? `<a href="#/items?s=${encodeURIComponent(mob.en)}" title="Показать предметы, которые выпадают с этого существа">Дроп: ${drops} ${drops === 1 ? "предмет" : drops < 5 ? "предмета" : "предметов"} →</a>` : ""
+      drops && mob.src === "c" ? `<a href="#/items?s=${encodeURIComponent(mob.en)}" title="Показать предметы, которые выпадают с этого существа">${dropsLabel} →</a>` : "",
+      drops && mob.src === "v" ? `<b class="npc-tip mob-drop-link" data-npc="${escAttr(mob.en)}" role="button" tabindex="0" title="Открыть карточку существа со списком дропа">${dropsLabel} →</b>` : ""
     ].filter(Boolean).join("");
     return `<article class="mob-card kind-${escAttr(mob.kind)}" data-src="${escAttr(mob.src)}">
-      <span class="slot mob-art">${mob.art ? `<img src="${escAttr(mob.art)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
-      <div class="mob-copy">
-        <div class="mob-name"><b>${esc(mob.ru)}</b>${mob.en !== mob.ru ? `<small>${esc(mob.en)}</small>` : ""}<em class="mob-kind ${escAttr(mob.kind)}">${MOB_KIND_RU[mob.kind] || mob.kind}${mob.src === "c" ? " · Calamity" : ""}</em></div>
-        ${stats ? `<div class="mob-stats">${stats}</div>` : ""}
-        ${chips ? `<div class="mob-tags">${chips}</div>` : ""}
-        ${mob.desc ? `<p class="mob-desc">${esc(mob.desc)}</p>` : ""}
-        ${links ? `<div class="mob-links">${links}</div>` : ""}
+      <em class="mob-kind ${escAttr(mob.kind)}">${MOB_KIND_RU[mob.kind] || mob.kind}${mob.src === "c" ? " · Calamity" : ""}</em>
+      <div class="mob-card-head">
+        <span class="slot mob-art">${mob.art ? `<img src="${escAttr(mob.art)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
+        <div class="mob-name"><b class="npc-tip mob-card-name" data-npc="${escAttr(mob.en)}" role="button" tabindex="0" title="Открыть карточку существа">${esc(mob.ru)}</b>${mob.en !== mob.ru ? `<small>${esc(mob.en)}</small>` : ""}${stats ? `<div class="mob-stats">${stats}</div>` : ""}</div>
       </div>
+      ${chips ? `<div class="mob-tags">${chips}</div>` : ""}
+      ${mob.desc ? `<p class="mob-desc">${esc(mob.desc)}</p>` : ""}
+      ${links ? `<div class="mob-links">${links}</div>` : ""}
     </article>`;
   }
   function renderMobs(params = {}) {

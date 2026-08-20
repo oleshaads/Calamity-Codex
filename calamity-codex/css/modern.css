@@ -5901,27 +5901,40 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
 .mob-event-info { display: grid; gap: 6px; margin-bottom: 12px; padding: 11px 13px; border: 1px solid #3a4148; border-left: 3px solid var(--gold); border-radius: 8px; background: #141c24; }
 .mob-event-info p { color: #b8c2ca; font-size: 13.5px; line-height: 1.6; }
 .mob-event-info b { color: #e8c46f; }
-.mob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 10px; }
+.mob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
 .mob-results .mob-grid { margin-bottom: 30px; }
-.mob-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start; padding: 11px 12px; border: 1px solid #2e3b46; border-radius: 9px; background: #141d25; }
-.mob-card:hover { border-color: #4a5965; }
-.mob-art { width: 64px; height: 64px; }
-.mob-art img { max-width: 58px; max-height: 58px; object-fit: contain; image-rendering: pixelated; }
+.mob-card { --mob-accent: #7f95a8; position: relative; display: flex; flex-direction: column; gap: 9px; overflow: hidden; padding: 13px 13px 12px; border: 1px solid #2e3b46; border-radius: 11px; background: linear-gradient(165deg, #182330, #121a23 62%); transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.mob-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(180deg, var(--mob-accent), color-mix(in srgb, var(--mob-accent), transparent 70%)); }
+.mob-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--mob-accent), #56616c 45%); box-shadow: 0 10px 22px rgba(0, 0, 0, .35), 0 0 16px color-mix(in srgb, var(--mob-accent), transparent 88%); }
+.mob-card.kind-boss { --mob-accent: #f06c73; }
+.mob-card.kind-critter { --mob-accent: #7ed6a0; }
+.mob-card[data-src="c"].kind-enemy { --mob-accent: #eea85b; }
+.mob-kind { position: absolute; top: 0; right: 0; padding: 4px 10px 5px; border-left: 1px solid #2e3b46; border-bottom: 1px solid #2e3b46; border-radius: 0 10px 0 10px; color: #9ba8af; background: #10181f; font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.mob-kind.boss { color: #f29aa2; }
+.mob-kind.critter { color: #8fd8ba; }
+.mob-card-head { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 13px; align-items: center; padding-right: 60px; }
+.mob-art { width: 76px; height: 76px; border-radius: 10px; background: radial-gradient(circle at 50% 38%, #22303e, #0e151c 78%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mob-accent), #33404c 70%), inset 0 -14px 18px rgba(0, 0, 0, .35); }
+.mob-art img { max-width: 64px; max-height: 64px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .45)); }
 .mob-art i { display: grid; place-items: center; width: 100%; height: 100%; color: #5f6b78; font-style: normal; }
-.mob-name b { display: block; color: #ece8dd; font-size: 14.5px; font-weight: 700; line-height: 1.35; }
-.mob-name small { display: block; margin-top: 2px; color: #77838f; font-size: 11.5px; }
-.mob-kind { display: inline-block; margin-top: 5px; padding: 2px 8px; border: 1px solid #3c4b56; border-radius: 9px; color: #9ba8af; background: #0f171e; font-family: var(--mono); font-size: 9px; font-style: normal; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.mob-kind.boss { border-color: #6d3a42; color: #f29aa2; }
-.mob-kind.critter { border-color: #33564a; color: #8fd8ba; }
-.mob-stats { display: flex; gap: 14px; margin-top: 7px; }
-.mob-stats span b { color: #e6e1d5; font-family: var(--mono); font-size: 13px; font-weight: 700; }
-.mob-stats span em { margin-left: 4px; color: #77838f; font-size: 11px; font-style: normal; }
-.mob-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-.mob-tags i { padding: 2px 8px; border: 1px solid #34424d; border-radius: 9px; color: #9fb3bd; background: #10181f; font-size: 11px; font-style: normal; }
-.mob-desc { margin-top: 8px; color: #9aa6ae; font-size: 13px; line-height: 1.6; }
-.mob-links { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: 8px; }
-.mob-links a { color: #8ebbe0; font-size: 12.5px; }
-.mob-links a:hover { text-decoration: underline; }
+.mob-name { min-width: 0; }
+.mob-name > b, .mob-card-name { display: inline-block; color: #f0ece1; font-size: 15px; font-weight: 700; line-height: 1.3; }
+b.mob-card-name { border-bottom: 1px dotted #5b6b79; cursor: pointer; }
+b.mob-card-name:hover, b.mob-card-name:focus-visible { border-bottom-color: var(--mob-accent); color: #fff; outline: none; }
+.mob-name small { display: block; margin-top: 2px; color: #74808c; font-size: 11px; }
+.mob-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mob-stats span { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 8px; border: 1px solid #33404c; border-radius: 7px; background: #10181f; }
+.mob-stats span i { font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.mob-stats span b { color: #e8e3d7; font-family: var(--mono); font-size: 12.5px; font-weight: 700; }
+.mob-stats .ms-hp i { color: #7ed6a0; }
+.mob-stats .ms-dmg i { color: #f29a8a; }
+.mob-stats .ms-def i { color: #8ebbe0; }
+.mob-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.mob-tags i { padding: 2px 9px; border: 1px solid color-mix(in srgb, var(--mob-accent), #34424d 74%); border-radius: 9px; color: color-mix(in srgb, var(--mob-accent), #cfd8de 55%); background: color-mix(in srgb, var(--mob-accent), #10181f 94%); font-size: 11px; font-style: normal; }
+.mob-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; color: #97a3ac; font-size: 12.5px; line-height: 1.6; }
+.mob-links { display: flex; flex-wrap: wrap; gap: 5px 14px; margin-top: auto; padding-top: 2px; }
+.mob-links a, .mob-links .mob-drop-link { color: #8ebbe0; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.mob-links a:hover, .mob-links .mob-drop-link:hover { text-decoration: underline; }
+b.mob-drop-link { border-bottom: 0; padding: 0; }
 @media (max-width: 760px) {
   .mob-grid { grid-template-columns: 1fr; }
   .mob-group > summary { grid-template-columns: 38px minmax(0, 1fr) auto; }

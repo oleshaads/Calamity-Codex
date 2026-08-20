@@ -110,6 +110,8 @@ const TAGS_BY_ID = new Map();
 // 4. Статы из NPC.cs SetDefaults2 (базовые значения ветки)
 const npcCs = read(path.join(VAN, "NPC.cs"));
 const STATS_BY_ID = new Map();
+const TINT_BY_TYPE = new Map();   // положительный type -> [r,g,b] из color = new Color(...)
+const NETID_INFO = new Map();     // отрицательный netID -> статы и тинт варианта
 {
   const start = npcCs.indexOf("public void SetDefaults(int Type, NPCSpawnParams");
   const end = npcCs.indexOf("\n\t\tpublic void SetDefaultsKeepPlayerInteraction", start);
@@ -131,8 +133,23 @@ const STATS_BY_ID = new Map();
     const top = body.split(/\n\t{4}(?=switch|if|for|while)/)[0];
     const grab = (name) => { const g = top.match(new RegExp(`(?:^|\\n)\\t*${name} = (\\d+);`)); return g ? Number(g[1]) : null; };
     const stats = { hp: grab("lifeMax"), dmg: grab("damage"), def: grab("defense") };
+    const tintMatch = top.match(/color = new Color\((\d+), (\d+), (\d+)/);
+    if (tintMatch) for (const id of ids) if (!TINT_BY_TYPE.has(id)) TINT_BY_TYPE.set(id, [Number(tintMatch[1]), Number(tintMatch[2]), Number(tintMatch[3])]);
     if (stats.hp === null && stats.dmg === null) continue;
     for (const id of ids) if (!STATS_BY_ID.has(id)) STATS_BY_ID.set(id, stats);
+  }
+  // Отрицательные netID (цветные слизни и другие варианты): статы и игровой тинт.
+  const netStart = npcCs.indexOf("private void SetDefaultsFromNetId");
+  const netSeg = npcCs.slice(netStart, npcCs.indexOf("\n\t\tpublic", netStart + 100));
+  for (const c of netSeg.matchAll(/case (-\d+):([\s\S]*?)break;/g)) {
+    const id = Number(c[1]);
+    const body = c[2];
+    const num = (rx) => { const g = body.match(rx); return g ? Number(g[1]) : null; };
+    const tint = body.match(/color = new Color\((\d+), (\d+), (\d+)/);
+    NETID_INFO.set(id, {
+      hp: num(/\n\t+life = (\d+);/), dmg: num(/\n\t+damage = (\d+);/), def: num(/\n\t+defense = (\d+);/),
+      tint: tint ? [Number(tint[1]), Number(tint[2]), Number(tint[3])] : null
+    });
   }
 }
 
@@ -149,13 +166,19 @@ const VANILLA_FRAMES = [];
   const arr = mainCs.match(/npcFrameCount = new int\[\d+\]\s*\{([\s\S]*?)\};/);
   if (arr) arr[1].split(",").forEach((v, i) => { VANILLA_FRAMES[i] = Number(v.trim()) || 1; });
 }
-const cropSprite = (source, target, frames) => {
+const cropSprite = (source, target, frames, tint = null) => {
   const [w, h] = execFileSync("identify", ["-format", "%w %h", source], { encoding: "utf8" }).trim().split(/\s+/).map(Number);
-  if (frames > 1 && h % frames === 0 && h / frames >= 8) {
-    execFileSync("convert", [source, "-crop", `${w}x${h / frames}+0+0`, "+repage", "-define", "png:exclude-chunks=date,time", target]);
-  } else {
-    fs.copyFileSync(source, target);
+  const args = [source];
+  if (frames > 1 && h % frames === 0 && h / frames >= 8) args.push("-crop", `${w}x${h / frames}+0+0`, "+repage");
+  if (tint) {
+    // Игра умножает серую текстуру на цвет NPC; повторяем множительный тинт.
+    // Слишком тёмные тинты (чёрный слизень) поднимаем до видимого минимума.
+    const [r, g, b] = tint.every((c) => c < 46) ? [70, 70, 70] : tint.map((c) => Math.max(c, 24));
+    args.push("(", "+clone", "-alpha", "off", "-fill", `rgb(${r},${g},${b})`, "-colorize", "100", ")", "-channel", "RGB", "-compose", "multiply", "-composite");
   }
+  if (args.length === 1) { fs.copyFileSync(source, target); return; }
+  args.push("-define", "png:exclude-chunks=date,time", target);
+  execFileSync("convert", args);
 };
 
 const vanillaMobs = [];
@@ -169,7 +192,10 @@ for (const row of dataset) {
   if (!key) { missingVanilla.push(en); continue; }
   const id = KEY_TO_ID.get(key);
   const ru = ruNpcNames[key] || en;
-  const stats = STATS_BY_ID.get(id) || {};
+  const netInfo = id < 0 ? (NETID_INFO.get(id) || {}) : {};
+  const stats = id < 0
+    ? { hp: netInfo.hp ?? null, dmg: netInfo.dmg ?? null, def: netInfo.def ?? null }
+    : (STATS_BY_ID.get(id) || {});
   const EXTRA_TAGS = {
     "Green Slime": ["b:Surface", "t:DayTime"], "Baby Slime": ["b:Surface"], "Black Slime": ["b:TheUnderground"],
     "Pinky": ["b:Surface", "t:DayTime"], "Purple Slime": ["b:Surface", "t:DayTime"], "Red Slime": ["b:TheUnderground"],
@@ -182,13 +208,14 @@ for (const row of dataset) {
   const NPCTEX = path.join(SRC, "npctex/Art/Terraria/images");
   const texId = id > 0 ? id : 1; // цветные слизни — варианты текстуры синего слизня
   const texFile = path.join(NPCTEX, `NPC_${texId}.png`);
+  const tint = id < 0 ? (netInfo.tint || TINT_BY_TYPE.get(texId) || null) : (TINT_BY_TYPE.get(id) || null);
   let art = "";
   if (exists(texFile)) {
     art = `assets/mob-sprites/v-${artSlug(en)}.png`;
-    if (!SKIP_ART) cropSprite(texFile, path.join(REPO, "calamity-codex", art), VANILLA_FRAMES[texId] || 1);
+    if (!SKIP_ART) cropSprite(texFile, path.join(REPO, "calamity-codex", art), VANILLA_FRAMES[texId] || 1, tint);
   } else if (exists(spriteFile)) {
     art = `assets/mob-sprites/v-${artSlug(en)}.png`;
-    if (!SKIP_ART) cropSprite(spriteFile, path.join(REPO, "calamity-codex", art), id > 0 ? (VANILLA_FRAMES[id] || 1) : 1);
+    if (!SKIP_ART) cropSprite(spriteFile, path.join(REPO, "calamity-codex", art), id > 0 ? (VANILLA_FRAMES[id] || 1) : 1, tint);
   }
   vanillaMobs.push({
     src: "v", id: `v${id}`, en, ru, kind: type === "Boss" ? "boss" : type === "Critter" ? "critter" : "enemy",

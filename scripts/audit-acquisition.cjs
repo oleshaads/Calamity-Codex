@@ -39,6 +39,11 @@ window.matchMedia = () => ({ matches: false, addListener() {}, removeListener() 
 window.fetch = async (url) => {
   requests.push(String(url));
   const isCalamity = String(url).includes("calamitymod.wiki.gg");
+  // Русское зеркало Calamity Wiki в тесте отвечает «страницы нет»: код должен
+  // честно перейти к английскому API и пометить результат как EN.
+  if (isCalamity && String(url).includes("/ru/api.php")) {
+    return { ok: true, status: 200, async json() { return { query: { pages: { 1: { pageid: 1 } } } }; } };
+  }
   const extract = isCalamity
     ? "The Celestial Onion is a permanent power-up item dropped by the Moon Lord. It permanently increases the number of accessory slots and does nothing after the maximum slot has already been granted."
     : "Алхимический стол встречается как размещённая мебель в случайных комнатах Данжа. После победы над Скелетроном его можно сломать киркой и перенести на базу.";
@@ -81,6 +86,9 @@ const settle = (ms = 70) => new Promise((resolve) => setTimeout(resolve, ms));
 
   window.fetch = async (url) => {
     requests.push(String(url));
+    if (String(url).includes("calamitymod.wiki.gg/ru/")) {
+      return { ok: true, status: 200, async json() { return { query: { pages: { 1: { pageid: 1 } } } }; } };
+    }
     return { ok: true, status: 200, async json() { return { query: { pages: { 1: { pageid: 1, extract: "The Celestial Onion is a permanent power-up item dropped by the Moon Lord." } } } }; } };
   };
   window.location.hash = "#/useful?type=permanent";

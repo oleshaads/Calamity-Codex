@@ -39,12 +39,12 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260819-core66";
+const releaseVersion = "20260819-core67";
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];
 const catalogSources = [
-  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-meta.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js", "mobs.js", "mob-guide.js"
+  "catalog.js", "boss-relations.js", "useful.js", "vanilla-tree.js", "vanilla-meta.js", "vanilla-ru.js", "npc-sources.js", "npc-ru.js", "npc-art.js", "ru-names.js", "mobs.js", "mob-guide.js", "vanilla-drops.js"
 ];
 const runtimePath = path.join(root, "js/codex.min.js");
 const catalogBundlePath = path.join(root, "js/codex-data.min.js");
