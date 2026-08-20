@@ -6551,3 +6551,20 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 0; background: r
   letter-spacing: .045em;
 }
 .hero-inner h1 { letter-spacing: .02em; }
+
+/* ============== Проход 17: живые шкалы и последние штрихи ============== */
+
+/* Все шкалы прогресса анимируют заполнение — отметил квест/босса и видно,
+   как полоса растёт (глобальный reduced-motion это отключает) */
+.hpbar i, .jm-bar i, .ragebar i, .recipe-check-progress i, .home-command-progress u, .boss-detail-danger i, .qmap-progress .hpbar i { transition: width .5s cubic-bezier(.2, .7, .3, 1); }
+
+/* Герб кодекса в боковой панели откликается на курсор */
+.rail-brand { border-radius: 10px; transition: background .14s ease; }
+.rail-brand:hover { background: rgba(232, 196, 111, .05); }
+.rail-brand:hover .brand-art { box-shadow: inset 0 0 0 1px #6b5a33, inset 0 -10px 14px rgba(0, 0, 0, .25), 0 0 16px rgba(232, 196, 111, .14); }
+
+/* Спрайты в чипах ингредиентов — пиксель-точные */
+.ings-icon { image-rendering: pixelated; }
+
+/* Подписи «в игре: …» приглушены курсивом для второго плана */
+.en-sub, .tree-root-sub { font-style: italic; }
