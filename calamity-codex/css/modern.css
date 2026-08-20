@@ -6397,3 +6397,52 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .ragebar { overflow: hidden; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5); }
 .ragebar i { border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 0 10px rgba(240, 108, 115, .25); }
 .sound-toggle[aria-pressed="true"] { color: #e8c46f; }
+
+/* Фирменные цвета групп бестиария: биом/событие узнаётся по оттенку. */
+.mob-group { --mg: #46545f; }
+.mob-group > summary { border-left: 3px solid color-mix(in srgb, var(--mg), transparent 45%); }
+.mob-group:hover { border-color: color-mix(in srgb, var(--mg), #2d3a45 45%); }
+.mob-group[open] > summary { border-bottom-color: color-mix(in srgb, var(--mg), #2b3842 55%); }
+.mob-group .mob-group-icon { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mg), #33404c 45%), inset 0 -10px 14px rgba(0, 0, 0, .28); }
+.mob-group > summary em { border: 1px solid color-mix(in srgb, var(--mg), #3c4b56 55%); }
+.mob-group[data-group="blood-moon"] { --mg: #f06c73; }
+.mob-group[data-group="slime-rain"] { --mg: #9b8cff; }
+.mob-group[data-group="goblins"] { --mg: #7fa7e0; }
+.mob-group[data-group="rain"] { --mg: #6ea7d9; }
+.mob-group[data-group="sandstorm"] { --mg: #e8c46f; }
+.mob-group[data-group="windy"] { --mg: #a8d9a0; }
+.mob-group[data-group="eclipse"] { --mg: #e8a44c; }
+.mob-group[data-group="frost-legion"] { --mg: #9be7ff; }
+.mob-group[data-group="pirates"] { --mg: #e8c46f; }
+.mob-group[data-group="old-ones"] { --mg: #c997e8; }
+.mob-group[data-group="martian"] { --mg: #6ecbff; }
+.mob-group[data-group="pumpkin-moon"] { --mg: #ff8a3c; }
+.mob-group[data-group="frost-moon"] { --mg: #9be7ff; }
+.mob-group[data-group="pillars"] { --mg: #7ae0ff; }
+.mob-group[data-group="acid-rain"] { --mg: #b6e04a; }
+.mob-group[data-group="surface"] { --mg: #91d47f; }
+.mob-group[data-group="night"] { --mg: #7f95c8; }
+.mob-group[data-group="underground"] { --mg: #c2a06a; }
+.mob-group[data-group="snow"] { --mg: #9be7ff; }
+.mob-group[data-group="desert"] { --mg: #e8c46f; }
+.mob-group[data-group="jungle"] { --mg: #6ee07a; }
+.mob-group[data-group="ocean"] { --mg: #4aa8ff; }
+.mob-group[data-group="sky"] { --mg: #9fd0ff; }
+.mob-group[data-group="corruption"] { --mg: #a06be0; }
+.mob-group[data-group="crimson"] { --mg: #e0606a; }
+.mob-group[data-group="hallow"] { --mg: #e883c9; }
+.mob-group[data-group="mushroom"] { --mg: #6ecbff; }
+.mob-group[data-group="dungeon"] { --mg: #8aa4d4; }
+.mob-group[data-group="temple"] { --mg: #d8b55e; }
+.mob-group[data-group="underworld"] { --mg: #ff6b35; }
+.mob-group[data-group="spider"] { --mg: #b9a7a0; }
+.mob-group[data-group="granite"] { --mg: #7a86b8; }
+.mob-group[data-group="marble"] { --mg: #cfd3da; }
+.mob-group[data-group="meteor"] { --mg: #ff8a5b; }
+.mob-group[data-group="graveyard"] { --mg: #9aa7ae; }
+.mob-group[data-group="sunken-sea"] { --mg: #3dcdc0; }
+.mob-group[data-group="sulphur-sea"] { --mg: #b6e04a; }
+.mob-group[data-group="abyss"] { --mg: #5a7ae8; }
+.mob-group[data-group="crags"] { --mg: #ff3b4a; }
+.mob-group[data-group="astral"] { --mg: #d07aff; }
+.mob-group[data-group="plague"] { --mg: #8fd12b; }

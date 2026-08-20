@@ -85,7 +85,7 @@
     wiki:      { eyebrow: "Архив исследователя", mark: "✦", no: "I",   cover: "assets/headers/wiki.webp",      bg: "assets/themes/mushroom.webp",  accent: "#8ebbe0", fx: "dust" },
     bosses:    { eyebrow: "Бестиарий Каламити", mark: "☠", no: "II",  cover: "assets/headers/bosses.webp",    bg: "assets/themes/brimstone.webp", accent: "#f06c73", fx: "fire" },
     items:     { eyebrow: "Арсенал героя",      mark: "◆", no: "III",  cover: "assets/headers/items.webp",     bg: "assets/headers/items.webp",   accent: "#68d8c9", fx: "sparks", filter: "saturate(.78) contrast(1.05) brightness(.76)" },
-    useful:    { eyebrow: "Набор исследователя", mark: "✚", no: "IV",   cover: "assets/headers/crafts.webp",    bg: "assets/themes/forest.webp",   accent: "#7ed6a0", fx: "leaves" },
+    useful:    { eyebrow: "Набор исследователя", mark: "✚", no: "IV",   cover: "assets/headers/useful.webp",    bg: "assets/themes/forest.webp",   accent: "#7ed6a0", fx: "leaves" },
     favorites: { eyebrow: "Личная коллекция",    mark: "★", no: "V",    cover: "assets/headers/favorites.webp", bg: "assets/themes/dungeon.webp",  accent: "#efc66e", fx: "stars" },
     lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "VI",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.webp",      accent: "#c997e8", fx: "spores" },
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VII",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",     accent: "#eea85b", fx: "embers" },
@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core84";
+  const ASSET_VERSION = "20260819-core85";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");

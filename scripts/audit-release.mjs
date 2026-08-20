@@ -39,7 +39,7 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260819-core84";
+const releaseVersion = "20260819-core85";
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];
@@ -251,7 +251,7 @@ check(app.includes("нет спрайта"), "Honest missing-sprite state is abs
 
 const officialArt = [
   "hero.jpg", "crest.jpg", "novice.jpg", "veteran.jpg", "emblem.png", "emblem.webp", "favicon.png",
-  ...["wiki", "bosses", "items", "favorites", "lex", "crafts", "biomes", "mobs"].map((name) => `headers/${name}.webp`),
+  ...["wiki", "bosses", "items", "favorites", "lex", "crafts", "biomes", "mobs", "useful"].map((name) => `headers/${name}.webp`),
   ...["forest", "wulfrum", "sea", "brimstone", "hell", "desert", "ice", "evil", "mushroom", "dungeon"].map((name) => `themes/${name}.jpg`)
 ];
 for (const relative of officialArt) {
