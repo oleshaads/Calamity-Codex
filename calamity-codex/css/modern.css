@@ -6060,3 +6060,68 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   .card:hover, .btn:hover, .jump:hover, .mob-card:hover { transform: none; }
   * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* ============== Премиальный слой, проход 2: страницы и детали ============== */
+
+/* Герой главной: золотой градиент имени и живые кнопки режимов */
+.hero-inner h1 { text-shadow: 0 4px 30px rgba(232, 196, 111, .14); }
+.hero-inner h1 span { background: linear-gradient(180deg, #f6e2ae 0%, #e8c46f 55%, #bd9b52 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mode-btn { background: linear-gradient(165deg, #1a2530, #131c26 60%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.mode-btn:hover { border-color: #4d5a64; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 10px 24px rgba(0, 0, 0, .32); transform: translateY(-2px); }
+.mode-btn.primary-tree { border-color: #6b5a33; background: linear-gradient(165deg, #262013, #17151b 65%); }
+.mode-btn.primary-tree:hover { border-color: #8a6d3b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 10px 26px rgba(0, 0, 0, .34), 0 0 22px rgba(232, 196, 111, .08); }
+.mode-btn .mode-arrow { color: #e8c46f; }
+.hs-stats a { border-radius: 9px; transition: background .14s ease, transform .14s ease; }
+.hs-stats a:hover { background: rgba(255, 255, 255, .035); transform: translateY(-1px); }
+
+/* Факты в шапке раздела — стеклянные пилюли */
+.page-head-facts span { padding: 8px 13px; border: 1px solid rgba(255, 255, 255, .07); border-radius: 10px; background: rgba(9, 13, 18, .5); }
+.page-head-facts span b { color: color-mix(in srgb, var(--page-accent, #e8c46f), #fff 30%); }
+
+/* Скролл-прогресс и клавиша поиска */
+.scroll-hp { box-shadow: 0 0 10px rgba(232, 196, 111, .35); }
+.search kbd { padding: 2px 8px; border: 1px solid #38464f; border-bottom-width: 2px; border-radius: 6px; color: #9fb3bd; background: #161f29; }
+
+/* Результаты глобального поиска */
+.search-hit { border-radius: 9px; transition: background .12s ease, border-color .12s ease; }
+.search-hit:hover, .search-hit:focus-visible { background: linear-gradient(90deg, rgba(232, 196, 111, .08), rgba(232, 196, 111, .02) 55%, transparent); }
+
+/* Мобильные вкладки: стеклянная панель с золотым индикатором */
+.mobile-tabs { border-top: 1px solid #232e39; background: rgba(11, 15, 21, .97); box-shadow: 0 -12px 26px rgba(0, 0, 0, .38); }
+.mobile-tabs a { position: relative; }
+.mobile-tabs a.active::after { content: ""; position: absolute; top: 0; left: 22%; right: 22%; height: 2px; border-radius: 0 0 3px 3px; background: linear-gradient(90deg, transparent, #e8c46f, transparent); }
+
+/* Страница квеста: цель, шаги и чеклист */
+.obj-box { border-left: 3px solid #e8c46f; border-radius: 10px; background: linear-gradient(90deg, rgba(232, 196, 111, .07), rgba(20, 28, 36, .6) 45%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+.step .step-n { border: 1px solid #6b5a33; border-radius: 8px; color: #e8c46f; background: linear-gradient(180deg, #241e12, #181410); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
+.task { border-radius: 9px; transition: background .13s ease; }
+.task:hover { background: rgba(255, 255, 255, .03); }
+.task.checked span { color: #74a58a; text-decoration: line-through; text-decoration-color: rgba(116, 165, 138, .5); }
+
+/* Дерево крафта: узлы и круглые тумблеры */
+.tnode-card { border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035), 0 4px 12px rgba(0, 0, 0, .22); transition: border-color .14s ease, box-shadow .14s ease; }
+.tnode-card:hover { border-color: #57646d; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 18px rgba(0, 0, 0, .3); }
+.ttoggle { border-radius: 50%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); }
+
+/* Эпохи: цветные бейджи прогрессии */
+.badge { border-radius: 8px; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+.badge.pre { border-color: #2f5a4c; color: #8fd8ba; background: #10201b; }
+.badge.hard { border-color: #6b5333; color: #eec27f; background: #221a10; }
+.badge.post { border-color: #5a3f6b; color: #cfa3ec; background: #1d1424; }
+.badge.end { border-color: #6b3340; color: #f2949f; background: #221115; }
+
+/* Журнал побед */
+.boss-defeat-btn { border-radius: 9px; transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease; }
+.boss-defeat-btn:hover { transform: translateY(-1px); }
+.boss-defeat-btn.done { border-color: #2f6b45; color: #9fe8bd; background: linear-gradient(180deg, #12271b, #0e1f16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 14px rgba(47, 169, 84, .12); }
+
+/* Пустые состояния и загрузка */
+.empty-state { border: 1px dashed #34424e; border-radius: 12px; background: rgba(13, 18, 24, .5); }
+.empty-state > span { color: #e8c46f; }
+.app-boot { border-radius: 12px; }
+
+/* Разделители фактов внутри карточек */
+.facts .fact + .fact { border-top: 1px dashed rgba(120, 140, 155, .16); }
+
+/* Свечение иконок быстрых разделов */
+.jump:hover .jump-icon { box-shadow: inset 0 0 0 2px #4d5a68, inset 0 0 0 3px rgba(9, 13, 18, .85), 0 0 18px color-mix(in srgb, var(--jump-accent), transparent 55%); }
