@@ -6446,3 +6446,35 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 .mob-group[data-group="crags"] { --mg: #ff3b4a; }
 .mob-group[data-group="astral"] { --mg: #d07aff; }
 .mob-group[data-group="plague"] { --mg: #8fd12b; }
+
+/* ============== Проход 13: цвета эпох и живой фон карты квестов ============== */
+
+/* Вступление карты квестов: декоративный арт кодекса подложкой */
+.qmap-status { position: relative; overflow: hidden; }
+.qmap-status::before { content: ""; position: absolute; inset: 0; background: url("../assets/novice.jpg") center 28% / cover no-repeat; opacity: .12; pointer-events: none; }
+.qmap-status > * { position: relative; }
+
+/* Эпохи: единая палитра прогрессии на карте квестов… */
+.qmap-era { --era-c: #8fd8ba; border-left: 3px solid color-mix(in srgb, var(--era-c), transparent 45%); }
+.qmap-era[data-era="hard"] { --era-c: #eec27f; }
+.qmap-era[data-era="post"] { --era-c: #cfa3ec; }
+.qmap-era[data-era="end"] { --era-c: #f2949f; }
+.qmap-era .qmap-era-no { border-color: color-mix(in srgb, var(--era-c), #3c4b56 45%); color: var(--era-c); }
+.qmap-era .qmap-era-head em { border: 1px solid color-mix(in srgb, var(--era-c), #3c4b56 55%); }
+
+/* …и на карточках боссов: верхняя полоса в цвет этапа */
+.boss-card { --era-c: #8fd8ba; position: relative; }
+.boss-card[data-era="hard"] { --era-c: #eec27f; }
+.boss-card[data-era="post"] { --era-c: #cfa3ec; }
+.boss-card[data-era="end"] { --era-c: #f2949f; }
+.boss-card::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 12px 12px 0 0; background: linear-gradient(90deg, var(--era-c), color-mix(in srgb, var(--era-c), transparent 70%) 70%, transparent); opacity: .75; pointer-events: none; }
+
+/* Эпохи на главной: номер в цвет этапа */
+.era-card[data-era="pre"] .era-no { color: rgba(143, 216, 186, .3); }
+.era-card[data-era="hard"] .era-no { color: rgba(238, 194, 127, .3); }
+.era-card[data-era="post"] .era-no { color: rgba(207, 163, 236, .3); }
+
+/* Страница квеста: панели несут акцент своей главы */
+.quest-topbar { border-left: 3px solid color-mix(in srgb, var(--accent, #e8c46f), transparent 30%); }
+.rail-quest { border-left: 3px solid color-mix(in srgb, var(--accent, #e8c46f), transparent 30%); }
+.rail-quest-now b { color: color-mix(in srgb, var(--accent, #e8c46f), #fff 40%); }
