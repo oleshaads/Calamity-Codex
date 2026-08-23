@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core100";
+  const ASSET_VERSION = "20260819-core101";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -4656,7 +4656,7 @@
     [...eventGroups, ...biomeGroups].forEach((g) => g.list.forEach((m) => groupedIds.add(m.id)));
     const rest = filtered.filter((m) => !groupedIds.has(m.id));
     if (rest.length) biomeGroups.push({ id: "other", title: "Особые существа и миньоны боссов", tags: [], list: [...rest].sort(byPower), sub: "Появляются в бою с боссами, в особых местах или по особым условиям." });
-    const searchHits = query ? filtered.filter((m) => matchesSearch(mobSearchBlob(m), query)).slice(0, 150) : [];
+    const searchHits = query ? filtered.filter((m) => matchesSearch(mobSearchBlob(m), query)).slice(0, document.body.classList.contains("lite") ? 60 : 150) : [];
     const activeFilterCount = (filters.src ? 1 : 0) + (filters.kind ? 1 : 0);
     const groupBlock = (group, type) => {
       const icon = group.icon || group.list.find((m) => m.art)?.art || "";
@@ -6061,7 +6061,7 @@
       const exact = new Set(list.filter((x) => String(x.name).toLocaleLowerCase("ru") === search || ruItemName(x).toLocaleLowerCase("ru") === search).map((x) => x));
       if (exact.size) list.sort((a, b) => (exact.has(b) ? 1 : 0) - (exact.has(a) ? 1 : 0));
     }
-    const pageSize = mode === "catalog" ? CATALOG_PAGE_SIZE : GUIDE_PAGE_SIZE;
+    const pageSize = (mode === "catalog" ? CATALOG_PAGE_SIZE : GUIDE_PAGE_SIZE) / (document.body.classList.contains("lite") ? 2 : 1);
     const requestedLimit = Number.parseInt(params.limit, 10);
     const limit = Number.isFinite(requestedLimit) ? Math.max(pageSize, requestedLimit) : pageSize;
     const visible = list.slice(0, limit);
@@ -8247,6 +8247,15 @@
         // Сайт остаётся обычным статическим приложением, если SW запрещён.
       });
     }, { once: true });
+  }
+
+  /* Прогрев на простое: когда сеть не экономная (не 2g/saveData) и лёгкий
+     режим выключен, тяжёлый бандл каталога скачивается заранее в фоне —
+     «Предметы», «Крафты» и глобальный поиск открываются мгновенно. */
+  {
+    const warmCatalogOnIdle = () => setTimeout(() => queueBackgroundTask(() => prefetchCatalogData()), 2500);
+    if (document.readyState === "complete") warmCatalogOnIdle();
+    else addEventListener("load", warmCatalogOnIdle, { once: true });
   }
 
   addEventListener("popstate", () => { restoreScrollOnNextRoute = true; });

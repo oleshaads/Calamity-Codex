@@ -1,4 +1,4 @@
-const VERSION = "20260819-core100";
+const VERSION = "20260819-core101";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
@@ -12,6 +12,7 @@ const CORE_ASSETS = [
   "./assets/icon-192.png",
   "./assets/icon-512.png",
   "./assets/hero.webp",
+  "./assets/fonts/RussoOne-Regular.woff2",
   "./assets/sprites/Calamity.png",
   "./assets/sprites/Wooden_Sword.png",
   "./assets/sprites/AdvancedDisplay.png",
@@ -35,23 +36,34 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-async function trimRuntimeCache(maxEntries = 400) {
+async function trimRuntimeCache(maxEntries = 700) {
   const cache = await caches.open(RUNTIME_CACHE);
   const keys = await cache.keys();
   if (keys.length <= maxEntries) return;
   await Promise.all(keys.slice(0, keys.length - maxEntries).map((key) => cache.delete(key)));
 }
 
-async function networkFirstNavigation(request) {
-  try {
+// Мгновенный старт: оболочка отдаётся из кэша без ожидания сети, а свежий
+// index.html подтягивается в фоне. Обновление релиза всё равно приходит через
+// новый VERSION сервис-воркера (registration.update() при каждом запуске).
+async function instantNavigation(event, request) {
+  const cached = await caches.match("./index.html");
+  const refresh = (async () => {
     const response = await fetch(request);
     if (response.ok) {
       const cache = await caches.open(RUNTIME_CACHE);
       await cache.put("./index.html", response.clone());
     }
     return response;
+  })();
+  if (cached) {
+    event.waitUntil(refresh.catch(() => {}));
+    return cached;
+  }
+  try {
+    return await refresh;
   } catch {
-    return (await caches.match("./index.html")) || (await caches.match("./"));
+    return (await caches.match("./")) || Response.error();
   }
 }
 
@@ -80,7 +92,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (request.mode === "navigate") {
-    event.respondWith(networkFirstNavigation(request));
+    event.respondWith(instantNavigation(event, request));
     return;
   }
   // Local art is keyed by this worker's release even when stale application

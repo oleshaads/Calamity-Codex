@@ -6530,7 +6530,7 @@ body::before { content: ""; position: fixed; inset: 0; z-index: 0; background: r
 /* ============== Проход 16: фирменный заголовочный шрифт ============== */
 @font-face {
   font-family: "Russo One";
-  src: url("../assets/fonts/RussoOne-Regular.ttf") format("truetype");
+  src: url("../assets/fonts/RussoOne-Regular.woff2") format("woff2"), url("../assets/fonts/RussoOne-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -6773,3 +6773,12 @@ body.lite .hpbar i, body.lite .ragebar i, body.lite .recipe-check-progress i { b
 .rail-status { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid #26323d; border-radius: 8px; background: rgba(13, 18, 24, .55); }
 .rail-status .status-dot { flex: none; }
 .rail-status [data-connection-label] { overflow: hidden; font-size: 9.5px; letter-spacing: .06em; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ==================================================================== */
+/* Производительность: длинные списки рендерятся лениво самим браузером */
+/* content-visibility пропускает layout/paint карточек за экраном —     */
+/* бестиарий на 600+ существ и крафты листаются без просадок.           */
+/* ==================================================================== */
+.mob-card { content-visibility: auto; contain-intrinsic-size: auto 236px; }
+.boss-card { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+.craft-grid .card { content-visibility: auto; contain-intrinsic-size: auto 340px; }

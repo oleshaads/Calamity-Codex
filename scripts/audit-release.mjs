@@ -39,7 +39,7 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260819-core100";
+const releaseVersion = "20260819-core101";
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];
@@ -85,7 +85,7 @@ check(manifest.display === "standalone" && manifest.start_url === "./#/", "PWA m
 check((manifest.icons || []).some((icon) => icon.sizes === "192x192") && (manifest.icons || []).some((icon) => icon.sizes === "512x512"), "PWA install icons are incomplete");
 for (const icon of manifest.icons || []) check(fs.existsSync(path.join(root, icon.src)), `PWA icon is missing: ${icon.src}`);
 const serviceWorker = fs.readFileSync(serviceWorkerPath, "utf8");
-check(serviceWorker.includes(`VERSION = "${releaseVersion}"`) && serviceWorker.includes("networkFirstNavigation") && serviceWorker.includes("trimRuntimeCache"), "Service worker version/cache strategies are incomplete");
+check(serviceWorker.includes(`VERSION = "${releaseVersion}"`) && serviceWorker.includes("instantNavigation") && serviceWorker.includes("trimRuntimeCache"), "Service worker version/cache strategies are incomplete");
 check(serviceWorker.includes("codex-data.min.js") && serviceWorker.includes("codex.min.js"), "Service worker does not preserve both core and deferred catalog bundles offline");
 check(app.includes("serviceWorker.register(`sw.js?v=${ASSET_VERSION}`") && app.includes("syncConnectionStatus"), "App does not register the current service worker or expose connection state");
 check(indexHtml.includes('id="install-app"') && app.includes("beforeinstallprompt") && app.includes("appinstalled"), "PWA install prompt UI is missing");
