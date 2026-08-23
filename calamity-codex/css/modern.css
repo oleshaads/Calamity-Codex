@@ -6759,3 +6759,17 @@ body.lite .qmap-status::before { display: none; }
 body.lite .craft-graph-page .craft-tree-inline-body, body.lite #tree-body { background-image: none; }
 body.lite .card-shot, body.lite .mob-art, body.lite .slot { box-shadow: inset 0 0 0 1px #33404c; background: #10181f; }
 body.lite .hpbar i, body.lite .ragebar i, body.lite .recipe-check-progress i { box-shadow: none; }
+
+/* ==================================================================== */
+/* Низ боковой панели: единый премиум-блок (прогресс · тумблер · статус) */
+/* ==================================================================== */
+.rail-footer > * + * { margin-top: 10px; }
+.rail-progress .hpbar, .rail-rev .ragebar { height: 8px; margin-top: 7px; border: 1px solid #33404c; border-radius: 5px; background: #0d1218; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); }
+.rail-progress .hpbar i { min-width: 6px; border-radius: 5px; background: linear-gradient(90deg, #8f6b2b, #e8c46f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 8px rgba(232, 196, 111, .3); }
+.rail-rev .ragebar i { min-width: 6px; border-radius: 5px; }
+.rail-progress span i { color: #e8c46f; font-family: var(--mono); font-size: 10px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rail-progress span b { color: #9aa6ae; }
+.lite-toggle { margin-bottom: 0; }
+.rail-status { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid #26323d; border-radius: 8px; background: rgba(13, 18, 24, .55); }
+.rail-status .status-dot { flex: none; }
+.rail-status [data-connection-label] { overflow: hidden; font-size: 9.5px; letter-spacing: .06em; text-overflow: ellipsis; white-space: nowrap; }
