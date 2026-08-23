@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core97";
+  const ASSET_VERSION = "20260819-core98";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -253,6 +253,7 @@
     if (catalogDataReady() || catalogPrefetchLink || navigator.onLine === false) return false;
     const connection = navigator.connection;
     if (connection?.saveData || /(?:^|-)2g$/i.test(connection?.effectiveType || "")) return false;
+    if (document.body.classList.contains("lite")) return false;
     const link = document.createElement("link");
     link.rel = "prefetch";
     link.as = "script";
@@ -1401,9 +1402,10 @@
       document.documentElement.style.setProperty("--refresh-rate", String(hz));
     };
     const tick = (now) => {
-      if (document.hidden) {
+      if (document.hidden || document.body.classList.contains("lite")) {
         animationFrame = 0;
         lastFrameAt = 0;
+        ctx.clearRect(0, 0, w, h);
         return;
       }
       const elapsed = lastFrameAt ? Math.min(66.667, Math.max(1, now - lastFrameAt)) : 16.667;
@@ -1480,11 +1482,12 @@
       animationFrame = requestAnimationFrame(tick);
     };
     const startAnimation = () => {
-      if (!animationFrame && !document.hidden) animationFrame = requestAnimationFrame(tick);
+      if (!animationFrame && !document.hidden && !document.body.classList.contains("lite")) animationFrame = requestAnimationFrame(tick);
     };
     document.addEventListener("visibilitychange", startAnimation);
     startAnimation();
     return {
+      sync: startAnimation,
       set(name) {
         mode = name || "embers";
         dots.forEach((d) => {
@@ -3552,6 +3555,13 @@
     };
     if (cached?.text && Date.now() - Number(cached.savedAt || 0) < 30 * 864e5) {
       apply(cached.text, true, cached.language || "ru");
+      return;
+    }
+    if (document.body.classList.contains("lite")) {
+      box.hidden = false;
+      box.classList.add("loaded");
+      if (label) label.textContent = `${profile.label} · лёгкий режим`;
+      if (paragraph) paragraph.textContent = "Автопроверка по сети отключена лёгким режимом. Открой официальную страницу по ссылке ниже или выключи лёгкий режим в боковой панели.";
       return;
     }
     box.hidden = false;
@@ -8254,6 +8264,49 @@
     FX.set("fire");
   }
 
+  /* ---------- Лёгкий режим: слабые ПК и плохой интернет ---------- */
+  function applyLiteMode(on, { save = true, notify = false, auto = false } = {}) {
+    document.body.classList.toggle("lite", Boolean(on));
+    document.querySelectorAll("[data-lite-toggle]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(Boolean(on)));
+      button.classList.toggle("on", Boolean(on));
+      const labelEl = button.querySelector("b");
+      if (labelEl) labelEl.textContent = on ? "Лёгкий режим включён" : "Лёгкий режим";
+    });
+    if (save) store.set({ liteMode: Boolean(on) });
+    FX.sync?.();
+    if (notify) {
+      toast(on
+        ? (auto ? "Обнаружено слабое устройство или медленная сеть — включён лёгкий режим" : "Лёгкий режим включён: эффекты и фоновая сеть отключены")
+        : "Лёгкий режим выключен: полный визуал возвращён", on ? "⚡" : "✦");
+      if (liveRegion) { liveRegion.textContent = ""; requestAnimationFrame(() => { liveRegion.textContent = on ? "Лёгкий режим включён" : "Лёгкий режим выключен"; }); }
+    }
+  }
+  function detectWeakDevice() {
+    const connection = navigator.connection || {};
+    if (connection.saveData === true) return true;
+    if (/(?:^|-)2g$/i.test(connection.effectiveType || "")) return true;
+    if (typeof connection.downlink === "number" && connection.downlink > 0 && connection.downlink < 1.2) return true;
+    if (navigator.deviceMemory && navigator.deviceMemory <= 2) return true;
+    // Малое число ядер учитываем только вместе с реально известной памятью:
+    // тестовые среды и старые браузеры занижают hardwareConcurrency.
+    if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2
+      && typeof navigator.deviceMemory === "number" && navigator.deviceMemory <= 4) return true;
+    return false;
+  }
+  {
+    const saved = store.get().liteMode;
+    if (saved === true) applyLiteMode(true, { save: false });
+    else if (saved === undefined && detectWeakDevice()) applyLiteMode(true, { save: true, notify: true, auto: true });
+    document.querySelectorAll("[data-lite-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = !document.body.classList.contains("lite");
+        applyLiteMode(next, { notify: true });
+        SND.play(next ? "snap" : "chime");
+      });
+    });
+  }
+
   /* Световой курсор: мягкое золотое пятно следует за мышью (только точный
      указатель, без reduced-motion). Один rAF, только transform — компоузер. */
   (() => {
@@ -8274,6 +8327,7 @@
 
   /* Тактильная золотая рябь на кнопках и чипах (одноразовая анимация) */
   document.addEventListener("click", (e) => {
+    if (document.body.classList.contains("lite")) return;
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const control = e.target.closest && e.target.closest(".btn, .chip, .mini, .mode-btn, .qmap-continue, .boss-defeat-btn");
     if (!control) return;

@@ -6730,3 +6730,32 @@ body {
   @keyframes tap-ripple { from { opacity: .9; transform: scale(0); } to { opacity: 0; transform: scale(1); } }
   .tap-ripple { position: absolute; z-index: 0; border-radius: 50%; background: radial-gradient(circle, rgba(232, 196, 111, .3), rgba(232, 196, 111, .08) 55%, transparent 70%); pointer-events: none; animation: tap-ripple .5s ease-out 1; }
 }
+
+/* ==================================================================== */
+/* ЛЁГКИЙ РЕЖИМ: слабые ПК и медленный интернет                          */
+/* ==================================================================== */
+
+/* Кнопка в боковой панели */
+.lite-toggle { display: flex; align-items: center; gap: 9px; width: 100%; margin-bottom: 8px; padding: 9px 11px; border: 1px solid #3a4853; border-radius: 9px; color: #cfd7dc; background: #141d25; cursor: pointer; text-align: left; transition: border-color .14s ease, background .14s ease; }
+.lite-toggle i { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #3c4b56; border-radius: 7px; color: #9fb3bd; background: #10181f; font-style: normal; font-size: 13px; }
+.lite-toggle b { flex: 1; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.lite-toggle em { padding: 3px 8px; border: 1px solid #33404c; border-radius: 8px; color: #77838f; background: #10181f; font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.lite-toggle:hover { border-color: #57646d; background: #18232d; }
+.lite-toggle.on { border-color: #4f8d63; background: linear-gradient(180deg, #12271b, #0e1f16); color: #c4e9ce; }
+.lite-toggle.on i { border-color: #4d8c61; color: #9ae5ae; background: #102218; }
+.lite-toggle.on em { border-color: #4d8c61; color: #9ae5ae; background: #102218; }
+
+/* Сам режим: минимум краски, теней, анимаций и декоративной сети */
+body.lite { background: #0b0f15; }
+body.lite::before, body.lite::after { display: none; }               /* секционное свечение и паспарту */
+body.lite #embers, body.lite .cursor-glow, body.lite #flash { display: none; }
+body.lite *, body.lite *::before, body.lite *::after { animation: none !important; transition: none !important; }
+body.lite .card, body.lite .panel, body.lite .mob-card, body.lite .jump, body.lite .mode-btn, body.lite .home-command-card, body.lite .qmap-card, body.lite .era-card { background: #131a23; box-shadow: none; }
+body.lite .card:hover, body.lite .mob-card:hover, body.lite .jump:hover, body.lite .btn:hover, body.lite .mode-btn:hover, body.lite .qmap-continue:hover { transform: none; box-shadow: none; }
+body.lite .page-head, body.lite .recipe-panel, body.lite .tree-panel, body.lite .biome-modal-panel, body.lite .tip-card, body.lite .search-drop { box-shadow: 0 0 0 1px #2e3b46; }
+body.lite .hero-bg { display: none; }                                 /* тяжёлый фон героя */
+body.lite .quest-hero .pic { display: none; }                         /* тематические картинки квестов */
+body.lite .qmap-status::before { display: none; }
+body.lite .craft-graph-page .craft-tree-inline-body, body.lite #tree-body { background-image: none; }
+body.lite .card-shot, body.lite .mob-art, body.lite .slot { box-shadow: inset 0 0 0 1px #33404c; background: #10181f; }
+body.lite .hpbar i, body.lite .ragebar i, body.lite .recipe-check-progress i { box-shadow: none; }
