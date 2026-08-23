@@ -171,7 +171,12 @@ node scripts/audit-release.mjs
 
 ## Публикация
 
-Сайт — полностью статическая папка `calamity-codex/`: её содержимое можно выложить на любой статический хостинг с HTTPS (GitHub Pages, Cloudflare Pages, Netlify). Серверных правил переадресации не требуется — разделы работают через hash-роутинг (`#/mobs`, `#/crafts`), а `robots.txt` лежит рядом с `index.html`. После выбора домена стоит заменить относительный `og:image` в `index.html` на абсолютный URL, чтобы соцсети показывали превью-карточку.
+Основной адрес сайта: **https://calamity-codex.pages.dev** (Cloudflare Pages, автодеплой
+из ветки `arena/01a01c55-calamity-codex`, корень — папка `calamity-codex/`, правила
+кэширования — `calamity-codex/_headers`). Запасное зеркало — GitHub Pages:
+https://oleshaads.github.io/Calamity-Codex/. Серверных правил переадресации не
+требуется — разделы работают через hash-роутинг (`#/mobs`, `#/crafts`), а `robots.txt`
+лежит рядом с `index.html`.
 
 Проект — бесплатный неофициальный фан-справочник. Спрайты Terraria принадлежат Re-Logic, материалы Calamity — команде мода; публикация допустима в некоммерческом виде согласно фан-политике Re-Logic. Все источники ассетов закреплены в [`calamity-codex/assets/PROVENANCE.md`](calamity-codex/assets/PROVENANCE.md).
 
