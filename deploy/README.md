@@ -33,3 +33,20 @@
 
 Важно: CNAME добавляется только ПОСЛЕ мержа PR, иначе старый адрес начнёт
 перенаправлять на ещё не существующий домен.
+
+## Cloudflare Pages: calamity-codex.pages.dev
+
+1. Создайте бесплатный аккаунт: https://dash.cloudflare.com/sign-up
+2. В панели: **Workers & Pages → Create application → Pages → Connect to Git**.
+3. Авторизуйте GitHub и выберите репозиторий `oleshaads/Calamity-Codex`.
+4. Настройки проекта:
+   - **Project name:** `calamity-codex` (это и даст адрес calamity-codex.pages.dev)
+   - **Production branch:** `arena/01a01c55-calamity-codex`
+   - **Framework preset:** None
+   - **Build command:** (пусто)
+   - **Build output directory:** `calamity-codex`
+5. Нажмите **Save and Deploy**. Дальше каждый пуш ветки деплоится автоматически.
+
+Файл `calamity-codex/_headers` уже настраивает годовой кэш для версионных
+ассетов и мгновенную ревалидацию оболочки. После первого деплоя сообщите
+агенту — он переключит og:image на новый адрес.
