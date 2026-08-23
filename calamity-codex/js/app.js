@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core104";
+  const ASSET_VERSION = "20260819-core105";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -8281,7 +8281,7 @@
      кэше сервис-воркера. После этого каждая картинка открывается мгновенно
      даже офлайн, а на новых релизах прогрев повторяется сам. */
   async function warmArtCache() {
-    if (!("serviceWorker" in navigator) || document.body.classList.contains("lite") || navigator.onLine === false) return;
+    if (!("serviceWorker" in navigator) || navigator.onLine === false) return;
     const connection = navigator.connection || {};
     if (connection.saveData === true || /(?:^|-)2g$/i.test(connection.effectiveType || "")) return;
     if (store.get().artWarm === ASSET_VERSION) return;
@@ -8295,7 +8295,12 @@
     }
     let manifest = null;
     try { manifest = await (await fetch(releaseAsset("assets/sprite-manifest.json"))).json(); } catch { return; }
-    const heavyAllowed = typeof connection.downlink !== "number" || connection.downlink >= 1.5;
+    // Слабые устройства и медленные сети качают бережно: в лёгком режиме —
+    // только витринный набор одним потоком, на медленном канале — два потока.
+    const lite = document.body.classList.contains("lite");
+    const slowLink = typeof connection.downlink === "number" && connection.downlink < 3;
+    const heavyAllowed = !lite && (typeof connection.downlink !== "number" || connection.downlink >= 1.5);
+    const workerCount = lite ? 1 : slowLink ? 2 : 4;
     const files = [...(manifest.core || []), ...(heavyAllowed ? manifest.heavy || [] : [])];
     if (!files.length) return;
     const status = document.querySelector(".rail-status");
@@ -8313,7 +8318,7 @@
     };
     const worker = async () => {
       while (cursor < files.length) {
-        if (consecutiveFailures > 40 || navigator.onLine === false || document.body.classList.contains("lite")) return;
+        if (consecutiveFailures > 40 || navigator.onLine === false) return;
         const url = releaseAsset(files[cursor++]);
         try {
           const response = await fetch(url);
@@ -8327,9 +8332,12 @@
       }
     };
     report();
-    await Promise.all(Array.from({ length: 4 }, worker));
+    await Promise.all(Array.from({ length: workerCount }, worker));
+    // Витринный набор в лёгком режиме не считается полным прогревом:
+    // при выключении режима докачается остальное.
+    const complete = cursor >= files.length && consecutiveFailures <= 40;
     if (progressEl) progressEl.remove();
-    if (cursor >= files.length && consecutiveFailures <= 40) {
+    if (complete && heavyAllowed) {
       store.set({ artWarm: ASSET_VERSION });
       toast("Вся графика кодекса сохранена — теперь картинки открываются мгновенно", "⚡");
     }
@@ -8363,7 +8371,7 @@
     FX.sync?.();
     if (notify) {
       toast(on
-        ? (auto ? "Обнаружено слабое устройство или медленная сеть — включён лёгкий режим" : "Лёгкий режим включён: эффекты и фоновая сеть отключены")
+        ? (auto ? "Обнаружено слабое устройство или медленная сеть — включён лёгкий режим" : "Лёгкий режим включён: эффекты отключены, графика докачивается экономно")
         : "Лёгкий режим выключен: полный визуал возвращён", on ? "⚡" : "✦");
       if (liveRegion) { liveRegion.textContent = ""; requestAnimationFrame(() => { liveRegion.textContent = on ? "Лёгкий режим включён" : "Лёгкий режим выключен"; }); }
     }
