@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core101";
+  const ASSET_VERSION = "20260819-core102";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -882,17 +882,33 @@
     hideTipCard();
   });
 
+  /* Профиль читается очень часто (избранное, чеклисты, прогресс на каждом
+     рендере), поэтому разобранный JSON кэшируется. Вызывающие никогда не
+     мутируют результат get() напрямую — только через set()/replace(). */
+  let storeCacheValue = null;
   const store = {
-    get() { try { return JSON.parse(localStorage.getItem("calamity-codex") || "{}"); } catch { return {}; } },
+    get() {
+      if (storeCacheValue !== null) return storeCacheValue;
+      try { storeCacheValue = JSON.parse(localStorage.getItem("calamity-codex") || "{}"); } catch { return {}; }
+      return storeCacheValue;
+    },
     set(p) {
-      try { localStorage.setItem("calamity-codex", JSON.stringify({ ...store.get(), ...p })); }
+      const next = { ...store.get(), ...p };
+      storeCacheValue = next;
+      try { localStorage.setItem("calamity-codex", JSON.stringify(next)); }
       catch { /* The guide still works when private storage is unavailable. */ }
     },
     replace(value) {
-      try { localStorage.setItem("calamity-codex", JSON.stringify(value && typeof value === "object" ? value : {})); }
+      const next = value && typeof value === "object" ? value : {};
+      storeCacheValue = next;
+      try { localStorage.setItem("calamity-codex", JSON.stringify(next)); }
       catch { /* The guide still works when private storage is unavailable. */ }
     }
   };
+  /* Другая вкладка могла изменить сохранение — сбрасываем кэш профиля. */
+  addEventListener("storage", (event) => {
+    if (!event.key || event.key === "calamity-codex") storeCacheValue = null;
+  });
 
   /* ---------- звуковой движок (WebAudio-синтез, без аудиофайлов) ---------- */
   const SND = (() => {

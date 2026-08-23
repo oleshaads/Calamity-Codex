@@ -1,4 +1,4 @@
-const VERSION = "20260819-core101";
+const VERSION = "20260819-core102";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
@@ -67,17 +67,28 @@ async function instantNavigation(event, request) {
   }
 }
 
-async function cacheFirst(request) {
+async function cacheFirst(event, request) {
   const cached = await caches.match(request);
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok && response.type === "basic") {
-    const cache = await caches.open(RUNTIME_CACHE);
-    await cache.put(request, response.clone());
-    await trimRuntimeCache();
+    // Ответ уходит странице сразу; запись в кэш и подрезка идут в фоне.
+    // Перечислять все ключи кэша после каждого спрайта расточительно —
+    // батч раз в 25 записей держит ту же границу в 25 раз дешевле.
+    const copy = response.clone();
+    event.waitUntil((async () => {
+      const cache = await caches.open(RUNTIME_CACHE);
+      await cache.put(request, copy);
+      putsSinceTrim += 1;
+      if (putsSinceTrim >= 25) {
+        putsSinceTrim = 0;
+        await trimRuntimeCache();
+      }
+    })());
   }
   return response;
 }
+let putsSinceTrim = 0;
 
 function currentReleaseAssetRequest(request, url) {
   if (!url.pathname.includes("/assets/") || url.searchParams.get("v") === VERSION) return request;
@@ -98,7 +109,7 @@ self.addEventListener("fetch", (event) => {
   // Local art is keyed by this worker's release even when stale application
   // code asks for an unversioned (or older-versioned) sprite URL. This prevents
   // a cached vertical animation sheet from surviving a sprite-frame fix.
-  event.respondWith(cacheFirst(currentReleaseAssetRequest(request, url)));
+  event.respondWith(cacheFirst(event, currentReleaseAssetRequest(request, url)));
 });
 
 self.addEventListener("message", (event) => {

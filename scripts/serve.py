@@ -47,6 +47,9 @@ def accepts_encoding(header, wanted):
 
 
 class CodexHandler(http.server.SimpleHTTPRequestHandler):
+    # HTTP/1.1 keep-alive: сотни спрайтов бестиария и дерева крафта идут по
+    # уже открытым соединениям вместо нового TCP-рукопожатия на каждый файл.
+    protocol_version = "HTTP/1.1"
     COMPRESSIBLE = {".html", ".css", ".js", ".json", ".webmanifest", ".svg", ".txt", ".xml"}
     _gzip_cache = {}
     _brotli_cache = {}
@@ -63,7 +66,7 @@ class CodexHandler(http.server.SimpleHTTPRequestHandler):
             if cached is not None:
                 return cached
         with open(path, "rb") as source:
-            payload = gzip.compress(source.read(), compresslevel=6, mtime=0)
+            payload = gzip.compress(source.read(), compresslevel=9, mtime=0)
         with cls._encoding_lock:
             # Drop stale versions of the same file while retaining hot assets.
             for old_key in [item for item in cls._gzip_cache if item[0] == path and item != key]:

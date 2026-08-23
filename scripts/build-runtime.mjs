@@ -39,9 +39,9 @@ const digest = (value) => crypto.createHash("sha256").update(value).digest("hex"
 async function buildJavaScript(files, label) {
   const source = readSources(files);
   const result = await minify(source, {
-    compress: { passes: 2 },
+    compress: { passes: 3, ecma: 2020 },
     mangle: true,
-    format: { comments: false }
+    format: { comments: false, ecma: 2020 }
   });
   if (!result.code) throw new Error(`Terser returned an empty ${label} bundle`);
   return `/*! Calamity Codex ${label}; source-sha256:${digest(source)} */\n${result.code}\n`;
