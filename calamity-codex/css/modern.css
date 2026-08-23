@@ -6785,3 +6785,51 @@ body.lite .hpbar i, body.lite .ragebar i, body.lite .recipe-check-progress i { b
 
 /* Индикатор фонового прогрева графики в капсуле статуса */
 .rail-status [data-art-progress] { margin-left: auto; color: #e8c46f; font-family: var(--mono); font-size: 9px; font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ==================================================================== */
+/* Обратный крафт: «что делается из предмета» (полка на #/crafts)       */
+/* ==================================================================== */
+.reverse-craft { display: flex; flex-direction: column; gap: 14px; }
+.reverse-craft-head { display: flex; gap: 13px; align-items: flex-start; }
+.reverse-craft-mark { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border: 1px solid #57432a; border-radius: 10px; color: #e8c46f; background: linear-gradient(160deg, rgba(232, 196, 111, .16), rgba(232, 196, 111, .03)); font-size: 20px; }
+.reverse-craft-head small { display: block; margin-bottom: 4px; color: #8a774e; font-family: var(--mono); font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; }
+.reverse-craft-head h2 { margin: 0; font-size: 19px; }
+.reverse-craft-head p { margin-top: 6px; max-width: 62ch; color: #93a1ad; font-size: 12px; line-height: 1.6; }
+.reverse-craft-suggest { max-height: 340px; overflow: auto; }
+.reverse-craft-placeholder, .reverse-empty { display: grid; justify-items: center; gap: 8px; padding: 30px 16px; border: 1px dashed #33404c; border-radius: 12px; color: #93a1ad; text-align: center; }
+.reverse-craft-placeholder span { color: #57432a; font-size: 26px; }
+.reverse-craft-placeholder b { color: #cfd8df; }
+.reverse-craft-placeholder p { max-width: 52ch; font-size: 11.5px; line-height: 1.6; }
+.reverse-craft-selected { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #4b3f28; border-radius: 12px; background: linear-gradient(165deg, rgba(232, 196, 111, .08), #121a23 60%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+.reverse-selected-art { width: 54px; height: 54px; flex: none; }
+.reverse-selected-art img { width: 100%; height: 100%; padding: 7px; object-fit: contain; image-rendering: pixelated; }
+.reverse-selected-copy { min-width: 0; }
+.reverse-selected-copy small { display: block; color: #8a774e; font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; }
+.reverse-selected-copy b { display: block; margin-top: 3px; color: #f0e6cf; font-family: "Russo One", var(--head, sans-serif); font-size: 16px; }
+.reverse-selected-copy span { display: block; margin-top: 2px; color: #75828e; font-family: var(--mono); font-size: 9.5px; }
+.reverse-craft-count { margin-left: auto; flex: none; padding: 7px 13px; border: 1px solid #57432a; border-radius: 999px; color: #e8c46f; background: rgba(232, 196, 111, .08); font-family: var(--mono); font-size: 10px; white-space: nowrap; }
+.reverse-result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.reverse-result-card { display: flex; flex-direction: column; gap: 10px; padding: 13px; border: 1px solid #2e3b46; border-radius: 11px; background: linear-gradient(165deg, #182330, #121a23 62%); transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; content-visibility: auto; contain-intrinsic-size: auto 230px; }
+.reverse-result-card:hover { transform: translateY(-3px); border-color: #4c5f72; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 14px 30px rgba(0, 0, 0, .45); }
+.reverse-result-head { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.reverse-result-art { width: 52px; height: 52px; }
+.reverse-result-art img { width: 100%; height: 100%; padding: 6px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .55)); }
+.reverse-result-art i { display: grid; place-items: center; width: 100%; height: 100%; color: #45525f; font-style: normal; }
+.reverse-result-title { min-width: 0; }
+.reverse-result-title b { display: block; overflow: hidden; color: #e7edf0; font-size: 13.5px; line-height: 1.3; text-overflow: ellipsis; }
+.reverse-result-title small { display: block; overflow: hidden; margin-top: 2px; color: #6d7a86; font-family: var(--mono); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.reverse-result-title em { display: block; margin-top: 3px; color: #8fa0b0; font-size: 10.5px; font-style: normal; }
+.reverse-result-need { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 10px; border: 1px solid #57432a; border-radius: 9px; color: #9aa6ae; background: rgba(232, 196, 111, .07); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+.reverse-result-need b { color: #e8c46f; font-family: var(--mono); font-size: 13px; }
+.reverse-result-recipe { display: flex; flex-wrap: wrap; gap: 6px; }
+.reverse-ing { padding: 4px 9px; border: 1px solid #33404c; border-radius: 999px; color: #aab6c1; background: #10181f; font-size: 10.5px; }
+.reverse-ing.is-source { border-color: #8f6b2b; color: #f0d38a; background: rgba(232, 196, 111, .12); box-shadow: 0 0 10px rgba(232, 196, 111, .14); }
+.reverse-result-obtain { color: #93a1ad; font-size: 11.5px; line-height: 1.55; }
+.reverse-result-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.reverse-more-note { padding: 10px 14px; border: 1px dashed #33404c; border-radius: 10px; color: #8fa0b0; font-size: 11px; }
+.reverse-uses-link { text-decoration: none; }
+body.lite .reverse-result-card, body.lite .reverse-craft-selected { background: #121a23; box-shadow: none; }
+@media (max-width: 700px) {
+  .reverse-craft-selected { flex-wrap: wrap; }
+  .reverse-craft-count { margin-left: 0; }
+}

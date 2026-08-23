@@ -39,7 +39,7 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260819-core105";
+const releaseVersion = "20260819-core106";
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];
@@ -74,7 +74,10 @@ check(!indexHtml.includes("codex-data.min.js"), "Heavy catalog data must not blo
 check(app.includes("ensureCatalogData") && app.includes("codex-data.min.js") && app.includes(`ASSET_VERSION = "${releaseVersion}"`), "Route/search-triggered catalog loading is not wired to the current release");
 // Budget raised 228 -> 236 KiB for the new full mob bestiary section (route,
 // grouped events/biomes UI); its heavy data stays in the lazy catalog bundle.
-check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 236 * 1024, "Initial core bundle exceeds the 236 KiB gzip performance budget");
+// Raised 236 -> 240 KiB for the reverse-craft explorer ("what is crafted from
+// this item"): picker, usage cards and inspector link; data reuses the
+// existing recipe index without any new payload.
+check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 240 * 1024, "Initial core bundle exceeds the 240 KiB gzip performance budget");
 check(runtimeBundle.length < catalogBundle.length, "Initial core bundle is not smaller than the deferred catalog payload");
 check(indexHtml.includes(`manifest.webmanifest?v=${releaseVersion}`), "PWA manifest is not linked with the current core version");
 const manifestPath = path.join(root, "manifest.webmanifest");
