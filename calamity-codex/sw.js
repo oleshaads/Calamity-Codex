@@ -1,4 +1,4 @@
-const VERSION = "20260819-core103";
+const VERSION = "20260819-core104";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
@@ -36,7 +36,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-async function trimRuntimeCache(maxEntries = 700) {
+async function trimRuntimeCache(maxEntries = 12000) {
   const cache = await caches.open(RUNTIME_CACHE);
   const keys = await cache.keys();
   if (keys.length <= maxEntries) return;
@@ -80,7 +80,7 @@ async function cacheFirst(event, request) {
       const cache = await caches.open(RUNTIME_CACHE);
       await cache.put(request, copy);
       putsSinceTrim += 1;
-      if (putsSinceTrim >= 25) {
+      if (putsSinceTrim >= 100) {
         putsSinceTrim = 0;
         await trimRuntimeCache();
       }

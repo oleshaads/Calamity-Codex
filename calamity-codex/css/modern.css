@@ -6782,3 +6782,6 @@ body.lite .hpbar i, body.lite .ragebar i, body.lite .recipe-check-progress i { b
 .mob-card { content-visibility: auto; contain-intrinsic-size: auto 236px; }
 .boss-card { content-visibility: auto; contain-intrinsic-size: auto 420px; }
 .craft-grid .card { content-visibility: auto; contain-intrinsic-size: auto 340px; }
+
+/* Индикатор фонового прогрева графики в капсуле статуса */
+.rail-status [data-art-progress] { margin-left: auto; color: #e8c46f; font-family: var(--mono); font-size: 9px; font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }

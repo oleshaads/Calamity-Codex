@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core103";
+  const ASSET_VERSION = "20260819-core104";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -8270,8 +8270,69 @@
      «Предметы», «Крафты» и глобальный поиск открываются мгновенно. */
   {
     const warmCatalogOnIdle = () => setTimeout(() => queueBackgroundTask(() => prefetchCatalogData()), 2500);
-    if (document.readyState === "complete") warmCatalogOnIdle();
-    else addEventListener("load", warmCatalogOnIdle, { once: true });
+    const warmArtOnIdle = () => setTimeout(() => queueBackgroundTask(() => { warmArtCache(); }), 6000);
+    const warmAll = () => { warmCatalogOnIdle(); warmArtOnIdle(); };
+    if (document.readyState === "complete") warmAll();
+    else addEventListener("load", warmAll, { once: true });
+  }
+
+  /* Полный прогрев графики: по манифесту сборки все спрайты предметов,
+     мобов, боссов и сцен по одному разу скачиваются в фоне и оседают в
+     кэше сервис-воркера. После этого каждая картинка открывается мгновенно
+     даже офлайн, а на новых релизах прогрев повторяется сам. */
+  async function warmArtCache() {
+    if (!("serviceWorker" in navigator) || document.body.classList.contains("lite") || navigator.onLine === false) return;
+    const connection = navigator.connection || {};
+    if (connection.saveData === true || /(?:^|-)2g$/i.test(connection.effectiveType || "")) return;
+    if (store.get().artWarm === ASSET_VERSION) return;
+    if (!navigator.serviceWorker.controller) {
+      // Первый визит: воркер ещё активируется — дождёмся, когда он возьмёт
+      // страницу под контроль, иначе скачанное не попадёт в его кэш.
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        setTimeout(() => queueBackgroundTask(() => { warmArtCache(); }), 1500);
+      }, { once: true });
+      return;
+    }
+    let manifest = null;
+    try { manifest = await (await fetch(releaseAsset("assets/sprite-manifest.json"))).json(); } catch { return; }
+    const heavyAllowed = typeof connection.downlink !== "number" || connection.downlink >= 1.5;
+    const files = [...(manifest.core || []), ...(heavyAllowed ? manifest.heavy || [] : [])];
+    if (!files.length) return;
+    const status = document.querySelector(".rail-status");
+    let progressEl = status ? status.querySelector("[data-art-progress]") : null;
+    if (status && !progressEl) {
+      progressEl = document.createElement("em");
+      progressEl.dataset.artProgress = "";
+      status.appendChild(progressEl);
+    }
+    let cursor = 0;
+    let finished = 0;
+    let consecutiveFailures = 0;
+    const report = () => {
+      if (progressEl) progressEl.textContent = `графика ${Math.min(100, Math.round((finished / files.length) * 100))}%`;
+    };
+    const worker = async () => {
+      while (cursor < files.length) {
+        if (consecutiveFailures > 40 || navigator.onLine === false || document.body.classList.contains("lite")) return;
+        const url = releaseAsset(files[cursor++]);
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            await response.blob();
+            consecutiveFailures = 0;
+          } else consecutiveFailures += 1;
+        } catch { consecutiveFailures += 1; }
+        finished += 1;
+        if (finished % 40 === 0) report();
+      }
+    };
+    report();
+    await Promise.all(Array.from({ length: 4 }, worker));
+    if (progressEl) progressEl.remove();
+    if (cursor >= files.length && consecutiveFailures <= 40) {
+      store.set({ artWarm: ASSET_VERSION });
+      toast("Вся графика кодекса сохранена — теперь картинки открываются мгновенно", "⚡");
+    }
   }
 
   addEventListener("popstate", () => { restoreScrollOnNextRoute = true; });

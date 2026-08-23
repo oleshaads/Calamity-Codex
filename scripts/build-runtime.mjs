@@ -55,6 +55,30 @@ const cssSource = fs.readFileSync(path.join(root, "css", "modern.css"), "utf8");
 const cssResult = new CleanCSS({ level: 2 }).minify(cssSource);
 if (cssResult.errors.length) throw new Error(cssResult.errors.join("\n"));
 
+// Манифест всей игровой графики: страница прогревает по нему кэш
+// сервис-воркера в фоне, после чего каждый спрайт открывается мгновенно
+// и офлайн. «core» — лёгкие витринные наборы, «heavy» — полные каталоги.
+const ART_EXTENSIONS = new Set([".png", ".webp", ".jpg", ".jpeg", ".gif"]);
+const listArt = (dir) => {
+  const absolute = path.join(root, "assets", dir);
+  if (!fs.existsSync(absolute)) return [];
+  return fs.readdirSync(absolute, { recursive: true })
+    .map((entry) => String(entry).replace(/\\/g, "/"))
+    .filter((entry) => ART_EXTENSIONS.has(path.extname(entry).toLowerCase()))
+    .map((entry) => `assets/${dir}/${entry}`)
+    .sort();
+};
+const rootArt = fs.readdirSync(path.join(root, "assets"))
+  .filter((entry) => ART_EXTENSIONS.has(path.extname(entry).toLowerCase()))
+  .map((entry) => `assets/${entry}`)
+  .sort();
+const spriteManifest = {
+  core: [...rootArt, ...["sprites", "boss-sprites", "npc-sprites", "mob-sprites", "headers", "lex", "vanilla-extra"].flatMap(listArt)],
+  heavy: [...["item-sprites", "biomes", "themes", "vanilla-sprites"].flatMap(listArt)]
+};
+fs.writeFileSync(path.join(root, "assets", "sprite-manifest.json"), JSON.stringify(spriteManifest));
+console.log(`assets/sprite-manifest.json: ${spriteManifest.core.length} core + ${spriteManifest.heavy.length} heavy art files`);
+
 const outputs = [
   [path.join(root, "js", "codex.min.js"), coreBundle],
   [path.join(root, "js", "codex-data.min.js"), catalogBundle],
