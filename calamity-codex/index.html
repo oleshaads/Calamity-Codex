@@ -18,10 +18,10 @@
   <meta name="twitter:image" content="assets/hero.jpg" />
   <link rel="icon" href="assets/favicon.png" type="image/png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <link rel="manifest" href="manifest.webmanifest?v=20260819-core98" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260819-core99" />
   <link rel="preload" href="assets/fonts/RussoOne-Regular.ttf" as="font" type="font/ttf" crossorigin />
-  <link rel="preload" href="js/codex.min.js?v=20260819-core98" as="script" />
-  <link rel="stylesheet" href="css/modern.min.css?v=20260819-core98" />
+  <link rel="preload" href="js/codex.min.js?v=20260819-core99" as="script" />
+  <link rel="stylesheet" href="css/modern.min.css?v=20260819-core99" />
 </head>
 <body>
   <a class="skip-link" href="#app">Перейти к содержимому</a>
@@ -102,7 +102,7 @@
           <div class="ragebar mini"><i></i></div>
         </div>
         <button class="lite-toggle" id="lite-toggle" type="button" data-lite-toggle aria-pressed="false" title="Отключает эффекты, тени и фоновые сетевые запросы — для слабых устройств и медленного интернета">
-          <i aria-hidden="true">⚡</i><b>Лёгкий режим</b><em>вкл / выкл</em>
+          <i aria-hidden="true">⚡</i><b>Лёгкий режим</b><em data-lite-state>выкл</em>
         </button>
         <button class="install-app" id="install-app" type="button" hidden>⊕ Установить кодекс</button>
         <p class="rail-status" id="connection-status"><span class="status-dot"></span><span data-connection-label>каталог доступен офлайн</span></p>
@@ -246,6 +246,6 @@
   <div id="toast" class="toast" role="status" hidden></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
-  <script defer src="js/codex.min.js?v=20260819-core98"></script>
+  <script defer src="js/codex.min.js?v=20260819-core99"></script>
 </body>
 </html>

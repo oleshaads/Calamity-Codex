@@ -6735,13 +6735,13 @@ body {
 /* ЛЁГКИЙ РЕЖИМ: слабые ПК и медленный интернет                          */
 /* ==================================================================== */
 
-/* Кнопка в боковой панели */
-.lite-toggle { display: flex; align-items: center; gap: 9px; width: 100%; margin-bottom: 8px; padding: 9px 11px; border: 1px solid #3a4853; border-radius: 9px; color: #cfd7dc; background: #141d25; cursor: pointer; text-align: left; transition: border-color .14s ease, background .14s ease; }
-.lite-toggle i { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #3c4b56; border-radius: 7px; color: #9fb3bd; background: #10181f; font-style: normal; font-size: 13px; }
-.lite-toggle b { flex: 1; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.lite-toggle em { padding: 3px 8px; border: 1px solid #33404c; border-radius: 8px; color: #77838f; background: #10181f; font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.lite-toggle:hover { border-color: #57646d; background: #18232d; }
-.lite-toggle.on { border-color: #4f8d63; background: linear-gradient(180deg, #12271b, #0e1f16); color: #c4e9ce; }
+/* Кнопка в боковой панели: строгий однострочный тумблер */
+.lite-toggle { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; min-height: 38px; margin-bottom: 8px; padding: 6px 9px; border: 1px solid #3a4853; border-radius: 9px; color: #cfd7dc; background: linear-gradient(180deg, #17212c, #121a23); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); cursor: pointer; text-align: left; transition: border-color .14s ease, background .14s ease, box-shadow .14s ease; }
+.lite-toggle i { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid #3c4b56; border-radius: 6px; color: #e8c46f; background: #10181f; font-style: normal; font-size: 12px; }
+.lite-toggle b { overflow: hidden; font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .07em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.lite-toggle em { min-width: 44px; padding: 3px 0; border: 1px solid #33404c; border-radius: 8px; color: #77838f; background: #10181f; font-family: var(--mono); font-size: 8.5px; font-style: normal; font-weight: 700; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.lite-toggle:hover { border-color: #57646d; }
+.lite-toggle.on { border-color: #3e6b50; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 0 12px rgba(104, 201, 130, .1); }
 .lite-toggle.on i { border-color: #4d8c61; color: #9ae5ae; background: #102218; }
 .lite-toggle.on em { border-color: #4d8c61; color: #9ae5ae; background: #102218; }
 

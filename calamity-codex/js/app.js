@@ -97,7 +97,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core98";
+  const ASSET_VERSION = "20260819-core99";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -8270,8 +8270,8 @@
     document.querySelectorAll("[data-lite-toggle]").forEach((button) => {
       button.setAttribute("aria-pressed", String(Boolean(on)));
       button.classList.toggle("on", Boolean(on));
-      const labelEl = button.querySelector("b");
-      if (labelEl) labelEl.textContent = on ? "Лёгкий режим включён" : "Лёгкий режим";
+      const stateEl = button.querySelector("[data-lite-state]");
+      if (stateEl) stateEl.textContent = on ? "вкл" : "выкл";
     });
     if (save) store.set({ liteMode: Boolean(on) });
     FX.sync?.();
