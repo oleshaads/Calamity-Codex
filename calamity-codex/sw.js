@@ -43,12 +43,9 @@ async function trimRuntimeCache(maxEntries = 12000) {
   await Promise.all(keys.slice(0, keys.length - maxEntries).map((key) => cache.delete(key)));
 }
 
-// Мгновенный старт: оболочка отдаётся из кэша без ожидания сети, а свежий
-// index.html подтягивается в фоне. Обновление релиза всё равно приходит через
-// новый VERSION сервис-воркера (registration.update() при каждом запуске).
 async function instantNavigation(event, request) {
   const cached = await caches.match("./index.html");
-  const refresh = (async () => {
+  const update = (async () => {
     const response = await fetch(request);
     if (response.ok) {
       const cache = await caches.open(RUNTIME_CACHE);
@@ -57,11 +54,11 @@ async function instantNavigation(event, request) {
     return response;
   })();
   if (cached) {
-    event.waitUntil(refresh.catch(() => {}));
+    event.waitUntil(update.catch(() => {}));
     return cached;
   }
   try {
-    return await refresh;
+    return await update;
   } catch {
     return (await caches.match("./")) || Response.error();
   }
@@ -72,9 +69,6 @@ async function cacheFirst(event, request) {
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok && response.type === "basic") {
-    // Ответ уходит странице сразу; запись в кэш и подрезка идут в фоне.
-    // Перечислять все ключи кэша после каждого спрайта расточительно —
-    // батч раз в 25 записей держит ту же границу в 25 раз дешевле.
     const copy = response.clone();
     event.waitUntil((async () => {
       const cache = await caches.open(RUNTIME_CACHE);
@@ -106,9 +100,6 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(instantNavigation(event, request));
     return;
   }
-  // Local art is keyed by this worker's release even when stale application
-  // code asks for an unversioned (or older-versioned) sprite URL. This prevents
-  // a cached vertical animation sheet from surviving a sprite-frame fix.
   event.respondWith(cacheFirst(event, currentReleaseAssetRequest(request, url)));
 });
 
