@@ -1,13 +1,13 @@
-const VERSION = "20260819-core110";
-const CORE_CACHE = `calamity-codex-core-${VERSION}`;
-const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
-const CORE_ASSETS = [
+константа ВЕРСИЯ = "20260824-core113";
+константа CORE_CACHE = `кодекс-катастрофы-ядро-${ВЕРСИЯ}`;
+константа RUNTIME_CACHE = `calamity-codex-время выполнения-${ВЕРСИЯ}`;
+константа ОСНОВНЫЕ_АКТИВЫ = [
   "./",
   "./index.html",
-  `./manifest.webmanifest?v=${VERSION}`,
-  `./css/modern.min.css?v=${VERSION}`,
-  `./js/codex.min.js?v=${VERSION}`,
-  `./js/codex-data.min.js?v=${VERSION}`,
+  `./manifest.webmanifest?в=${ВЕРСИЯ}`,
+  `./css/modern.min.css?в=${ВЕРСИЯ}`,
+  `./js/codex.min.js?в=${ВЕРСИЯ}`,
+  `./js/codex-data.min.js?в=${ВЕРСИЯ}`,
   "./assets/favicon.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
@@ -24,54 +24,54 @@ const CORE_ASSETS = [
   "./assets/sprites/Rock.png"
 ];
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CORE_CACHE).then((cache) => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
+себя.addEventListener("установить", (событие) => {
+  событие.подождите, пока(кэши.открыть(CORE_CACHE).затем((кэш) => кэш.добавитьВсе(ОСНОВНЫЕ_АКТИВЫ)).затем(() => себя.пропуститьОжидание()));
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("calamity-codex-") && ![CORE_CACHE, RUNTIME_CACHE].includes(key)).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
+себя.addEventListener("активировать", (событие) => {
+  событие.подождите, пока(
+    кэши.ключи()
+      .затем((ключи) => Обещать.все(ключи.фильтр((ключ) => ключ.начинаетсяС("кодекс бедствия-") && ![CORE_CACHE, RUNTIME_CACHE].включает в себя(ключ)).карта((ключ) => кэши.удалить(ключ))))
+      .затем(() => себя.клиенты.требовать())
   );
 });
 
-async function trimRuntimeCache(maxEntries = 12000) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  const keys = await cache.keys();
-  if (keys.length <= maxEntries) return;
-  await Promise.all(keys.slice(0, keys.length - maxEntries).map((key) => cache.delete(key)));
+асинхронный функция trimRuntimeCache(maxEntries = 12000) {
+  константа кэш = ждать кэши.открыть(RUNTIME_CACHE);
+  константа ключи = ждать кэш.ключи();
+  если (ключи.длина <= maxEntries) возвращаться;
+  ждать Обещать.все(ключи.ломтик(0, ключи.длина - maxEntries).карта((ключ) => кэш.удалить(ключ)));
 }
 
 // Мгновенный старт: оболочка отдаётся из кэша без ожидания сети, а свежий
 // index.html подтягивается в фоне. Обновление релиза всё равно приходит через
-// новый VERSION сервис-воркера (registration.update() при каждом запуске).
-async function instantNavigation(event, request) {
-  const cached = await caches.match("./index.html");
-  const refresh = (async () => {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      await cache.put("./index.html", response.clone());
+// новый ВЕРСИЯ сервис-воркера (registration.update() пѸкаждом запуск).
+асинхронный функция мгновеннаяНавигация(событие, запрос) {
+  константа кэшированный = ждать кэши.соответствовать("./index.html");
+  константа обновить = (асинхронный () => {
+    константа ответ = ждать принести(запрос);
+    если (ответ.хорошо) {
+      константа кэш = ждать кэши.открыть(RUNTIME_CACHE);
+      ждать кэш.помещать("./index.html", ответ.клон());
     }
-    return response;
+    возвращаться ответ;
   })();
-  if (cached) {
-    event.waitUntil(refresh.catch(() => {}));
-    return cached;
+  если (кэшированный) {
+    событие.подождите, пока(обновить.ловить(() => {}));
+    возвращаться кэшированный;
   }
-  try {
-    return await refresh;
-  } catch {
-    return (await caches.match("./")) || Response.error();
+  пытаться {
+    возвращаться ждать обновить;
+  } ловить {
+    возвращаться (ждать кэши.соответствовать("./")) || Ответ.ошибка();
   }
 }
 
-async function cacheFirst(event, request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok && response.type === "basic") {
+асинхронный функция кэшПервый(событие, запрос) {
+  константа кэшированный = ждать кэши.соответствовать(запрос);
+  если (кэшированный) возвращаться кэшированный;
+  константа ответ = ждать принести(запрос);
+  если (ответ.хорошо && ответ.тип === "базовый") {
     // Ответ уходит странице сразу; запись в кэш и подрезка идут в фоне.
     // Перечислять все ключи кэша после каждого спрайта расточительно —
     // батч раз в 25 записей держит ту же границу в 25 раз дешевле.
