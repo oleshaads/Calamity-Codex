@@ -12,7 +12,7 @@ const cssSource = fs.readFileSync(path.join(root, "css/modern.css"), "utf8");
 check(htmlSource.includes('id="recipe-plan"') && htmlSource.includes('id="recipe-plan-open"') && htmlSource.includes("data-craft-plan-count"), "Visual recipe or navigation does not expose the shared craft plan");
 for (const token of [
   "function craftPlanMaterialSummary", "function craftPlanEntries", "function setCraftPlanEntry",
-  "function craftPlanHTML", "function bindCraftPlan", "function craftPlanActionButton", "function addCraftPlanEntry", "craftPlanMaterials", "CRAFT_PLAN_LIMIT = 24"
+  "function craftPlanHTML", "function bindCraftPlan", "function craftPlanActionButton", "function addCraftPlanEntry", "craftPlanMaterials", "Количество целей не ограничено"
 ]) check(appSource.includes(token), `Shared craft planner is incomplete: ${token}`);
 check(appSource.includes('params.plan === "1"') && appSource.includes('data-add-craft-plan="'), "Craft planner has no direct URL or tree-inspector action");
 for (const token of [".craft-plan-target", ".craft-plan-material.collected", ".craft-plan-quantity", ".craft-plan-station", ".craft-plan-empty", ".craft-plan-card-add"]) {
@@ -133,7 +133,7 @@ const settle = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
   const cleared = JSON.parse(window.localStorage.getItem("calamity-codex") || "{}");
   check(document.querySelector(".craft-plan-empty") && !cleared.craftPlan?.length && !cleared.craftPlanMaterials?.length, "Clearing the shared plan did not remove targets and checklist state");
   check(errors.length === 0, `Shared craft-plan flow emitted runtime errors: ${errors.join("\n")}`);
-  console.log("PASS: up to 24 saved craft targets share exact batch-aware resources, stations, copy output and one persistent checklist");
+  console.log("PASS: unlimited saved craft targets share exact batch-aware resources, stations, copy output and one persistent checklist");
   dom.window.close();
 })().catch((error) => {
   console.error(error.stack || error);

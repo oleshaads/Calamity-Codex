@@ -1,7 +1,7 @@
 /* VERSION проставляется сборкой (scripts/build-runtime.mjs) по хэшу содержимого
    бандлов: пока файлы не менялись — URL и кеш стабильны, изменились — версия
    меняется сама. Ручные даты больше не используются. */
-const VERSION = "h-df9a86af92";
+const VERSION = "h-0ed96c6b2a";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
@@ -64,13 +64,6 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-async function trimRuntimeCache(maxEntries = 12000) {
-  const cache = await caches.open(RUNTIME_CACHE);
-  const keys = await cache.keys();
-  if (keys.length <= maxEntries) return;
-  await Promise.all(keys.slice(0, keys.length - maxEntries).map((key) => cache.delete(key)));
-}
-
 async function instantNavigation(event, request) {
   const cached = await caches.match("./index.html");
   const update = (async () => {
@@ -92,8 +85,6 @@ async function instantNavigation(event, request) {
   }
 }
 
-let putsSinceTrim = 0;
-
 async function cacheFirst(event, request) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -109,13 +100,13 @@ async function cacheFirst(event, request) {
   if (response.ok && response.type === "basic") {
     const copy = response.clone();
     event.waitUntil((async () => {
-      const cache = await caches.open(RUNTIME_CACHE);
-      await cache.put(request, copy);
-      putsSinceTrim += 1;
-      if (putsSinceTrim >= 100) {
-        putsSinceTrim = 0;
-        await trimRuntimeCache();
-      }
+      try {
+        const cache = await caches.open(RUNTIME_CACHE);
+        // Без ручного потолка записей: размером хранилища управляет браузер
+        // (под давлением квоты он вытесняет данные сам), а при нехватке места
+        // запись тихо пропускается — офлайн-режим не ломается.
+        await cache.put(request, copy);
+      } catch { /* квота исчерпана — файл останется сетевым */ }
     })());
   }
   return response;

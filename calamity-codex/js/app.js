@@ -3621,8 +3621,9 @@
   function cacheWikiSource(key, value, language = "ru", wiki = "terraria") {
     const cache = getWikiSourceCache();
     cache[key] = { text: value, language, wiki, savedAt: Date.now() };
-    const entries = Object.entries(cache).sort((a, b) => (b[1].savedAt || 0) - (a[1].savedAt || 0)).slice(0, 300);
-    wikiSourceCache = Object.fromEntries(entries);
+    // Без искусственного потолка записей: естественная граница — квота
+    // localStorage, запись всё равно обёрнута в try/catch.
+    wikiSourceCache = cache;
     try { localStorage.setItem(WIKI_SOURCE_CACHE_KEY, JSON.stringify(wikiSourceCache)); } catch { /* optional cache */ }
   }
   function officialWikiProfile(info) {
@@ -3705,7 +3706,7 @@
       const languageMark = language === "en" ? " · EN" : "";
       if (label) label.textContent = cachedResult ? `${profile.label}${languageMark} · сохранённая копия` : `${profile.label}${languageMark} · получено онлайн`;
     };
-    if (cached?.text && Date.now() - Number(cached.savedAt || 0) < 30 * 864e5) {
+    if (cached?.text) {
       apply(cached.text, true, cached.language || "ru");
       return;
     }
@@ -5548,14 +5549,12 @@
     return (Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(".", ","));
   }
 
-  const CRAFT_PLAN_LIMIT = 24;
   function craftPlanRows() {
     const rows = store.get().craftPlan;
     if (!Array.isArray(rows)) return [];
     return rows.map((row) => Array.isArray(row) ? row : [row?.ref, row?.quantity])
-      .map(([ref, quantity]) => [String(ref || "").trim(), Math.min(999, Math.max(1, Math.round(Number(quantity) || 1)))])
-      .filter(([ref], index, all) => ref && all.findIndex(([candidate]) => candidate === ref) === index)
-      .slice(0, CRAFT_PLAN_LIMIT);
+      .map(([ref, quantity]) => [String(ref || "").trim(), Math.max(1, Math.round(Number(quantity) || 1))])
+      .filter(([ref], index, all) => ref && all.findIndex(([candidate]) => candidate === ref) === index);
   }
   function canonicalCraftPlanRef(value) {
     const info = ingredientInfo(value);
@@ -5574,18 +5573,17 @@
     }).filter(Boolean);
   }
   function saveCraftPlanRows(rows) {
-    store.set({ craftPlan: rows.slice(0, CRAFT_PLAN_LIMIT) });
+    store.set({ craftPlan: rows });
     updateCraftPlanCount();
   }
   function setCraftPlanEntry(value, quantity) {
     const ref = canonicalCraftPlanRef(value);
     if (!ref || !visualRecipeFor(ref)) return { ok: false, ref, quantity: 0 };
-    const nextQuantity = Math.min(999, Math.max(1, Math.round(Number(quantity) || 1)));
+    const nextQuantity = Math.max(1, Math.round(Number(quantity) || 1));
     const rows = craftPlanRows();
     const index = rows.findIndex(([savedRef]) => savedRef === ref);
     if (index >= 0) rows[index] = [ref, nextQuantity];
-    else if (rows.length < CRAFT_PLAN_LIMIT) rows.push([ref, nextQuantity]);
-    else return { ok: false, full: true, ref, quantity: nextQuantity };
+    else rows.push([ref, nextQuantity]);
     saveCraftPlanRows(rows);
     return { ok: true, added: index < 0, ref, quantity: nextQuantity };
   }
@@ -5681,7 +5679,7 @@
     const stationsHTML = stations.map((station) => `<span class="craft-plan-station"><span class="slot">${station.art ? `<img src="${escAttr(releaseAsset(station.art))}" alt="" loading="lazy" decoding="async" />` : `<b aria-hidden="true">РУКИ</b>`}</span><b>${esc(station.name)}</b></span>`).join("");
     return `<section class="craft-plan panel" id="craft-plan" tabindex="-1" aria-labelledby="craft-plan-title">
       <header class="craft-plan-head"><div class="craft-plan-heading"><span aria-hidden="true">▦</span><div><small>общая смета нескольких рецептов</small><h2 id="craft-plan-title">План крафта</h2><p>Добавляй цели из визуальных рецептов. Кодекс объединит одинаковые промежуточные предметы, реальные размеры партий и базовые ресурсы.</p></div></div><div class="craft-plan-head-actions"><button type="button" data-plan-copy ${entries.length ? "" : "disabled"}>⧉ Скопировать план</button><button type="button" data-plan-clear ${entries.length ? "" : "disabled"}>Очистить</button></div></header>
-      ${entries.length ? `<div class="craft-plan-stats"><span><b>${entries.length}</b><small>целей</small></span><span><b>${materials.length}</b><small>видов ресурсов</small></span><span><b>${esc(craftAmount(totalUnits))}</b><small>единиц суммарно</small></span><span><b>${stations.length}</b><small>станций</small></span></div><div class="craft-plan-targets">${targetsHTML}</div><section class="craft-plan-resources" aria-labelledby="craft-plan-resources-title"><header><div><small>единый список закупки и добычи</small><h3 id="craft-plan-resources-title">Базовые ресурсы</h3><p>Отметки сохраняются в профиле и остаются при изменении количества целей.</p></div><button type="button" data-plan-reset-materials ${collectedCount ? "" : "disabled"}>Сбросить отметки</button></header><div class="recipe-check-progress"><i style="width:${percent}%"></i></div><output aria-live="polite"><b>${collectedCount}</b> из ${materials.length} видов собрано · ${percent}%</output><div class="craft-plan-material-grid">${materialsHTML}</div></section><div class="craft-plan-stations"><small>Все станции плана</small><div>${stationsHTML || `<span class="craft-plan-no-stations">Дополнительные станции не нужны</span>`}</div></div>` : `<div class="craft-plan-empty"><span aria-hidden="true">＋</span><div><b>План пока пуст</b><p>Открой рецепт любого создаваемого предмета и нажми «Добавить в план». Можно объединить до ${CRAFT_PLAN_LIMIT} целей.</p></div><a class="btn ghost" href="#/items">Выбрать предмет</a></div>`}
+      ${entries.length ? `<div class="craft-plan-stats"><span><b>${entries.length}</b><small>целей</small></span><span><b>${materials.length}</b><small>видов ресурсов</small></span><span><b>${esc(craftAmount(totalUnits))}</b><small>единиц суммарно</small></span><span><b>${stations.length}</b><small>станций</small></span></div><div class="craft-plan-targets">${targetsHTML}</div><section class="craft-plan-resources" aria-labelledby="craft-plan-resources-title"><header><div><small>единый список закупки и добычи</small><h3 id="craft-plan-resources-title">Базовые ресурсы</h3><p>Отметки сохраняются в профиле и остаются при изменении количества целей.</p></div><button type="button" data-plan-reset-materials ${collectedCount ? "" : "disabled"}>Сбросить отметки</button></header><div class="recipe-check-progress"><i style="width:${percent}%"></i></div><output aria-live="polite"><b>${collectedCount}</b> из ${materials.length} видов собрано · ${percent}%</output><div class="craft-plan-material-grid">${materialsHTML}</div></section><div class="craft-plan-stations"><small>Все станции плана</small><div>${stationsHTML || `<span class="craft-plan-no-stations">Дополнительные станции не нужны</span>`}</div></div>` : `<div class="craft-plan-empty"><span aria-hidden="true">＋</span><div><b>План пока пуст</b><p>Открой рецепт любого создаваемого предмета и нажми «Добавить в план». Количество целей не ограничено.</p></div><a class="btn ghost" href="#/items">Выбрать предмет</a></div>`}
     </section>`;
   }
   function refreshCraftPlan(options = {}) {
@@ -5709,7 +5707,7 @@
         const nextQuantity = (currentEntry?.quantity || 1) + Number(quantityButton.dataset.planQuantity || 0);
         setCraftPlanEntry(ref, nextQuantity);
         refreshCraftPlan();
-        announce(`Количество крафтов: ${Math.min(999, Math.max(1, nextQuantity))}`);
+        announce(`Количество крафтов: ${Math.max(1, nextQuantity)}`);
         focusTarget(ref, `[data-plan-quantity="${quantityButton.dataset.planQuantity}"]`);
         return;
       }
@@ -8061,7 +8059,7 @@
     const quantity = recipeCraftQuantity(recipeStateKey);
     const result = setCraftPlanEntry(recipeCurrent, quantity);
     if (!result.ok) {
-      toast(result.full ? `В плане уже ${CRAFT_PLAN_LIMIT} целей` : "Этот рецепт нельзя добавить в план", "!");
+      toast("Этот рецепт нельзя добавить в план", "!");
       return;
     }
     renderVisualRecipe(recipeCurrent);
@@ -8104,10 +8102,10 @@
   }
   function recipeCraftQuantity(key) {
     const value = Number(store.get().recipeQuantities?.[key] || 1);
-    return Math.min(999, Math.max(1, Number.isFinite(value) ? Math.round(value) : 1));
+    return Math.max(1, Number.isFinite(value) ? Math.round(value) : 1);
   }
   function setRecipeCraftQuantity(key, value) {
-    const quantity = Math.min(999, Math.max(1, Math.round(Number(value) || 1)));
+    const quantity = Math.max(1, Math.round(Number(value) || 1));
     const all = { ...(store.get().recipeQuantities || {}), [key]: quantity };
     store.set({ recipeQuantities: all });
     return quantity;
@@ -8143,7 +8141,7 @@
     event.preventDefault();
     const result = addCraftPlanEntry(button.dataset.addCraftPlan || "", 1);
     if (!result.ok) {
-      toast(result.full ? `В плане уже ${CRAFT_PLAN_LIMIT} целей` : "Этот рецепт нельзя добавить в план", "!");
+      toast("Этот рецепт нельзя добавить в план", "!");
       return;
     }
     document.querySelectorAll("[data-add-craft-plan]").forEach((control) => {
@@ -8745,7 +8743,6 @@
   addEventListener("popstate", () => { restoreScrollOnNextRoute = true; });
   addEventListener("hashchange", () => {
     if (lastScrollKey) routeScrollPositions.set(lastScrollKey, scrollY);
-    if (routeScrollPositions.size > 120) routeScrollPositions.delete(routeScrollPositions.keys().next().value);
     SND.play("tick");
     route();
   });

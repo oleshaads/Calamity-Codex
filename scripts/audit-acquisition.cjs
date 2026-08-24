@@ -9,7 +9,7 @@ const check = (condition, message) => { if (!condition) fail(message); };
 const appSource = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 check(appSource.includes("GENERIC_OBTAIN_RE") && appSource.includes("isGenericObtainText"), "Generic acquisition placeholders are not identified honestly");
 check(appSource.includes("function officialWikiProfile") && appSource.includes("terraria.wiki.gg/ru/api.php") && appSource.includes("calamitymod.wiki.gg/api.php"), "Universal official-wiki acquisition lookup is incomplete");
-check(appSource.includes('WIKI_SOURCE_CACHE_KEY = "calamity-codex-wiki-sources-v4"') && appSource.includes("slice(0, 300)"), "Verified acquisition results are not cached for offline reuse");
+check(appSource.includes('WIKI_SOURCE_CACHE_KEY = "calamity-codex-wiki-sources-v4"') && appSource.includes("wikiSourceCache = cache;"), "Verified acquisition results are not cached for offline reuse");
 check(!/catch\s*\{[\s\S]{0,250}?box\.hidden\s*=\s*true/.test(appSource), "Wiki lookup still hides its failure instead of offering an official source link");
 const css = fs.readFileSync(path.join(root, "css/modern.css"), "utf8");
 check(css.includes("Универсальный проверяемый источник предмета") && css.includes(".acquisition-wiki") && css.includes(".wiki-source-live.failed"), "Acquisition verification states lack readable styling");
