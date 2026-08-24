@@ -6874,3 +6874,32 @@ body.lite .reverse-craft-selected::after { display: none; }
 @media (max-width: 700px) {
   .reverse-selected-side { align-items: flex-start; margin-left: 0; }
 }
+
+/* ==================================================================== */
+/* Спокойные рамки: без золотых колец на контейнерах и полях ввода      */
+/* ==================================================================== */
+.craft-graph-page .craft-tree-branch { border: 1px solid #2f3b47; box-shadow: 0 14px 32px rgba(0, 0, 0, .32); }
+.search:focus-within { border-color: #4c5f72; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .45); }
+.search-wrap:focus-within { border-color: #4c5f72; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .45); }
+.reverse-craft-selected { border-color: #3a4656; background: linear-gradient(160deg, #1b2734, #121a23 62%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 12px 28px rgba(0, 0, 0, .35); }
+.reverse-craft-selected::after { display: none; }
+.reverse-selected-art { border-color: #3a4656; background: #0d141b; box-shadow: none; }
+.reverse-craft-count { border-color: #3f4c5b; background: #141d27; }
+.reverse-result-card:hover { border-color: #4c5f72; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 14px 30px rgba(0, 0, 0, .45); }
+.reverse-result-card::before { background: linear-gradient(180deg, rgba(143, 160, 176, .5), rgba(143, 160, 176, .05)); }
+.reverse-pop-card:hover { border-color: #4c5f72; box-shadow: 0 12px 26px rgba(0, 0, 0, .42); }
+.reverse-more { border-color: #33404c; color: #cfd8df; background: #121a23; }
+.reverse-more:hover { border-color: #4c5f72; background: #17212b; }
+.reverse-station { border-color: #3a4656; color: #aab6c1; }
+
+/* Ровные плитки и заголовки витрины обратного крафта */
+.reverse-pop-head { display: block; }
+.reverse-pop-head b { display: block; }
+.reverse-pop-head small { display: block; margin-top: 3px; }
+.reverse-pop-grid { align-items: stretch; }
+.reverse-pop-card { height: 100%; }
+.reverse-pop-card b { min-height: 33px; }
+.reverse-pop-card em { margin-top: auto; }
+
+/* Спрайт-иконки на кнопках действий */
+.btn-sprite { width: 16px; height: 16px; flex: none; display: inline-block; margin-right: 5px; object-fit: contain; image-rendering: pixelated; vertical-align: -3px; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .5)); }

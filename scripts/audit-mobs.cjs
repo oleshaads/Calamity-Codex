@@ -101,7 +101,9 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   window.location.hash = "#/crafts?item=catalog%3AWulfrumBattery";
   await settle(250);
   const mentions = [...document.querySelectorAll(".npc-tip")];
-  check(mentions.length >= 5 && document.querySelectorAll("b.mob-mention").length >= 5, "Craft tree does not auto-link mob mentions");
+  // Справочник рекомендаций удалён со страницы дерева, поэтому проверяем
+  // кликабельные упоминания существ в источниках самого графа.
+  check(mentions.length >= 5, "Craft tree does not auto-link mob mentions");
   const wulfrum = mentions.find((tip) => /^Wulfrum/.test(tip.dataset.npc || ""));
   check(wulfrum, "Craft sources lost their clickable mob names");
   wulfrum.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

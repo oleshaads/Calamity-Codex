@@ -105,8 +105,13 @@ const settle = (ms = 45) => new Promise((resolve) => setTimeout(resolve, ms));
   check(window.document.querySelectorAll(".catalog-item-card").length > 10, "Searching the new boss name does not find its related items and recipes");
   check([...window.document.querySelectorAll(".catalog-item-card")].every((entry) => entry.textContent.includes("Геката")), "Boss-name search returned a card without the matching relation description");
 
-  window.location.hash = "#/crafts?q=%D0%9C%D0%B5%D1%82%D0%BA%D0%B0%20%D0%9F%D1%80%D0%BE%D0%B2%D0%B8%D0%B4%D0%B5%D0%BD%D1%81";
-  await settle(100);
+  // Справочник рекомендаций удалён со страницы дерева: карточка рекомендации
+  // с раздельными боссами проверяется через избранные крафты профиля.
+  const savedProfile = JSON.parse(window.localStorage.getItem("calamity-codex") || "{}");
+  window.localStorage.setItem("calamity-codex", JSON.stringify({ ...savedProfile, favorites: { ...(savedProfile.favorites || {}), craft: ["Метка Провиденс"] } }));
+  window.dispatchEvent(new window.StorageEvent("storage", { key: "calamity-codex" }));
+  window.location.hash = "#/favorites";
+  await settle(150);
   const markCard = [...window.document.querySelectorAll(".craft-card")].find((entry) => entry.textContent.includes("Метка Провиденс"));
   check(markCard, "Mark of Providence craft card did not render");
   const linkedBosses = [...markCard.querySelectorAll(".boss-ref b")].map((node) => node.textContent);

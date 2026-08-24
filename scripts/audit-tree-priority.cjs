@@ -68,13 +68,12 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   treeLink.click();
   await settle(130);
   const branch = document.getElementById("craft-tree-branch");
-  const planShelf = document.querySelector(".craft-plan-shelf");
-  const recommendationShelf = document.querySelector(".craft-recommendations-shelf");
   check(window.location.hash.includes("#/crafts?item=catalog%3AAirSpinner"), "Primary action did not open the shareable full-tree route");
   check(branch && branch.textContent.includes("Аир Спиннер") && branch.querySelector("#craft-tree-inline-body > .tnode"), "Full-page tree did not render the selected Air Spinner root");
   check(document.activeElement === branch, "Direct tree route did not focus the primary graph section");
-  check(Boolean(branch.compareDocumentPosition(planShelf) & window.Node.DOCUMENT_POSITION_FOLLOWING) && Boolean(branch.compareDocumentPosition(recommendationShelf) & window.Node.DOCUMENT_POSITION_FOLLOWING), "Plan or recommendations are still placed before the full tree");
-  check(!planShelf.open && !recommendationShelf.open, "Secondary craft plan or recommendations compete with the selected tree by default");
+  // Пустой план и справочник рекомендаций больше не занимают страницу дерева:
+  // план появляется только с целями или по прямой ссылке #/crafts?plan=1.
+  check(!document.querySelector(".craft-plan-shelf") && !document.querySelector(".craft-recommendations-shelf"), "Empty secondary shelves must not compete with the selected tree");
 
   document.getElementById("craft-tree-clear").click();
   await settle(100);

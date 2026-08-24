@@ -62,6 +62,10 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
   const storedInline = JSON.parse(window.localStorage.getItem("calamity-codex") || "{}").treeZoom?.inline;
   check(storedInline === 1, "Inline graph zoom was not saved");
 
+  // Справочник рекомендаций удалён со страницы дерева: быстрый модальный
+  // граф теперь проверяется на карточках крафта внутри квеста маршрута.
+  window.location.hash = "#/novice?q=1";
+  await settle(90);
   const modalTrigger = document.querySelector(".craft-card .ing[data-ing]");
   check(modalTrigger, "Craft page has no ingredient trigger for the quick modal tree");
   modalTrigger.click();

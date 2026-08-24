@@ -100,7 +100,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core108";
+  const ASSET_VERSION = "20260819-core109";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -110,6 +110,9 @@
       ? withoutHash.replace(/([?&])v=[^&]*/, `$1v=${ASSET_VERSION}`)
       : `${withoutHash}${withoutHash.includes("?") ? "&" : "?"}v=${ASSET_VERSION}`;
     return hash ? `${versioned}#${hash}` : versioned;
+  }
+  function btnSprite(path) {
+    return `<img class="btn-sprite" src="${releaseAsset(path)}" alt="" loading="lazy" decoding="async" />`;
   }
   function versionLocalImages(root = document) {
     if (!root) return;
@@ -548,7 +551,7 @@
         </div>
         ${wikiProfile ? `<section class="wiki-source-live acquisition-wiki" data-wiki-live><small>${esc(wikiProfile.label)} · проверяем источник…</small><p>Ищем конкретный способ получения, противника, структуру, магазин или условие появления.</p><a href="${escAttr(wikiProfile.url)}" target="_blank" rel="noopener noreferrer">Открыть официальную страницу ↗</a></section>` : ""}
         <div class="tip-card-actions">
-          ${recipe ? `${info.recipe ? fullTreeLink(name) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(name)}"><span aria-hidden="true">⚒</span> Рецепт</button>${craftPlanActionButton(name)}` : ""}
+          ${recipe ? `${info.recipe ? fullTreeLink(name) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(name)}">${btnSprite("assets/vanilla-sprites/36.png")}Рецепт</button>${craftPlanActionButton(name)}` : ""}
           ${info.catName ? `<a class="craft-catalog-link" href="#/items?s=${encodeURIComponent(info.catName)}">В каталоге ↗</a>` : ""}
           ${lex ? `<a class="craft-catalog-link" href="#/lex?q=${encodeURIComponent(lex.ru)}">В словаре ↗</a>` : ""}
         </div>
@@ -2131,7 +2134,7 @@
         </details>
         <div class="card-actions">
           ${fullTreeLink(catRecipe ? `catalog:${catRecipe.id}` : cleanName)}
-          ${visualRecipe ? `<button class="recipe-btn" type="button" data-recipe="${escAttr(cleanName)}"><span aria-hidden="true">⚒</span> Визуальный рецепт</button>${craftPlanActionButton(catRecipe ? `catalog:${catRecipe.id}` : cleanName)}` : ""}
+          ${visualRecipe ? `<button class="recipe-btn" type="button" data-recipe="${escAttr(cleanName)}">${btnSprite("assets/vanilla-sprites/36.png")}Визуальный рецепт</button>${craftPlanActionButton(catRecipe ? `catalog:${catRecipe.id}` : cleanName)}` : ""}
           ${catRecipe ? `<a class="craft-catalog-link" href="#/items?s=${encodeURIComponent(catRecipe.name)}" title="Открыть полную карточку в каталоге">в каталоге ↗</a>` : ""}
         </div>
       </div>
@@ -4245,7 +4248,7 @@
           </div>
         </details>
         <div class="card-links">
-          ${hasRecipe ? `${hasTreeRecipe ? fullTreeLink(`catalog:${item.id}`) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(`catalog:${item.id}`)}"><span aria-hidden="true">⚒</span> Рецепт</button>${craftPlanActionButton(`catalog:${item.id}`)}` : `<button class="obtain-btn" type="button" data-item-details="${escAttr(`catalog:${item.id}`)}"><span aria-hidden="true">⌖</span> Получение</button>`}
+          ${hasRecipe ? `${hasTreeRecipe ? fullTreeLink(`catalog:${item.id}`) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(`catalog:${item.id}`)}">${btnSprite("assets/vanilla-sprites/36.png")}Рецепт</button>${craftPlanActionButton(`catalog:${item.id}`)}` : `<button class="obtain-btn" type="button" data-item-details="${escAttr(`catalog:${item.id}`)}"><span aria-hidden="true">⌖</span> Получение</button>`}
           <a href="${escAttr(wikiUrl)}" target="_blank" rel="noopener noreferrer">${hasRecipe ? "Страница предмета" : "Источник и шансы"} на wiki ↗</a>
           ${detail ? `<a class="catalog-guide-link" href="#/items?mode=guide&s=${encodeURIComponent(detail.name)}" title="Открыть практическую рекомендацию ${escAttr(detailName)}">Рекомендация кодекса →</a>` : ""}
         </div>
@@ -4300,7 +4303,7 @@
           </div>
         </details>
         <div class="card-links">
-          ${hasRecipe ? `${hasTreeRecipe ? fullTreeLink(it.name) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(it.name)}"><span aria-hidden="true">⚒</span> Рецепт</button>${craftPlanActionButton(it.name)}` : `<button class="obtain-btn" type="button" data-item-details="${escAttr(it.name)}"><span aria-hidden="true">⌖</span> Получение</button>`}
+          ${hasRecipe ? `${hasTreeRecipe ? fullTreeLink(it.name) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(it.name)}">${btnSprite("assets/vanilla-sprites/36.png")}Рецепт</button>${craftPlanActionButton(it.name)}` : `<button class="obtain-btn" type="button" data-item-details="${escAttr(it.name)}"><span aria-hidden="true">⌖</span> Получение</button>`}
           ${itemInfo.catName ? `<a href="#/items?s=${encodeURIComponent(itemInfo.catName)}">Полная карточка →</a>` : ""}
         </div>
       </div>
@@ -5431,11 +5434,11 @@
     const ref = canonicalCraftPlanRef(value);
     const existing = craftPlanRows().find(([savedRef]) => savedRef === ref);
     const saved = Boolean(existing);
-    return `<button class="craft-plan-card-add${saved ? " saved" : ""}" type="button" data-add-craft-plan="${escAttr(ref)}" aria-pressed="${saved}" title="${saved ? "Уже добавлено в общий план" : "Добавить этот рецепт в общий план крафта"}"><span aria-hidden="true">${saved ? "✓" : "＋"}</span> ${saved ? "В плане" : esc(label)}</button>`;
+    return `<button class="craft-plan-card-add${saved ? " saved" : ""}" type="button" data-add-craft-plan="${escAttr(ref)}" aria-pressed="${saved}" title="${saved ? "Уже добавлено в общий план" : "Добавить этот рецепт в общий план крафта"}">${saved ? `<span aria-hidden="true">✓</span> ` : btnSprite("assets/vanilla-sprites/48.png")}${saved ? "В плане" : esc(label)}</button>`;
   }
   function fullTreeLink(value, label = "Открыть полное дерево") {
     const ref = canonicalCraftPlanRef(value);
-    return `<a class="tree-primary-btn" href="#/crafts?item=${encodeURIComponent(ref)}"><span aria-hidden="true">◆</span><span><b>${esc(label)}</b><small>Все ветки до базовых ресурсов</small></span><i aria-hidden="true">→</i></a>`;
+    return `<a class="tree-primary-btn" href="#/crafts?item=${encodeURIComponent(ref)}">${btnSprite("assets/sprites/Iron_Anvil.png")}<span><b>${esc(label)}</b><small>Все ветки до базовых ресурсов</small></span><i aria-hidden="true">→</i></a>`;
   }
   function removeCraftPlanEntry(value) {
     const ref = canonicalCraftPlanRef(value);
@@ -5890,7 +5893,7 @@
     if (share) share.disabled = !(isTreeEntry(info));
   }
 
-  function bindCraftTreeBranch(section, pageFilter = "") {
+  function bindCraftTreeBranch(section, pageFilter = "", { autofocus = true } = {}) {
     if (!section || section.dataset.bound) return;
     section.dataset.bound = "1";
     // Масштаб хранится отдельно от data-tree-zoom на кнопках управления:
@@ -5941,7 +5944,9 @@
         populateCraftTreePicker(section);
         delete grid.dataset.loading;
         setPickerLoading(false);
-        search?.focus();
+        // Прямая ссылка на план крафта не должна терять фокус из-за
+        // фоновой подготовки полки выбора предметов.
+        if (!section.dataset.noAutofocus) search?.focus();
       }, 0);
     };
     const setPicker = (open) => {
@@ -5957,12 +5962,13 @@
       }
       if (grid?.dataset.ready) {
         renderCraftChoiceWindow(section);
-        requestAnimationFrame(() => search?.focus());
+        requestAnimationFrame(() => { if (!section.dataset.noAutofocus) search?.focus(); });
       } else {
         requestAnimationFrame(loadPickerChoices);
       }
     };
-    if (add) add.onclick = () => setPicker(picker.hidden);
+    if (!autofocus) section.dataset.noAutofocus = "1";
+    if (add) add.onclick = () => { delete section.dataset.noAutofocus; setPicker(picker.hidden); };
     if (picker && !picker.hidden) setPicker(true);
     if (search) search.oninput = () => {
       clearTimeout(choiceSearchTimer);
@@ -6645,7 +6651,7 @@
         </div>
       </details>
       <div class="useful-card-actions">
-        ${visualRecipe ? `${info.recipe ? fullTreeLink(item.ref) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(item.ref)}"><span aria-hidden="true">⚒</span> Рецепт</button>${craftPlanActionButton(item.ref)}` : `<button class="obtain-btn" type="button" data-item-details="${escAttr(item.ref)}"><span aria-hidden="true">⌖</span> Получение</button>`}
+        ${visualRecipe ? `${info.recipe ? fullTreeLink(item.ref) : ""}<button class="recipe-btn" type="button" data-recipe="${escAttr(item.ref)}">${btnSprite("assets/vanilla-sprites/36.png")}Рецепт</button>${craftPlanActionButton(item.ref)}` : `<button class="obtain-btn" type="button" data-item-details="${escAttr(item.ref)}"><span aria-hidden="true">⌖</span> Получение</button>`}
         <a href="${escAttr(catalogUrl)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${external ? "Terraria Wiki ↗" : "Полная карточка →"}</a>
       </div>
     </article>`;
@@ -6803,8 +6809,8 @@
       <div class="reverse-result-recipe">${chips}${stationChip}</div>
       ${obtainShort ? `<p class="reverse-result-obtain">${esc(obtainShort)}</p>` : ""}
       <div class="reverse-result-actions">
-        <a class="tree-btn" href="#/crafts?item=${encodeURIComponent(row.result)}">◆ Дерево</a>
-        <button class="tree-btn ghost" type="button" data-recipe="${escAttr(row.result)}">⚒ Рецепт</button>
+        <a class="tree-btn" href="#/crafts?item=${encodeURIComponent(row.result)}">${btnSprite("assets/sprites/Iron_Anvil.png")}Дерево</a>
+        <button class="tree-btn ghost" type="button" data-recipe="${escAttr(row.result)}">${btnSprite("assets/vanilla-sprites/36.png")}Рецепт</button>
         ${craftPlanActionButton(row.result)}
       </div>
     </article>`;
@@ -6835,7 +6841,7 @@
         </div>
         <div class="reverse-selected-side">
           <span class="reverse-craft-count">${rows.length ? `⚒ участвует в ${recipeCountText(rows.length)}` : "ни в одном рецепте"}</span>
-          <a class="tree-btn ghost" href="#/crafts?item=${encodeURIComponent(info.key || info.name)}">◆ Его полное дерево</a>
+          <a class="tree-btn ghost" href="#/crafts?item=${encodeURIComponent(info.key || info.name)}">${btnSprite("assets/sprites/Iron_Anvil.png")}Его полное дерево</a>
         </div>
       </div>
       ${rows.length
@@ -6953,24 +6959,6 @@
         craftTreeRoot = "";
       }
     }
-    const q = (filter || "").trim().toLocaleLowerCase("ru");
-    const seen = new Set();
-    const list = CODEX.crafts.filter((c) => {
-      const key = String(c.name || "").toLocaleLowerCase("ru");
-      if (seen.has(key)) return false;
-      seen.add(key);
-      const bossNames = bossRelationsFor(c).map(({ boss }) => `${boss.name} ${boss.en || ""}`).join(" ");
-      const blob = `${c.name} ${ruItemName(c.name)} ${ruText(c.ings)} ${c.why} ${c.stage} ${c.station || ""} ${bossNames}`;
-      const ru = ruItemName(c.name) || c.name;
-      return !q || matchesSearch(`${blob} ${ru}`, q);
-    });
-    const groups = [];
-    const map = {};
-    list.forEach((c) => {
-      const stage = c.stage || "Прочее";
-      if (!map[stage]) { map[stage] = []; groups.push(stage); }
-      map[stage].push(c);
-    });
     const recipeCount = getRecipeIndex().size;
     const cycleCutCount = recipeCycleCuts.size + VANILLA_RECIPE_CUT_IDS.size;
     const planTargetCount = craftPlanRows().length;
@@ -6988,38 +6976,18 @@
           </div></div>
         </details>
         ${craftTreeBranchHTML(craftTreeRoot)}
-        <details class="secondary-shelf craft-plan-shelf" ${focusPlan ? "open" : ""}>
+        ${planTargetCount > 0 || focusPlan ? `<details class="secondary-shelf craft-plan-shelf" ${focusPlan ? "open" : ""}>
           <summary><span><i aria-hidden="true">＋</i><b>Общий план крафта</b><small>Несколько целей и объединённая смета</small></span><em>${planTargetCount ? `${planTargetCount} целей` : "Пусто"}</em></summary>
           <div class="secondary-shelf-body">${craftPlanHTML()}</div>
-        </details>
-        <details class="secondary-shelf craft-recommendations-shelf" ${q ? "open" : ""}>
-          <summary><span><i aria-hidden="true">☰</i><b>Рекомендации по этапам</b><small>Дополнительный справочник готовых результатов</small></span><em>${list.length}</em></summary>
-          <div class="secondary-shelf-body"><section class="craft-index-panel panel" aria-labelledby="craft-index-title">
-          <div class="craft-index-head">
-            <div>
-              <small>справочник результатов</small>
-              <h2 id="craft-index-title">Все рекомендации по этапам</h2>
-              <p>Кнопка «Дерево крафта» на карточке открывает тот же граф с выбранным результатом.</p>
-            </div>
-            <label class="search-wrap craft-index-search">
-              <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
-              <input id="craft-filter" type="search" aria-label="Поиск рецептов" placeholder="Название, материал, этап…" value="${escAttr(filter || "")}" />
-            </label>
-          </div>
-          <div class="craft-index-results">
-            ${groups.length
-              ? groups.map((stage, i) => shelf(esc(stage), map[stage].length, `<div class="craft-grid">${map[stage].map((c) => craftCard(c)).join("")}</div>`, i === 0 || !!q)).join("")
-              : `<div class="empty-state"><span>⚒</span><b>Рецепт не найден</b><p>Проверь название или попробуй поискать ингредиент.</p><a class="btn ghost" href="#/crafts">Показать все рецепты</a></div>`}
-          </div>
-        </section></div>
-        </details>
+        </details>` : ""}
+
       </div>
     `;
     const plan = app.querySelector("#craft-plan");
     bindCraftPlan(plan);
     updateCraftPlanCount();
     const branch = app.querySelector("#craft-tree-branch");
-    if (branch) bindCraftTreeBranch(branch, filter);
+    if (branch) bindCraftTreeBranch(branch, filter, { autofocus: !focusPlan });
     if (requestedRoot && branch && !focusPlan) requestAnimationFrame(() => {
       branch.scrollIntoView({ block: "start", behavior: "smooth" });
       branch.focus({ preventScroll: true });
@@ -7028,18 +6996,6 @@
       plan.scrollIntoView({ block: "start", behavior: "smooth" });
       plan.focus({ preventScroll: true });
     });
-    const inp = $("#craft-filter");
-    let t;
-    if (inp) inp.oninput = () => {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        const params = new URLSearchParams();
-        if (inp.value) params.set("q", inp.value);
-        if (craftTreeRoot) params.set("item", craftTreeRoot);
-        history.replaceState(null, "", `#/crafts${params.toString() ? `?${params}` : ""}`);
-        route();
-      }, 200);
-    };
   }
 
   const biomeModal = document.getElementById("biome-modal");
