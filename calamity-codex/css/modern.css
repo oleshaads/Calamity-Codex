@@ -650,15 +650,26 @@ kbd {
   align-items: center;
   gap: 10px;
   min-width: 128px;
-  padding-left: 14px;
-  border-left: 1px solid #26303c;
+  padding: 6px 14px 6px 14px;
+  border: 1px solid #33404c;
+  border-radius: 9px;
   color: var(--text);
+  background: linear-gradient(180deg, #17212c, #121a23);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  transition: border-color .14s ease, box-shadow .14s ease, background .14s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+.journey-mini:hover {
+  border-color: #8a6d3b;
+  background: linear-gradient(180deg, #1c2733, #151e28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 16px rgba(232, 196, 111, .1);
 }
 .jm-copy { text-align: right; }
 .jm-copy small { display: block; color: #6b7682; font-family: var(--mono); font-size: 7px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
-.jm-copy b { display: block; color: var(--gold); font-family: var(--mono); font-size: 12px; }
-.jm-bar { width: 46px; height: 9px; border: 2px solid var(--line); border-radius: 2px; background: #140709; box-shadow: inset 0 1px 3px rgba(0,0,0,.7); overflow: hidden; }
-.jm-bar i { display: block; width: 0; height: 100%; background: linear-gradient(180deg, #ff8a76, #d63c3c 55%, var(--hp-2)); transition: width .35s ease; }
+.jm-copy b { display: block; color: var(--gold); font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.jm-bar { width: 46px; height: 9px; border: 1px solid #33404c; border-radius: 5px; background: #0d1218; box-shadow: inset 0 1px 2px rgba(0,0,0,.6); overflow: hidden; }
+.jm-bar i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #8f6b2b, #e8c46f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 0 8px rgba(232, 196, 111, .3); border-radius: 5px; transition: width .5s cubic-bezier(.2, .7, .3, 1); }
 
 /* ---------- выпадающий поиск ---------- */
 .search-drop {
@@ -5338,7 +5349,7 @@ body::after { opacity: .12; background-size: auto, 48px 48px, 48px 48px; }
 .page-context b { color: #dce2e5; font-size: 12px; }
 .search { border: 1px solid #34424d; border-radius: 7px; background: #111922; box-shadow: none; }
 .search:focus-within { border-color: #887440; box-shadow: 0 0 0 3px rgba(232,196,111,.08); }
-.sound-toggle, .favorite-mini, .journey-mini, .burger { border-width: 1px; box-shadow: none; }
+.sound-toggle, .favorite-mini, .burger { border-width: 1px; box-shadow: none; }
 
 /* Компактные шапки разделов */
 .page { padding-top: 22px; }
@@ -6221,8 +6232,6 @@ select:focus { border-color: #b3924c; box-shadow: 0 0 0 3px rgba(232, 196, 111, 
 input[type="search"], input[type="text"], input[type="number"] { border-radius: 8px; transition: border-color .14s ease, box-shadow .14s ease; }
 
 /* Хром шапки: рюкзак, звук, мини-квест */
-.journey-mini { border: 1px solid #33404c; border-radius: 9px; background: linear-gradient(180deg, #17212c, #121a23); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); transition: border-color .14s ease, box-shadow .14s ease; }
-.journey-mini:hover { border-color: #8a6d3b; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 0 16px rgba(232, 196, 111, .08); }
 .favorite-mini, .sound-toggle { transition: box-shadow .14s ease, border-color .14s ease; }
 .favorite-mini:hover, .sound-toggle:hover { box-shadow: inset 0 0 0 1px #57646d, inset 0 -10px 14px rgba(0, 0, 0, .25), 0 0 14px rgba(232, 196, 111, .08); }
 .favorite-count { border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, .4); }
@@ -6729,6 +6738,86 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   @keyframes tap-ripple { from { opacity: .9; transform: scale(0); } to { opacity: 0; transform: scale(1); } }
   .tap-ripple { position: absolute; z-index: 0; border-radius: 50%; background: radial-gradient(circle, rgba(232, 196, 111, .3), rgba(232, 196, 111, .08) 55%, transparent 70%); pointer-events: none; animation: tap-ripple .5s ease-out 1; }
+}
+
+
+
+/* ==================================================================== */
+/* Подсветка терминов в тексте Пути новичка                              */
+/* ==================================================================== */
+.term-hl {
+  color: var(--gold);
+  border-bottom: 1px dotted rgba(255, 217, 122, .55);
+  cursor: help;
+  transition: background .12s ease, border-color .12s ease;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.term-hl:hover, .term-hl:focus-visible {
+  background: rgba(255, 217, 122, .1);
+  border-bottom-style: solid;
+  outline: none;
+}
+
+/* ==================================================================== */
+/* Пасхалка: сердечки и любовное послание                                */
+/* ==================================================================== */
+.easter-hearts {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  overflow: hidden;
+}
+.easter-heart {
+  position: absolute;
+  bottom: -40px;
+  display: block;
+  animation: easter-float linear forwards;
+  filter: drop-shadow(0 2px 6px rgba(255, 60, 80, .5));
+}
+@keyframes easter-float {
+  0% { transform: translateY(0) rotate(0deg) scale(.6); opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(-110vh) rotate(360deg) scale(1.1); opacity: 0; }
+}
+.easter-message {
+  position: fixed;
+  z-index: 1000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 28px 42px;
+  border: 2px solid #e84060;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(165deg, rgba(200, 30, 60, .92), rgba(120, 10, 30, .95));
+  box-shadow: 0 0 0 100vmax rgba(180, 20, 40, .45), 0 24px 80px rgba(0, 0, 0, .6), 0 0 60px rgba(255, 60, 80, .3);
+  text-align: center;
+  animation: easter-msg-in .4s cubic-bezier(.2, .7, .3, 1) both;
+  pointer-events: none;
+}
+.easter-message b {
+  display: block;
+  font-family: "Russo One", var(--mono), sans-serif;
+  font-size: clamp(22px, 4vw, 36px);
+  font-weight: 400;
+  letter-spacing: .03em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
+}
+.easter-message small {
+  display: block;
+  margin-top: 10px;
+  color: rgba(255, 220, 220, .8);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+@keyframes easter-msg-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.85); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 /* ==================================================================== */
