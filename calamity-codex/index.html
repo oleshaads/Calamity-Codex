@@ -25,6 +25,21 @@
   <link rel="dns-prefetch" href="https://calamitymod.wiki.gg" />
   <link rel="preload" href="js/codex.min.js?v=20260824-core115" as="script" />
   <link rel="stylesheet" href="css/modern.min.css?v=20260824-core115" />
+  <style>
+    .home-123-mark {
+      display: none;
+      margin: 18px 24px 0;
+      color: #f6e2ae;
+      font-family: "Russo One", system-ui, sans-serif;
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 400;
+      letter-spacing: .16em;
+      line-height: 1;
+      text-shadow: 0 4px 24px rgba(232, 196, 111, .28);
+    }
+    body:not([data-view]) .home-123-mark,
+    body[data-view="home"] .home-123-mark { display: block; }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#app">Перейти к содержимому</a>
@@ -170,6 +185,7 @@
       </header>
 
       <div id="search-panel" class="search-drop hidden" role="dialog" aria-modal="false" aria-label="Результаты поиска" tabindex="-1"></div>
+      <p class="home-123-mark">123</p>
       <main id="app" tabindex="-1" aria-busy="true">
         <section class="app-boot" aria-label="Загрузка кодекса">
           <span class="app-boot-mark" aria-hidden="true">◆</span>
