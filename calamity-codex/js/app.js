@@ -93,7 +93,7 @@
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VII",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",     accent: "#eea85b", fx: "embers" },
     biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VIII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",   accent: "#91d47f", fx: "leaves" },
     mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/mobs.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" },
-    reverse:   { eyebrow: "Зеркало кузницы",      mark: "⇄", no: "X",    cover: "assets/headers/crafts.webp",  bg: "assets/themes/hell.webp",     accent: "#e8c46f", fx: "embers" }
+    reverse:   { eyebrow: "Зеркало кузницы",      mark: "⇄", no: "X",    cover: "assets/headers/reverse.webp",  bg: "assets/themes/hell.webp",     accent: "#e8c46f", fx: "embers" }
   };
   const KIND_RU = {
     weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
@@ -4360,7 +4360,8 @@
           <div class="qmap-intro">
             <small>путь новичка</small>
             <h2>${total} квестов от первого дома до финала</h2>
-            <p>Иди по порядку: каждый квест подсказывает, куда идти, что собрать, что скрафтить и кого бить. Отмечай завершённые — прогресс сохраняется, и кодекс всегда помнит, где ты остановился.</p>
+            <p>Добро пожаловать в Каламити! Этот пошаговый маршрут проведёт тебя через весь мод — от первого ночлега до финального босса. Каждый квест объясняет, <b>куда идти</b>, <b>что собрать</b>, <b>что скрафтить</b> и <b>кого победить</b>. Нажимай «Завершить квест» — прогресс сохраняется автоматически.</p>
+            ${!done.size ? `<div class="hint" style="margin-top:14px"><b>Совет:</b> Начни с выбора класса ниже — это определит, какое оружие и броню рекомендовать. Ты всегда можешь сменить класс позже.</div>` : ""}
           </div>
           <div class="qmap-status panel">
             <div class="qmap-progress"><span><b>Путь героя</b><i>${done.size} / ${total} · ${pct}%</i></span><div class="hpbar"><i style="width:${pct}%"></i></div></div>
@@ -4518,6 +4519,7 @@
       });
     });
     bindSprites(app);
+    highlightNoviceTerms(app);
   }
 
   /* ===================== Мобы: бестиарий всех существ ===================== */
@@ -4683,6 +4685,83 @@
     const label = mobIndex().tagLabels[tag];
     return label || tag.split(":").pop();
   }
+
+  /* ---------- Подсветка игровых терминов в тексте Пути новичка ---------- */
+  let _termPattern = null;
+  function buildTermPattern() {
+    if (_termPattern) return _termPattern;
+    const terms = new Map();
+    /* Собираем русские названия предметов, боссов и биомов из CODEX */
+    const addItem = (item) => {
+      if (!item) return;
+      const ru = (item.nameRu || item.ru || item.name || "").trim();
+      if (ru && ru.length >= 3) terms.set(ru.toLocaleLowerCase("ru"), { ru, type: "предмет" });
+    };
+    if (CODEX.items) CODEX.items.forEach(addItem);
+    if (CODEX.bosses) CODEX.bosses.forEach((b) => {
+      const ru = (b.nameRu || b.ru || b.name || "").trim();
+      if (ru && ru.length >= 3) terms.set(ru.toLocaleLowerCase("ru"), { ru, type: "босс" });
+    });
+    if (CODEX.biomes) CODEX.biomes.forEach((b) => {
+      const ru = (b.nameRu || b.ru || b.name || "").trim();
+      if (ru && ru.length >= 3) terms.set(ru.toLocaleLowerCase("ru"), { ru, type: "биом" });
+    });
+    if (!terms.size) { _termPattern = null; return null; }
+    /* Сортируем по длине (длинные первыми) для жадного совпадения */
+    const sorted = [...terms.keys()].sort((a, b) => b.length - a.length);
+    const escaped = sorted.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    _termPattern = { rx: new RegExp(`(^|[\\s(\\["'—–,.:;!?])(${escaped.join("|")})`, "giu"), terms };
+    return _termPattern;
+  }
+  function highlightNoviceTerms(root) {
+    if (!root) return;
+    const pattern = buildTermPattern();
+    if (!pattern) return;
+    const targets = root.matches?.(".story, .how-tip, .desc, .obj-box, .hint, .step p, .info-card p, .kill-card p, .class-note, .mood, .qpanel-hint")
+      ? [root, ...root.querySelectorAll(".story, .how-tip, .desc, .obj-box, .hint, .step p, .info-card p, .kill-card p, .class-note, .mood, .qpanel-hint")]
+      : [...root.querySelectorAll(".story, .how-tip, .desc, .obj-box, .hint, .step p, .info-card p, .kill-card p, .class-note, .mood, .qpanel-hint")];
+    targets.forEach((el) => {
+      if (el.dataset.termHl) return;
+      el.dataset.termHl = "1";
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.parentElement && node.parentElement.closest("a, button, .term-hl, .npc-tip, .tip, [data-boss-detail]")) continue;
+        nodes.push(node);
+      }
+      nodes.forEach((node) => {
+        const text = node.nodeValue || "";
+        pattern.rx.lastIndex = 0;
+        if (!pattern.rx.test(text)) return;
+        pattern.rx.lastIndex = 0;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        let match;
+        while ((match = pattern.rx.exec(text))) {
+          const prefix = match[1];
+          const term = match[2];
+          const start = match.index + prefix.length;
+          if (start > last) frag.appendChild(document.createTextNode(text.slice(last, start)));
+          const key = term.toLocaleLowerCase("ru");
+          const info = pattern.terms.get(key);
+          if (info) {
+            const span = document.createElement("span");
+            span.className = "term-hl";
+            span.title = `${info.type}: ${info.ru}`;
+            span.textContent = term;
+            frag.appendChild(span);
+          } else {
+            frag.appendChild(document.createTextNode(term));
+          }
+          last = start + term.length;
+        }
+        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(frag, node);
+      });
+    });
+  }
+
   const MOB_KIND_RU = { enemy: "враг", critter: "зверёк", boss: "босс" };
   function mobMatchesFilters(mob, filters) {
     if (filters.src && mob.src !== filters.src) return false;
@@ -8540,6 +8619,53 @@
     route();
   });
   route();
+
+  /* ---------- Пасхалка: 10+ кликов по логотипу «Каламити Кодекс» за 10 секунд ---------- */
+  (() => {
+    const brand = document.querySelector('.rail-brand');
+    if (!brand) return;
+    let clicks = [];
+    let easterEggActive = false;
+    brand.addEventListener('click', (e) => {
+      if (easterEggActive) { e.preventDefault(); return; }
+      const now = Date.now();
+      clicks.push(now);
+      clicks = clicks.filter((t) => now - t < 10000);
+      if (clicks.length >= 10) {
+        e.preventDefault();
+        clicks = [];
+        easterEggActive = true;
+        SND.play('chime');
+        /* Запускаем вылетающие сердечки */
+        const hearts = ['❤', '💖', '💕', '💗', '💘', '💝', '♥'];
+        const container = document.createElement('div');
+        container.className = 'easter-hearts';
+        container.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(container);
+        for (let i = 0; i < 28; i++) {
+          const heart = document.createElement('span');
+          heart.className = 'easter-heart';
+          heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+          heart.style.left = Math.random() * 100 + 'vw';
+          heart.style.animationDelay = (Math.random() * 1.8) + 's';
+          heart.style.animationDuration = (2.2 + Math.random() * 2) + 's';
+          heart.style.fontSize = (18 + Math.random() * 26) + 'px';
+          container.appendChild(heart);
+        }
+        /* Текст пасхалки */
+        const msg = document.createElement('div');
+        msg.className = 'easter-message';
+        msg.innerHTML = '<b>Катя, я люблю тебя.</b><small>@Твой муж</small>';
+        document.body.appendChild(msg);
+        /* Очистка через 6 секунд */
+        setTimeout(() => {
+          container.remove();
+          msg.remove();
+          easterEggActive = false;
+        }, 6000);
+      }
+    });
+  })();
 
   /* Восстановление режима мести из сохранения */
   if (store.get().revengeance) {
