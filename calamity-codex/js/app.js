@@ -59,6 +59,7 @@
     favorites: "Избранное",
     lex: "Словарь",
     crafts: "Полное дерево",
+    reverse: "Обратный крафт",
     biomes: "Биомы",
     mobs: "Мобы"
   };
@@ -77,7 +78,8 @@
     if (view === "items") return `items:${params.mode || "catalog"}:${params.cls || "all"}:${params.kind || "all"}:${params.q || "all"}:${params.fav || ""}:${params.era || "all"}:${params.sort || "stage"}`;
     if (view === "useful") return `useful:${params.type || "all"}`;
     if (view === "lex") return `lex:${params.type || "all"}`;
-    if (view === "crafts") return `crafts:${params.q || "all"}:${params.item || ""}:${params.plan || ""}:${params.use || ""}`;
+    if (view === "crafts") return `crafts:${params.q || "all"}:${params.item || ""}:${params.plan || ""}`;
+    if (view === "reverse") return `reverse:${params.item || params.use || ""}`;
     if (view === "biomes") return `biomes:${params.danger || "all"}`;
     return view;
   }
@@ -90,14 +92,15 @@
     lex:       { eyebrow: "Язык этого мира",     mark: "A", no: "VI",   cover: "assets/headers/lex.webp",       bg: "assets/themes/sea.webp",      accent: "#c997e8", fx: "spores" },
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VII",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",     accent: "#eea85b", fx: "embers" },
     biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VIII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",   accent: "#91d47f", fx: "leaves" },
-    mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/mobs.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" }
+    mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/mobs.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" },
+    reverse:   { eyebrow: "Зеркало кузницы",      mark: "⇄", no: "X",    cover: "assets/headers/crafts.webp",  bg: "assets/themes/hell.webp",     accent: "#e8c46f", fx: "embers" }
   };
   const KIND_RU = {
     weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core106";
+  const ASSET_VERSION = "20260819-core107";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -354,6 +357,7 @@
     }
     if (view === "lex") return [[Object.keys(CODEX.lex || {}).length, "терминов"], ["RU / EN", "названия"]];
     if (view === "crafts") return [[getRecipeIndex().size, "рецептов в дереве"], [VANILLA_TREE_INDEX.items.length, "ванильных предметов"]];
+    if (view === "reverse") return [[getRecipeIndex().size, "рецептов в базе"], [reverseUseIndex().size, "ингредиентов с применением"]];
     if (view === "biomes") return [[CODEX.biomes.length, "биомов"], [4, "уровня риска"]];
     if (view === "mobs") {
       const idx = mobIndex();
@@ -1560,11 +1564,11 @@
     return `<span class="badge ${cls}">${pretty[era] || label}</span>`;
   }
 
-  const CATALOG_VIEWS = new Set(["items", "crafts", "useful", "favorites", "mobs"]);
+  const CATALOG_VIEWS = new Set(["items", "crafts", "useful", "favorites", "mobs", "reverse"]);
   function renderCatalogLoading(view, failed = false) {
     if (!app) return;
     app.setAttribute("aria-busy", String(!failed));
-    const label = view === "crafts" ? "рецепты Terraria" : view === "useful" ? "практический набор" : view === "favorites" ? "рюкзак героя" : view === "mobs" ? "бестиарий существ" : "полный каталог";
+    const label = view === "crafts" || view === "reverse" ? "рецепты Terraria" : view === "useful" ? "практический набор" : view === "favorites" ? "рюкзак героя" : view === "mobs" ? "бестиарий существ" : "полный каталог";
     app.innerHTML = `
       <section class="app-boot catalog-boot" aria-live="polite">
         <span class="app-boot-mark" aria-hidden="true">${failed ? "!" : "◆"}</span>
@@ -1640,7 +1644,8 @@
       }
       else if (view === "wiki") { applySectionTheme(view); renderWiki(params); }
       else if (view === "bosses") { applySectionTheme(view); renderBosses(params); }
-      else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || "", params.item || "", params.plan === "1", params.use || ""); }
+      else if (view === "crafts") { applySectionTheme(view); renderCrafts(params.q || "", params.item || "", params.plan === "1"); }
+      else if (view === "reverse") { applySectionTheme(view); renderReverse(params); }
       else if (view === "items") { applySectionTheme(view); renderItems(params); }
       else if (view === "useful") { applySectionTheme(view); renderUseful(params); }
       else if (view === "favorites") { applySectionTheme(view); renderFavorites(); }
@@ -5661,10 +5666,7 @@
         ${(() => {
           const usesCount = reverseUsesFor(name).length;
           if (!usesCount) return "";
-          const reverseParams = new URLSearchParams();
-          if (craftTreeRoot) reverseParams.set("item", craftTreeRoot);
-          reverseParams.set("use", name);
-          return `<a class="tree-btn ghost reverse-uses-link" href="#/crafts?${escAttr(reverseParams.toString())}">⇄ Участвует в ${recipeCountText(usesCount)}</a>`;
+          return `<a class="tree-btn ghost reverse-uses-link" href="#/reverse?item=${encodeURIComponent(name)}">⇄ Участвует в ${recipeCountText(usesCount)}</a>`;
         })()}
         <a class="craft-catalog-link" href="${escAttr(wiki)}" target="_blank" rel="noopener noreferrer">Открыть справочную страницу ↗</a>
       </div>`;
@@ -6785,7 +6787,7 @@
       </div>
     </article>`;
   }
-  function renderReverseCraftOutput(section, value, filter) {
+  function renderReverseCraftOutput(section, value) {
     const output = section.querySelector("#reverse-craft-output");
     const summaryBadge = section.querySelector("[data-reverse-summary]");
     if (!output) return;
@@ -6818,7 +6820,7 @@
     `;
     versionLocalImages(output);
   }
-  function bindReverseCraft(section, initialUse, filter) {
+  function bindReverseCraft(section, initialUse) {
     if (!section) return;
     craftReverseUse = initialUse || "";
     const searchInput = section.querySelector("#reverse-craft-search");
@@ -6826,11 +6828,9 @@
     const selectReverse = (value) => {
       craftReverseUse = value;
       const params = new URLSearchParams();
-      if (filter) params.set("q", filter);
-      if (craftTreeRoot) params.set("item", craftTreeRoot);
-      params.set("use", value);
-      history.replaceState(null, "", `#/crafts?${params}`);
-      renderReverseCraftOutput(section, value, filter);
+      params.set("item", value);
+      history.replaceState(null, "", `#/reverse?${params}`);
+      renderReverseCraftOutput(section, value);
       SND.play("tick");
     };
     if (searchInput && suggest) {
@@ -6861,10 +6861,43 @@
         }, 180);
       });
     }
-    if (craftReverseUse) renderReverseCraftOutput(section, craftReverseUse, filter);
+    if (craftReverseUse) renderReverseCraftOutput(section, craftReverseUse);
   }
 
-  function renderCrafts(filter, requestedRoot = "", focusPlan = false, reverseUse = "") {
+  function renderReverse(params = {}) {
+    fillRail("");
+    const selected = params.item || params.use || "";
+    const recipeCount = getRecipeIndex().size;
+    const ingredientCount = reverseUseIndex().size;
+    app.innerHTML = `
+      <div class="page craft-graph-page reverse-page">
+        ${mast("Обратный крафт", "Зеркало полного дерева: выбери любой ингредиент — кодекс покажет каждый рецепт с его участием, полный состав, станции и способ получения результатов.")}
+        <section class="craft-tree-branch panel reverse-craft" id="reverse-craft-shelf" tabindex="-1" aria-labelledby="reverse-craft-title">
+          <div class="craft-tree-branch-head">
+            <div class="craft-tree-branch-copy">
+              <span class="craft-tree-branch-mark" aria-hidden="true">⇄</span>
+              <div>
+                <small>зеркальный инструмент · все применения</small>
+                <h2 id="reverse-craft-title">Что делается из предмета</h2>
+                <p>Найди любой предмет Terraria или Calamity: кодекс покажет все ${recipeCount.toLocaleString("ru-RU")} рецептов базы наоборот — во что превращается ингредиент, сколько его нужно и как достать результат. Применение есть у ${ingredientCount.toLocaleString("ru-RU")} предметов.</p>
+              </div>
+            </div>
+          </div>
+          <label class="craft-tree-search reverse-craft-search">
+            <span aria-hidden="true">▶</span>
+            <input id="reverse-craft-search" type="search" placeholder="Ингредиент: паутина, адский камень, суть света…" autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="craft-tree-choice-grid reverse-craft-suggest" id="reverse-craft-suggest" hidden></div>
+          <div class="reverse-craft-output" id="reverse-craft-output">
+            <div class="reverse-craft-placeholder"><span aria-hidden="true">⇄</span><b>Выбери ингредиент выше</b><p>Например: «паутина», «души» или «слиток» — появятся все предметы, которые из него создаются, с рецептами и источниками.</p></div>
+          </div>
+        </section>
+        <p class="craft-tree-help"><b>Подсказка:</b> у каждой карточки есть кнопки «Дерево» и «Рецепт», а выбранный ингредиент подсвечен золотом в составе. Ссылку на подборку можно копировать — выбор сохранён в адресе.</p>
+      </div>`;
+    bindReverseCraft(app.querySelector("#reverse-craft-shelf"), selected);
+  }
+
+  function renderCrafts(filter, requestedRoot = "", focusPlan = false) {
     const requestedInfo = requestedRoot ? ingredientInfo(requestedRoot) : null;
     if (requestedRoot) {
       if (isTreeEntry(requestedInfo)) {
@@ -6910,29 +6943,6 @@
           </div></div>
         </details>
         ${craftTreeBranchHTML(craftTreeRoot)}
-        <details class="secondary-shelf reverse-craft-shelf" id="reverse-craft-shelf"${reverseUse ? " open" : ""}>
-          <summary><span><i aria-hidden="true">⇄</i><b>Что делается из предмета</b><small>Обратный крафт: выбери ингредиент — увидишь все его применения</small></span><em data-reverse-summary>${reverseUse ? "…" : "Выбери ингредиент"}</em></summary>
-          <div class="secondary-shelf-body">
-            <section class="reverse-craft panel" aria-labelledby="reverse-craft-title">
-              <div class="reverse-craft-head">
-                <span class="reverse-craft-mark" aria-hidden="true">⇄</span>
-                <div>
-                  <small>обратное дерево · из чего → что</small>
-                  <h2 id="reverse-craft-title">Из этого предмета можно создать…</h2>
-                  <p>Найди любой ингредиент Terraria или Calamity — кодекс покажет каждый рецепт с его участием: результат, полный состав, станцию и как получить сам результат.</p>
-                </div>
-              </div>
-              <label class="craft-tree-search reverse-craft-search">
-                <span aria-hidden="true">▶</span>
-                <input id="reverse-craft-search" type="search" placeholder="Ингредиент: паутина, адский камень, суть света…" autocomplete="off" spellcheck="false" />
-              </label>
-              <div class="craft-tree-choice-grid reverse-craft-suggest" id="reverse-craft-suggest" hidden></div>
-              <div class="reverse-craft-output" id="reverse-craft-output">
-                <div class="reverse-craft-placeholder"><span aria-hidden="true">⇄</span><b>Выбери ингредиент выше</b><p>Например: «паутина», «души» или «слиток» — появятся все предметы, которые из него создаются, с рецептами и источниками.</p></div>
-              </div>
-            </section>
-          </div>
-        </details>
         <details class="secondary-shelf craft-plan-shelf" ${focusPlan ? "open" : ""}>
           <summary><span><i aria-hidden="true">＋</i><b>Общий план крафта</b><small>Несколько целей и объединённая смета</small></span><em>${planTargetCount ? `${planTargetCount} целей` : "Пусто"}</em></summary>
           <div class="secondary-shelf-body">${craftPlanHTML()}</div>
@@ -6965,12 +6975,7 @@
     updateCraftPlanCount();
     const branch = app.querySelector("#craft-tree-branch");
     if (branch) bindCraftTreeBranch(branch, filter);
-    bindReverseCraft(app.querySelector("#reverse-craft-shelf"), reverseUse, filter);
-    if (reverseUse) requestAnimationFrame(() => {
-      const shelfEl = app.querySelector("#reverse-craft-shelf");
-      if (shelfEl && typeof shelfEl.scrollIntoView === "function") shelfEl.scrollIntoView({ block: "start", behavior: "smooth" });
-    });
-    else if (requestedRoot && branch && !focusPlan) requestAnimationFrame(() => {
+    if (requestedRoot && branch && !focusPlan) requestAnimationFrame(() => {
       branch.scrollIntoView({ block: "start", behavior: "smooth" });
       branch.focus({ preventScroll: true });
     });
@@ -6986,7 +6991,6 @@
         const params = new URLSearchParams();
         if (inp.value) params.set("q", inp.value);
         if (craftTreeRoot) params.set("item", craftTreeRoot);
-        if (craftReverseUse) params.set("use", craftReverseUse);
         history.replaceState(null, "", `#/crafts${params.toString() ? `?${params}` : ""}`);
         route();
       }, 200);

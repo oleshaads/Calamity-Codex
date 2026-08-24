@@ -11,8 +11,10 @@ const sourceDom = new JSDOM(htmlSource.replace(/<script\b[^>]*src=[^>]*><\/scrip
 const sourceDocument = sourceDom.window.document;
 const desktopOrder = [...sourceDocument.querySelectorAll("#main-nav [data-nav]")].map((node) => node.dataset.nav);
 const mobileOrder = [...sourceDocument.querySelectorAll(".mobile-tabs [data-nav]")].map((node) => node.dataset.nav);
-check(desktopOrder.slice(0, 5).join(",") === "home,novice,crafts,items,bosses", `Full tree is not third in desktop priority: ${desktopOrder.join(",")}`);
-check(mobileOrder.slice(0, 5).join(",") === "home,novice,crafts,items,bosses", `Full tree is not third in mobile priority: ${mobileOrder.join(",")}`);
+// «Обратный крафт» — зеркальный инструмент дерева: стоит сразу после
+// «Предметов» в группе крафта, поэтому первые пять пунктов включают его.
+check(desktopOrder.slice(0, 5).join(",") === "home,novice,crafts,items,reverse", `Full tree is not third in desktop priority: ${desktopOrder.join(",")}`);
+check(mobileOrder.slice(0, 5).join(",") === "home,novice,crafts,items,reverse", `Full tree is not third in mobile priority: ${mobileOrder.join(",")}`);
 check(sourceDocument.querySelector('[data-nav="crafts"].nav-primary'), "Full tree navigation has no primary identity");
 sourceDom.window.close();
 
