@@ -50,7 +50,7 @@ const settle = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
   await settle();
   const request = items.window.document.querySelector("script[data-codex-catalog]");
   check(items.window.document.querySelector(".catalog-boot"), "Direct catalog route has no non-blocking loading state");
-  check(request && /codex-data\.min\.js\?v=20260819-core112$/.test(request.src), "Direct catalog route did not request the versioned lazy bundle");
+  check(request && /codex-data\.min\.js\?v=20260819-core110$/.test(request.src), "Direct catalog route did not request the versioned lazy bundle");
 
   // jsdom does not fetch dynamically appended scripts. Execute the exact
   // production artifact and fire its load callback to exercise hydration.

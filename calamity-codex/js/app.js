@@ -93,14 +93,14 @@
     crafts:    { eyebrow: "Кузница и алхимия",   mark: "⚒", no: "VII",  cover: "assets/headers/crafts.webp",    bg: "assets/themes/hell.webp",     accent: "#eea85b", fx: "embers" },
     biomes:    { eyebrow: "Атлас мира",           mark: "⌖", no: "VIII", cover: "assets/headers/biomes.webp",    bg: "assets/themes/forest.webp",   accent: "#91d47f", fx: "leaves" },
     mobs:      { eyebrow: "Бестиарий мира",       mark: "⚔", no: "IX",   cover: "assets/headers/mobs.webp",    bg: "assets/themes/evil.webp",     accent: "#e0977a", fx: "dust" },
-    reverse:   { eyebrow: "Зеркало кузницы",      mark: "⇄", no: "X",    cover: "assets/headers/reverse.webp", bg: "assets/themes/hell.webp",     accent: "#e8c46f", fx: "embers" }
+    reverse:   { eyebrow: "Зеркало кузницы",      mark: "⇄", no: "X",    cover: "assets/headers/crafts.webp",  bg: "assets/themes/hell.webp",     accent: "#e8c46f", fx: "embers" }
   };
   const KIND_RU = {
     weapon: "Оружие", armor: "Броня", acc: "Аксессуары", ammo: "Боеприпасы",
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core112";
+  const ASSET_VERSION = "20260819-core110";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -4463,10 +4463,6 @@
             }).join("")}</div>`)}
             ${shelf("Советы", "", `<div class="tips">${q.tips.map((t) => `<div class="hint">${T(t)}</div>`).join("")}</div><div class="class-note ${escAttr(cls)}"><b>${CLS_RU[cls]}:</b> ${T(q.classTips[cls])}</div>`)}
             </div>
-            ${nextQuest ? `<a class="quest-next-cta" href="#/novice?q=${nextQuest.id}">
-              <span class="qnc-copy"><small>дальше по маршруту</small><b>Глава ${String(nextQuest.id).padStart(2, "0")}: ${esc(nextQuest.title)}</b><span>${esc(ruText(nextQuest.objective || nextQuest.subtitle || nextQuest.mood || "")).slice(0, 150)}</span></span>
-              <i aria-hidden="true">→</i>
-            </a>` : ""}
             <div class="quest-nav">
               <button class="btn ghost" data-go="${q.id - 1}" ${q.id === 1 ? "disabled" : ""}>← Назад</button>
               <button class="btn ${done.has(q.id) ? "done" : ""}" data-finish="${q.id}">${done.has(q.id) ? "✓ Квест пройден" : "Завершить квест"}</button>
@@ -6940,7 +6936,8 @@
                 const popCount = reverseUsesFor(popName).length;
                 return `<button class="reverse-pop-card" type="button" data-choice-name="${escAttr(popName)}">
                   <span class="slot reverse-pop-art">${popArt ? `<img src="${escAttr(popArt)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
-                  <span class="reverse-pop-copy"><b>${esc(popInfo.ru)}</b><em>${recipesNomText(popCount)}</em></span>
+                  <b>${esc(popInfo.ru)}</b>
+                  <em>${recipesNomText(popCount)}</em>
                 </button>`;
               }).join("")}</div>
             </div>
@@ -8592,34 +8589,6 @@
       });
     });
   }
-
-  /* Пасхалка: больше 10 кликов по логотипу за 10 секунд — признание */
-  (() => {
-    const brand = document.querySelector(".rail-brand");
-    if (!brand) return;
-    let loveClicks = [];
-    brand.addEventListener("click", () => {
-      const now = Date.now();
-      loveClicks = loveClicks.filter((t) => now - t < 10000);
-      loveClicks.push(now);
-      if (loveClicks.length <= 10 || document.querySelector(".love-easter")) return;
-      loveClicks = [];
-      const overlay = document.createElement("div");
-      overlay.className = "love-easter";
-      overlay.setAttribute("aria-hidden", "true");
-      overlay.innerHTML = `<div class="love-note"><b>Катя, я люблю тебя.</b><small>@Твой муж</small></div>` +
-        Array.from({ length: 28 }, () => {
-          const left = (Math.random() * 96 + 2).toFixed(1);
-          const delay = (Math.random() * 1.8).toFixed(2);
-          const size = Math.round(15 + Math.random() * 24);
-          const duration = (3.2 + Math.random() * 2.6).toFixed(2);
-          return `<span class="love-heart" style="left:${left}%;animation-delay:${delay}s;animation-duration:${duration}s;font-size:${size}px">❤</span>`;
-        }).join("");
-      document.body.appendChild(overlay);
-      SND.play("chime");
-      setTimeout(() => overlay.remove(), 8000);
-    });
-  })();
 
   /* Световой курсор: мягкое золотое пятно следует за мышью (только точный
      указатель, без reduced-motion). Один rAF, только transform — компоузер. */
