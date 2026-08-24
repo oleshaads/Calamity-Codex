@@ -100,7 +100,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core109";
+  const ASSET_VERSION = "20260819-core110";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -2124,7 +2124,7 @@
         ${station ? `<span class="station-tag"><img src="${escAttr(craftStationSprite(station))}" alt="" loading="lazy" decoding="async" /><span>${esc(stationDisplayName(station))}</span></span>` : ""}
         <div class="card-title">${esc(ru)}${en ? `<span class="en-sub">оригинал: ${esc(en)}</span>` : ""}</div>
         <details class="card-facts-shelf craft-facts-shelf">
-          <summary><span><b>Ингредиенты и назначение</b><small>${ings.length} позиций · ${station ? esc(stationDisplayName(station)) : "без станции"}</small></span><i aria-hidden="true">⌄</i></summary>
+          <summary><span><b>Ингредиенты и назначение</b><small>${ings.length} позиций · ${station ? esc(stationDisplayName(station)) : "без станции"}</small></span><i aria-hidden="true" class="chev"><svg viewBox="0 0 24 24" width="14" height="14"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></summary>
           ${ings.length ? `<ul class="ings-list">${ings.map((x, i) => {
       const enName = enIngs[i] ? cleanIng(enIngs[i]) : "";
       const ingKey = enName || cleanIng(x);
@@ -4235,7 +4235,7 @@
         <div class="card-title">${esc(title)}<span class="en-sub">оригинал: ${esc(item.name)}</span></div>
         <p class="desc">${esc(description)}</p>
         <details class="card-facts-shelf">
-          <summary><span><b>Подробнее о предмете</b><small>Получение, связи и применение</small></span><i aria-hidden="true">⌄</i></summary>
+          <summary><span><b>Подробнее о предмете</b><small>Получение, связи и применение</small></span><i aria-hidden="true" class="chev"><svg viewBox="0 0 24 24" width="14" height="14"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></summary>
           <div class="facts">
             ${!isCraft
               ? npcSourceLines(itemSources)
@@ -4294,7 +4294,7 @@
         ${!fake ? `<div class="stats-line">${esc(stats)}</div>` : ""}
         ${desc ? `<p class="desc">${esc(desc)}</p>` : ""}
         <details class="card-facts-shelf">
-          <summary><span><b>Практические сведения</b><small>Источник, связи и назначение</small></span><i aria-hidden="true">⌄</i></summary>
+          <summary><span><b>Практические сведения</b><small>Источник, связи и назначение</small></span><i aria-hidden="true" class="chev"><svg viewBox="0 0 24 24" width="14" height="14"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></summary>
           <div class="facts">
             ${showGet ? `<div class="fact"><span>Где</span><p>${esc(getPlain)}</p></div>` : ""}
             ${npcSourceLines(itemSources) ? `<div class="fact source-fact"><span>Дроп</span><div class="src-list">${npcSourceLines(itemSources)}</div></div>` : ""}
@@ -6167,19 +6167,19 @@
         ${mast("Арсенал Каламити", "У каждого предмета есть изображение, источник, назначение и этап применения; отдельный режим сохраняет маршрут прохождения.")}
         <nav class="catalog-mode-switch" aria-label="Режим каталога предметов">
           <a class="catalog-mode ${mode === "catalog" ? "active" : ""}" href="#/items">
-            <i aria-hidden="true">I</i>
+            <i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/StarterBag.png")}" alt="" loading="lazy" decoding="async" /></i>
             <span><b>Полный каталог</b><small>Изображения, получение, польза и этап для каждого предмета</small></span>
             <em>${fmt(indexCount)}</em>
           </a>
           <a class="catalog-mode ${mode === "guide" ? "active" : ""}" href="#/items?mode=guide">
-            <i aria-hidden="true">II</i>
+            <i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/Wooden_Sword.png")}" alt="" loading="lazy" decoding="async" /></i>
             <span><b>Маршрут прохождения</b><small>Отобранные рекомендации по главам кодекса</small></span>
             <em>${fmt(CODEX.items.length)}</em>
           </a>
         </nav>
         ${mode === "catalog" ? `
           <details class="catalog-about-shelf">
-            <summary><span><i aria-hidden="true">i</i><b>Об источниках каталога</b><small>Покрытие спрайтов, описаний и рецептов</small></span><em>${fmt(indexCount)} предметов</em></summary>
+            <summary><span><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/AdvancedDisplay.png")}" alt="" loading="lazy" decoding="async" /></i><b>Об источниках каталога</b><small>Покрытие спрайтов, описаний и рецептов</small></span><em>${fmt(indexCount)} предметов</em></summary>
             <div class="catalog-about-content">
           <section class="catalog-source">
             <span class="catalog-source-mark" aria-hidden="true">◆</span>
@@ -6209,10 +6209,10 @@
           </section>
         `}
         <details class="catalog-filter-shelf" ${activeFilterCount ? "open" : ""}>
-          <summary><span><i aria-hidden="true">⌄</i><b>Фильтры каталога</b><small>Класс, тип${mode === "catalog" ? " и этап доступности" : " предмета"}</small></span><em>${activeFilterCount ? `${activeFilterCount} активно` : "Все предметы"}</em></summary>
+          <summary><span><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/vanilla-sprites/3347.png")}" alt="" loading="lazy" decoding="async" /></i><b>Фильтры каталога</b><small>Класс, тип${mode === "catalog" ? " и этап доступности" : " предмета"}</small></span><em>${activeFilterCount ? `${activeFilterCount} активно` : "Все предметы"}</em></summary>
           <section class="catalog-filter-stack panel" aria-label="Фильтры каталога">
           <div class="catalog-filter-row">
-            <span class="catalog-filter-label"><i aria-hidden="true">I</i><b>Класс</b></span>
+            <span class="catalog-filter-label"><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/Wooden_Sword.png")}" alt="" loading="lazy" decoding="async" /></i><b>Класс</b></span>
             <div class="chips item-class-chips">
               <button class="chip favorite-chip ${favoriteOnly ? "active" : ""}" data-p="fav" data-v="${favoriteOnly ? "all" : "1"}"><span aria-hidden="true">★</span> Избранное <em>${favoriteItems.size}</em></button>
               <button class="chip ${cls === "all" ? "active" : ""}" data-p="cls" data-v="all">Все классы</button>
@@ -6220,14 +6220,14 @@
             </div>
           </div>
           <div class="catalog-filter-row">
-            <span class="catalog-filter-label"><i aria-hidden="true">II</i><b>Тип</b></span>
+            <span class="catalog-filter-label"><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/StarterBag.png")}" alt="" loading="lazy" decoding="async" /></i><b>Тип</b></span>
             <div class="chips item-kind-chips">
               <button class="chip ${kind === "all" ? "active" : ""}" data-p="kind" data-v="all">Все типы <em>${fmt(pool.length)}</em></button>
               ${kindOptions.map(([id, label]) => `<button class="chip ${kind === id ? "active" : ""}" data-p="kind" data-v="${id}">${label}<em>${fmt(pool.filter((item) => item.kind === id).length)}</em></button>`).join("")}
             </div>
           </div>
           ${mode === "catalog" ? `<div class="catalog-filter-row catalog-filter-era">
-            <span class="catalog-filter-label"><i aria-hidden="true">III</i><b>Этап</b></span>
+            <span class="catalog-filter-label"><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/Suspicious_Looking_Eye.png")}" alt="" loading="lazy" decoding="async" /></i><b>Этап</b></span>
             <div class="chips item-era-chips" role="group" aria-label="Этап прогрессии">
               ${CATALOG_ERAS.map(([id, label]) => `<button class="chip ${era === id ? "active" : ""}" data-p="era" data-v="${id}">${label}<em>${fmt(id === "all" ? pool.length : pool.filter((item) => catalogEraOf(item.stage) === id).length)}</em></button>`).join("")}
             </div>
@@ -6509,7 +6509,7 @@
         </section>
         ${showRoadmap ? bossRoadmapHTML(entries, defeated) : ""}
         <details class="catalog-filter-shelf boss-filter-shelf" ${activeBossFilterCount ? "open" : ""}>
-          <summary><span><i aria-hidden="true">⌄</i><b>Фильтры бестиария</b><small>Эпоха, категория и журнал побед</small></span><em>${activeBossFilterCount ? `${activeBossFilterCount} активно` : "Все встречи"}</em></summary>
+          <summary><span><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/vanilla-sprites/3347.png")}" alt="" loading="lazy" decoding="async" /></i><b>Фильтры бестиария</b><small>Эпоха, категория и журнал побед</small></span><em>${activeBossFilterCount ? `${activeBossFilterCount} активно` : "Все встречи"}</em></summary>
           <section class="boss-filter-stack panel" aria-label="Фильтры бестиария">
           <div class="boss-filter-row"><span>Эпоха</span><div class="chips boss-era-chips">
             ${eras.map(([id, label]) => `<button class="chip ${era === id ? "active" : ""}" data-boss-era="${id}">${label}<em>${countEra(id)}</em></button>`).join("")}
@@ -6578,7 +6578,7 @@
         <p class="desc">${esc(ruText(b.tip || "Подготовь арену, мобильность и подходящее этапу снаряжение."))}</p>
         <div class="danger-row"><label>Опасность <b>${danger}%</b></label><div class="hpbar"><i style="width:${danger}%"></i></div></div>
         <details class="card-facts-shelf boss-facts-shelf">
-          <summary><span><b>Подготовка и награды</b><small>Место, этап, призыв и дроп</small></span><i aria-hidden="true">⌄</i></summary>
+          <summary><span><b>Подготовка и награды</b><small>Место, этап, призыв и дроп</small></span><i aria-hidden="true" class="chev"><svg viewBox="0 0 24 24" width="14" height="14"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></summary>
           <div class="facts">
             <div class="fact"><span>Где проходит бой</span><p>${esc(factText("where"))}</p></div>
             <div class="fact"><span>Когда идти</span><p>${esc(factText("when"))}</p></div>
@@ -6642,7 +6642,7 @@
       </div>
       ${description ? `<p class="useful-card-description">${esc(description)}</p>` : ""}
       <details class="card-facts-shelf useful-facts-shelf">
-        <summary><span><b>Как получить и использовать</b><small>Четыре практических ответа</small></span><i aria-hidden="true">⌄</i></summary>
+        <summary><span><b>Как получить и использовать</b><small>Четыре практических ответа</small></span><i aria-hidden="true" class="chev"><svg viewBox="0 0 24 24" width="14" height="14"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i></summary>
         <div class="useful-card-body">
           <div class="useful-detail useful-reason"><b>Почему полезно</b><p>${esc(item.why)}</p></div>
           <div class="useful-detail useful-timing"><b>Когда брать</b><p>${esc(timing)}</p></div>
@@ -6967,7 +6967,7 @@
       <div class="page craft-graph-page">
         ${mast("Полное дерево крафта", "Главный инструмент кодекса: выбери любой результат и раскрой все зависимости до базовых ресурсов, точных партий и рабочих станций.")}
         <details class="catalog-about-shelf craft-about-shelf">
-          <summary><span><i aria-hidden="true">i</i><b>О базе дерева</b><small>Покрытие рецептов и защита от циклов</small></span><em>${recipeCount.toLocaleString("ru-RU")} рецептов</em></summary>
+          <summary><span><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/sprites/AdvancedDisplay.png")}" alt="" loading="lazy" decoding="async" /></i><b>О базе дерева</b><small>Покрытие рецептов и защита от циклов</small></span><em>${recipeCount.toLocaleString("ru-RU")} рецептов</em></summary>
           <div class="catalog-about-content"><div class="craft-graph-stats" aria-label="Статистика дерева рецептов">
             <span><b>${recipeCount.toLocaleString("ru-RU")}</b><small>рецептов в дереве</small></span>
             <span><b>${VANILLA_TREE_INDEX.items.length.toLocaleString("ru-RU")}</b><small>предметов Terraria</small></span>
@@ -6977,7 +6977,7 @@
         </details>
         ${craftTreeBranchHTML(craftTreeRoot)}
         ${planTargetCount > 0 || focusPlan ? `<details class="secondary-shelf craft-plan-shelf" ${focusPlan ? "open" : ""}>
-          <summary><span><i aria-hidden="true">＋</i><b>Общий план крафта</b><small>Несколько целей и объединённая смета</small></span><em>${planTargetCount ? `${planTargetCount} целей` : "Пусто"}</em></summary>
+          <summary><span><i aria-hidden="true"><img class="shelf-sprite" src="${releaseAsset("assets/vanilla-sprites/48.png")}" alt="" loading="lazy" decoding="async" /></i><b>Общий план крафта</b><small>Несколько целей и объединённая смета</small></span><em>${planTargetCount ? `${planTargetCount} целей` : "Пусто"}</em></summary>
           <div class="secondary-shelf-body">${craftPlanHTML()}</div>
         </details>` : ""}
 

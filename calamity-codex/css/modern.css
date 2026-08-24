@@ -6903,3 +6903,23 @@ body.lite .reverse-craft-selected::after { display: none; }
 
 /* Спрайт-иконки на кнопках действий */
 .btn-sprite { width: 16px; height: 16px; flex: none; display: inline-block; margin-right: 5px; object-fit: contain; image-rendering: pixelated; vertical-align: -3px; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .5)); }
+
+/* ==================================================================== */
+/* Значки полок — настоящие спрайты; поля ввода — без золотого кольца   */
+/* ==================================================================== */
+.shelf-sprite { width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .5)); }
+.catalog-filter-label .shelf-sprite { width: 16px; height: 16px; }
+.catalog-filter-label i, .catalog-about-shelf summary i, .catalog-filter-shelf summary i, .secondary-shelf summary i { display: grid; place-items: center; }
+summary .chev { display: grid; place-items: center; }
+summary .chev svg { display: block; }
+
+/* Голова панелей дерева и обратного крафта — без янтарной подложки */
+.craft-tree-branch-head { border-bottom: 1px solid #25313d; background: linear-gradient(135deg, #1a2530, #141d26 60%); }
+
+/* Поля ввода: рамку фокуса показывает обёртка, а не золотое кольцо */
+input[type="search"]:focus-visible, input[type="text"]:focus-visible, input[type="number"]:focus-visible { outline: 0; box-shadow: none; }
+select:focus { border-color: #4c5f72; box-shadow: none; }
+
+/* Плитки популярных ингредиентов: жёсткая сетка — всё стоит ровно */
+.reverse-pop-card { display: grid; grid-template-rows: 46px auto 1fr; align-items: start; justify-items: start; gap: 8px; }
+.reverse-pop-card em { align-self: end; }
