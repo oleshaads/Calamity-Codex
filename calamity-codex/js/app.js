@@ -100,7 +100,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core110";
+  const ASSET_VERSION = "20260819-core111";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -6936,8 +6936,7 @@
                 const popCount = reverseUsesFor(popName).length;
                 return `<button class="reverse-pop-card" type="button" data-choice-name="${escAttr(popName)}">
                   <span class="slot reverse-pop-art">${popArt ? `<img src="${escAttr(popArt)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
-                  <b>${esc(popInfo.ru)}</b>
-                  <em>${recipesNomText(popCount)}</em>
+                  <span class="reverse-pop-copy"><b>${esc(popInfo.ru)}</b><em>${recipesNomText(popCount)}</em></span>
                 </button>`;
               }).join("")}</div>
             </div>

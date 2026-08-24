@@ -6923,3 +6923,34 @@ select:focus { border-color: #4c5f72; box-shadow: none; }
 /* Плитки популярных ингредиентов: жёсткая сетка — всё стоит ровно */
 .reverse-pop-card { display: grid; grid-template-rows: 46px auto 1fr; align-items: start; justify-items: start; gap: 8px; }
 .reverse-pop-card em { align-self: end; }
+
+/* ==================================================================== */
+/* Обратный крафт: компактная центрированная колонка инструмента        */
+/* Страница больше не растягивается на всю ширину экрана.               */
+/* ==================================================================== */
+.reverse-page { max-width: 1100px; margin: 0 auto; }
+.reverse-page .craft-tree-branch-head { padding: 15px 18px; }
+.reverse-page .craft-tree-branch-mark { width: 38px; height: 38px; font-size: 17px; }
+.reverse-page .craft-tree-branch-copy h2 { font-size: 17px; }
+.reverse-page .craft-tree-branch-copy p { font-size: 11.5px; }
+.reverse-craft { gap: 12px; }
+.reverse-craft-search { min-height: 46px; }
+.reverse-craft-search input { font-size: 13px; }
+
+/* Плитки популярных ингредиентов: компактные, арт слева, текст справа */
+.reverse-pop { gap: 10px; }
+.reverse-pop-head { display: flex; align-items: baseline; gap: 10px; }
+.reverse-pop-head b { display: inline; font-size: 12.5px; }
+.reverse-pop-head small { display: inline; margin-top: 0; }
+.reverse-pop-grid { grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 9px; }
+.reverse-pop-card { display: flex; flex-direction: row; align-items: center; gap: 11px; height: auto; min-height: 0; padding: 8px 12px; }
+.reverse-pop-art { width: 42px; height: 42px; flex: none; }
+.reverse-pop-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.reverse-pop-card b { min-height: 0; overflow: hidden; font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.reverse-pop-card em { margin-top: 0; }
+
+/* Карточки результатов и шапка выбора — под ширину колонки */
+.reverse-result-grid { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
+.reverse-craft-selected { padding: 13px 15px; }
+.reverse-selected-art { width: 56px; height: 56px; }
+.reverse-selected-copy b { font-size: 16px; }
