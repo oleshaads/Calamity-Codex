@@ -1,4 +1,4 @@
-const VERSION = "20260824-core113";
+const VERSION = "20260824-core114";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
