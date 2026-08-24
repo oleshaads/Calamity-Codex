@@ -1,0 +1,43 @@
+{
+  "name": "Каламити Кодекс — путеводитель по Terraria Calamity",
+  "short_name": "Каламити Кодекс",
+  "description": "Русскоязычный офлайн-справочник и маршрут прохождения Terraria с Calamity Mod.",
+  "lang": "ru",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#05070b",
+  "theme_color": "#0a0e14",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Продолжить путь",
+      "short_name": "Путь",
+      "url": "./#/novice"
+    },
+    {
+      "name": "Дерево крафта",
+      "short_name": "Крафт",
+      "url": "./#/crafts"
+    },
+    {
+      "name": "Каталог предметов",
+      "short_name": "Предметы",
+      "url": "./#/items"
+    }
+  ]
+}

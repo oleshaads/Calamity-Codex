@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0e14" />
+  <meta name="color-scheme" content="dark" />
+  <title>Каламити Кодекс — путеводитель по Terraria Calamity</title>
+  <meta name="description" content="Русский спутник по Terraria 1.4.5 + Calamity: 30 квестов, 2500+ предметов, 635 мобов, боссы, крафты и биомы — всё офлайн." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Каламити Кодекс — путеводитель по Terraria Calamity" />
+  <meta property="og:description" content="30 квестов от первого дома до Верховной ведьмы, 635 мобов с лут-таблицами, полное дерево крафта и бестиарий — по-русски и офлайн." />
+  <meta property="og:image" content="https://calamity-codex.pages.dev/assets/hero.jpg" />
+  <meta property="og:site_name" content="Каламити Кодекс" />
+  <meta property="og:locale" content="ru_RU" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Каламити Кодекс — путеводитель по Terraria Calamity" />
+  <meta name="twitter:description" content="30 квестов, 635 мобов, полное дерево крафта и бестиарий — по-русски и офлайн." />
+  <meta name="twitter:image" content="https://calamity-codex.pages.dev/assets/hero.jpg" />
+  <link rel="icon" href="assets/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest?v=20260824-core115" />
+  <link rel="preload" href="assets/fonts/RussoOne-Regular.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="dns-prefetch" href="https://terraria.wiki.gg" />
+  <link rel="dns-prefetch" href="https://calamitymod.wiki.gg" />
+  <link rel="preload" href="js/codex.min.js?v=20260824-core115" as="script" />
+  <link rel="stylesheet" href="css/modern.min.css?v=20260824-core115" />
+</head>
+<body>
+  <a class="skip-link" href="#app">Перейти к содержимому</a>
+
+  <canvas id="embers" aria-hidden="true"></canvas>
+  <div id="flash" aria-hidden="true"></div>
+  <div class="scroll-hp" id="scroll-hp" aria-hidden="true"></div>
+
+  <div class="shell">
+    <aside class="rail" id="rail" aria-label="Основная навигация">
+      <a class="rail-brand" href="#/" aria-label="Каламити Кодекс — на главную">
+        <span class="brand-art slot"><img src="assets/favicon.png" alt="" width="128" height="128" /></span>
+        <span class="brand-copy">
+          <b>КАЛАМИТИ КОДЕКС</b>
+          <small>терминал прохождения · 2.2.2</small>
+        </span>
+      </a>
+
+      <nav class="rail-nav" id="main-nav">
+        <span class="nav-caption">Прохождение</span>
+        <a href="#/" data-nav="home">
+          <span class="nav-icon slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span>
+          <span>Главная</span>
+        </a>
+        <a href="#/novice" data-nav="novice">
+          <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span>
+          <span>Путь новичка</span><em>30</em>
+        </a>
+        <span class="nav-caption">Крафт и предметы</span>
+        <a class="nav-primary" href="#/crafts" data-nav="crafts">
+          <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span>
+          <span>Полное дерево</span><em data-craft-plan-count title="Целей в плане крафта">0</em>
+        </a>
+        <a href="#/items" data-nav="items">
+          <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span>
+          <span>Предметы</span><em>2.5K</em>
+        </a>
+        <a href="#/reverse" data-nav="reverse">
+          <span class="nav-icon slot"><img src="assets/sprites/WulfrumMetalScrap.png" alt="" loading="lazy" /></span>
+          <span>Обратный крафт</span><em>⇄</em>
+        </a>
+        <span class="nav-caption">Мир и боссы</span>
+        <a href="#/bosses" data-nav="bosses">
+          <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span>
+          <span>Боссы</span><em>54</em>
+        </a>
+        <a href="#/mobs" data-nav="mobs">
+          <span class="nav-icon slot"><img src="assets/mob-sprites/v-zombie.png" alt="" loading="lazy" /></span>
+          <span>Мобы</span><em>635</em>
+        </a>
+        <a href="#/biomes" data-nav="biomes">
+          <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" /></span>
+          <span>Биомы</span>
+        </a>
+        <span class="nav-caption">Справка и личное</span>
+        <a href="#/useful" data-nav="useful">
+          <span class="nav-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span>
+          <span>Полезное</span><em>71</em>
+        </a>
+        <a href="#/wiki" data-nav="wiki">
+          <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" /></span>
+          <span>Справочник</span>
+        </a>
+        <a href="#/lex" data-nav="lex">
+          <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" /></span>
+          <span>Словарь</span>
+        </a>
+        <a href="#/favorites" data-nav="favorites">
+          <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" /></span>
+          <span>Избранное</span><em data-favorites-count>0</em>
+        </a>
+      </nav>
+
+      <div class="rail-extra" id="rail-extra"></div>
+
+      <div class="rail-footer">
+        <div class="rail-progress">
+          <span><b>Путь героя</b><i id="rail-progress-label">0 / 30</i></span>
+          <div class="hpbar mini"><i id="rail-progress-fill"></i></div>
+        </div>
+        <div class="rail-rev" id="rail-rev" hidden>
+          <span><b>Месть</b><i>revengeance</i></span>
+          <div class="ragebar mini"><i></i></div>
+        </div>
+        <button class="lite-toggle" id="lite-toggle" type="button" data-lite-toggle aria-pressed="false" title="Отключает эффекты, тени и фоновые сетевые запросы — для слабых устройств и медленного интернета">
+          <i aria-hidden="true">⚡</i><b>Лёгкий режим</b><em data-lite-state>выкл</em>
+        </button>
+        <button class="install-app" id="install-app" type="button" hidden>⊕ Установить кодекс</button>
+        <p class="rail-status" id="connection-status"><span class="status-dot"></span><span data-connection-label>каталог доступен офлайн</span></p>
+      </div>
+    </aside>
+
+    <div class="stage">
+      <header class="stage-bar">
+        <button class="burger" id="menu-btn" type="button" aria-label="Открыть меню" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+
+        <div class="page-context" aria-live="polite">
+          <small>вы сейчас здесь</small>
+          <b id="route-title">Главная</b>
+        </div>
+
+        <label class="search" aria-label="Глобальный поиск">
+          <span class="search-prompt" aria-hidden="true">▶</span>
+          <input id="global-search" type="search" placeholder="Найти предмет, босса, крафт…" autocomplete="off" spellcheck="false" aria-controls="search-panel" aria-autocomplete="list" aria-haspopup="dialog" aria-expanded="false" />
+          <kbd>Ctrl K</kbd>
+        </label>
+
+        <button class="sound-toggle slot" id="sound-toggle" type="button" aria-pressed="true" aria-label="Звук интерфейса: включён" title="Звук интерфейса">
+          <svg class="snd-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M18.7 6.3a8.4 8.4 0 0 1 0 11.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="snd-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="m16.5 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </button>
+
+        <a class="favorite-mini slot" href="#/favorites" data-nav="favorites" aria-label="Открыть избранное" title="Рюкзак героя">
+          <img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" />
+          <span class="favorite-count" data-favorites-count>0</span>
+        </a>
+
+        <a class="journey-mini" href="#/novice?q=1" title="Продолжить путь новичка">
+          <span class="jm-copy"><small>Квест</small><b id="journey-count">0%</b></span>
+          <span class="jm-bar"><i id="journey-fill"></i></span>
+        </a>
+      </header>
+
+      <div id="search-panel" class="search-drop hidden" role="dialog" aria-modal="false" aria-label="Результаты поиска" tabindex="-1"></div>
+      <main id="app" tabindex="-1" aria-busy="true">
+        <section class="app-boot" aria-label="Загрузка кодекса">
+          <span class="app-boot-mark" aria-hidden="true">◆</span>
+          <div><b>Загружаем кодекс</b><small>Подготавливаем маршрут, каталог и поиск…</small></div>
+          <i aria-hidden="true"></i>
+        </section>
+        <noscript><section class="app-noscript"><b>Нужен JavaScript</b><p>Включи JavaScript, чтобы открыть каталог, поиск и дерево крафта.</p></section></noscript>
+      </main>
+    </div>
+    <div id="rail-scrim" class="rail-scrim" hidden></div>
+  </div>
+
+  <nav class="mobile-tabs" aria-label="Быстрая навигация">
+    <a href="#/" data-nav="home"><span class="slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span><span>Главная</span></a>
+    <a href="#/novice" data-nav="novice"><span class="slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span><span>Путь</span></a>
+    <a class="nav-primary" href="#/crafts" data-nav="crafts"><span class="slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span><span>Дерево</span></a>
+    <a href="#/items" data-nav="items"><span class="slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span><span>Предметы</span></a>
+    <a href="#/reverse" data-nav="reverse"><span class="slot"><img src="assets/sprites/WulfrumMetalScrap.png" alt="" loading="lazy" /></span><span>Из чего</span></a>
+    <a href="#/bosses" data-nav="bosses"><span class="slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span><span>Боссы</span></a>
+    <a href="#/useful" data-nav="useful"><span class="slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span><span>Полезное</span></a>
+  </nav>
+
+  <button class="to-top" id="to-top" type="button" aria-label="Наверх">▲</button>
+  <div id="tt" class="tt" hidden></div>
+  <div id="tip-card" class="tip-card panel" role="dialog" aria-modal="false" aria-label="Сведения об объекте" tabindex="-1" hidden></div>
+
+  <div class="recipe-modal" id="recipe-modal" hidden>
+    <div class="recipe-modal-backdrop" data-recipe-close></div>
+    <section class="recipe-panel panel" role="dialog" aria-modal="true" aria-labelledby="recipe-dialog-title recipe-result-name" aria-describedby="recipe-dialog-help">
+      <header class="recipe-head">
+        <div><small id="recipe-dialog-title">визуальный рецепт</small><h2 id="recipe-result-name">Рецепт предмета</h2><span id="recipe-result-original"></span></div>
+        <button class="tree-nav-btn" id="recipe-close" type="button" data-recipe-close aria-label="Закрыть рецепт">✕</button>
+      </header>
+      <p class="recipe-help" id="recipe-dialog-help">Все изображения взяты из игры: слева ингредиенты и количество, справа результат, ниже — необходимая станция.</p>
+      <div class="recipe-content" id="recipe-content"></div>
+      <footer class="recipe-actions">
+        <button class="btn recipe-plan-add" id="recipe-plan" type="button"><img class="btn-sprite" src="assets/vanilla-sprites/48.png" alt="" loading="lazy" /> Добавить в план</button>
+        <a class="btn ghost recipe-plan-open" id="recipe-plan-open" href="#/crafts?plan=1">План крафта · <span data-craft-plan-count>0</span></a>
+        <button class="btn recipe-tree-primary" id="recipe-tree" type="button"><img class="btn-sprite" src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /> Открыть полное дерево</button>
+        <button class="btn" type="button" data-recipe-close>Готово</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="tree-modal" id="tree-modal" hidden>
+    <div class="tree-backdrop" data-tree-close></div>
+    <div class="tree-panel panel" role="dialog" aria-modal="true" aria-labelledby="tree-dialog-title tree-root-name" aria-describedby="tree-legend">
+      <div class="tree-head">
+        <div class="tree-root">
+          <span class="slot tree-root-slot"><img id="tree-root-img" alt="" /><span id="tree-root-art-fallback" class="tree-root-art-fallback" hidden aria-hidden="true">◆</span></span>
+          <span class="tree-root-copy">
+            <small id="tree-dialog-title">дерево крафта</small>
+            <b id="tree-root-name"></b>
+            <i id="tree-root-sub"></i>
+            <p id="tree-root-desc" class="tree-root-desc"></p>
+            <span id="tree-root-src" class="tree-root-src"></span>
+            <span id="tree-root-live" class="wiki-source-live tree-root-live" data-wiki-live hidden><small>официальная Terraria Wiki · уточняем онлайн…</small><p>Проверяем конкретный источник и условия получения.</p></span>
+          </span>
+        </div>
+        <div class="tree-tools">
+          <div class="craft-tree-zoom-controls modal-tree-zoom-controls" role="group" aria-label="Масштаб графа в модальном дереве">
+            <button type="button" data-modal-tree-zoom="out" aria-label="Уменьшить граф дерева">−</button>
+            <output data-modal-tree-zoom-label>100%</output>
+            <button type="button" data-modal-tree-zoom="in" aria-label="Увеличить граф дерева">+</button>
+            <button type="button" data-modal-tree-zoom="reset" aria-label="Сбросить масштаб графа">↺</button>
+          </div>
+          <button class="tree-nav-btn" id="tree-expand" type="button" title="Развернуть всё" aria-label="Развернуть все рецепты">⊞</button>
+          <button class="tree-nav-btn" id="tree-collapse" type="button" title="Свернуть всё" aria-label="Свернуть все рецепты">⊟</button>
+          <button class="tree-nav-btn" id="tree-back" type="button" aria-label="Назад">←</button>
+          <button class="tree-nav-btn" id="tree-close" type="button" data-tree-close aria-label="Закрыть дерево">✕</button>
+        </div>
+      </div>
+      <div class="tree-legend" id="tree-legend"><b>✥ зажми ЛКМ</b> и тяни карту · <b>Ctrl + колесо</b> — масштаб только графа · <b>▸ круг</b> — ингредиенты · клик по карточке — её дерево</div>
+      <div class="tree-body" id="tree-body"></div>
+    </div>
+  </div>
+
+  <div class="biome-modal" id="biome-modal" hidden>
+    <div class="biome-modal-backdrop" data-biome-close></div>
+    <section class="biome-modal-panel panel" role="dialog" aria-modal="true" aria-labelledby="biome-modal-title" aria-describedby="biome-modal-desc">
+      <header class="biome-modal-head">
+        <div>
+          <small>атлас мира</small>
+          <h2 id="biome-modal-title"></h2>
+          <span id="biome-modal-sub"></span>
+        </div>
+        <span class="danger-pill" id="biome-modal-danger"></span>
+        <button class="tree-nav-btn" id="biome-modal-close" type="button" data-biome-close aria-label="Закрыть изображение">✕</button>
+      </header>
+      <figure class="biome-modal-figure">
+        <img id="biome-modal-image" alt="" />
+        <figcaption id="biome-modal-desc"></figcaption>
+      </figure>
+      <footer class="biome-modal-nav">
+        <button class="btn ghost" id="biome-modal-prev" type="button" aria-label="Предыдущий биом">← Предыдущий</button>
+        <output id="biome-modal-count" aria-live="polite"></output>
+        <button class="btn ghost" id="biome-modal-next" type="button" aria-label="Следующий биом">Следующий →</button>
+      </footer>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <div id="live-region" class="sr-only" aria-live="polite"></div>
+
+  <script defer src="js/codex.min.js?v=20260824-core115"></script>
+</body>
+</html>
