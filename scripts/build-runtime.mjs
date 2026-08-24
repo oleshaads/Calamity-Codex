@@ -55,6 +55,26 @@ const cssSource = fs.readFileSync(path.join(root, "css", "modern.css"), "utf8");
 const cssResult = new CleanCSS({ level: 2 }).minify(cssSource);
 if (cssResult.errors.length) throw new Error(cssResult.errors.join("\n"));
 
+/* Версия релиза = хэш содержимого бандлов. Пока ни один файл не изменился,
+   версия (и все ?v=… URL) стабильна — браузерные и прокси-кеши работают
+   штатно; любое изменение содержимого меняет версию автоматически. Ручные
+   даты вида ?v=20260819-core111 больше не нужны и не ломают кеширование. */
+const releaseVersion = `h-${digest(`${coreBundle}\n${catalogBundle}\n${cssResult.styles}`).slice(0, 10)}`;
+const releaseTargets = [
+  path.join(root, "index.html"),
+  path.join(root, "sw.js")
+];
+for (const target of releaseTargets) {
+  const before = fs.readFileSync(target, "utf8");
+  const after = before
+    .replace(/([?&]v=)[A-Za-z0-9._-]+/g, `$1${releaseVersion}`)
+    .replace(/(const VERSION = ")[^"]+(")/, `$1${releaseVersion}$2`);
+  if (after !== before) {
+    fs.writeFileSync(target, after);
+    console.log(`${path.relative(process.cwd(), target)}: release ?v= → ${releaseVersion}`);
+  }
+}
+
 // Манифест всей игровой графики: страница прогревает по нему кэш
 // сервис-воркера в фоне, после чего каждый спрайт открывается мгновенно
 // и офлайн. «core» — лёгкие витринные наборы, «heavy» — полные каталоги.

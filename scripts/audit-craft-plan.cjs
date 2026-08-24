@@ -61,7 +61,7 @@ const settle = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
   const directSaved = JSON.parse(window.localStorage.getItem("calamity-codex") || "{}").craftPlan || [];
   check(directSaved.some(([ref, quantity]) => ref === "catalog:AirSpinner" && quantity === 1), "Direct card button did not save Air Spinner to the craft plan");
   check(directAdd.classList.contains("saved") && directAdd.getAttribute("aria-pressed") === "true" && directAdd.textContent.includes("В плане"), "Direct card button did not switch to its visible saved state");
-  check(document.getElementById("recipe-modal").hidden, "Direct Add to plan button unnecessarily opened the recipe modal");
+  check(!document.getElementById("recipe-modal") || document.getElementById("recipe-modal").hidden, "Direct Add to plan button unnecessarily opened the recipe modal");
 
   window.location.hash = "#/crafts?plan=1";
   await settle(110);

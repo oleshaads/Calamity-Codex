@@ -39,7 +39,10 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260824-core115";
+// Версия релиза проставляется сборкой по хэшу содержимого (contenthash) —
+// её единственный источник истины это <script src="js/codex.min.js?v=…">.
+const releaseVersion = (indexHtml.match(/js\/codex\.min\.js\?v=([A-Za-z0-9._-]+)/) || [])[1] || "";
+check(/^h-[0-9a-f]{10}$/.test(releaseVersion), `Release version is not a build-generated contenthash (h-…): "${releaseVersion}"; run npm run build:runtime`);
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];
@@ -71,13 +74,17 @@ check(scriptTags.length === 1 && /\bdefer\b/.test(scriptTags[0]) && scriptTags[0
 check(indexHtml.includes(`rel="preload" href="js/codex.min.js?v=${releaseVersion}" as="script"`), "Core runtime bundle is not preloaded from the document head");
 check(indexHtml.includes(`css/modern.min.css?v=${releaseVersion}`), "Index does not load the current minified stylesheet");
 check(!indexHtml.includes("codex-data.min.js"), "Heavy catalog data must not block the initial document");
-check(app.includes("ensureCatalogData") && app.includes("codex-data.min.js") && app.includes(`ASSET_VERSION = "${releaseVersion}"`), "Route/search-triggered catalog loading is not wired to the current release");
+check(app.includes("ensureCatalogData") && app.includes("codex-data.min.js") && app.includes("document.currentScript"), "Route/search-triggered catalog loading is not wired to the current release");
 // Budget raised 228 -> 236 KiB for the new full mob bestiary section (route,
 // grouped events/biomes UI); its heavy data stays in the lazy catalog bundle.
 // Raised 236 -> 240 KiB for the reverse-craft explorer ("what is crafted from
 // this item"): picker, usage cards and inspector link; data reuses the
 // existing recipe index without any new payload.
-check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 240 * 1024, "Initial core bundle exceeds the 240 KiB gzip performance budget");
+// Raised 240 -> 244 KiB for the release/UX hardening pass: lazy modal shells
+// (template mount on first open), per-route SEO meta, wiki-source retry,
+// scroll-time FX pause and contenthash release bootstrapping. All of it is
+// logic-only — heavy data still lives exclusively in the lazy catalog bundle.
+check(zlib.gzipSync(runtimeBundle, { level: 9 }).length < 244 * 1024, "Initial core bundle exceeds the 244 KiB gzip performance budget");
 check(runtimeBundle.length < catalogBundle.length, "Initial core bundle is not smaller than the deferred catalog payload");
 check(indexHtml.includes(`manifest.webmanifest?v=${releaseVersion}`), "PWA manifest is not linked with the current core version");
 const manifestPath = path.join(root, "manifest.webmanifest");
@@ -214,7 +221,7 @@ check(modernCss.includes(".scroll-hp") && modernCss.includes("transform-origin: 
 check(!modernCss.includes("backdrop-filter") && !modernCss.includes("@keyframes tgl-pulse") && !modernCss.includes("@keyframes root-sweep") && !modernCss.includes("@keyframes station-bob"), "Continuous paint-heavy blur/tree animations are still enabled");
 check(/@keyframes app-in\s*\{[\s\S]*?from\s*\{\s*opacity:\s*0;\s*\}[\s\S]*?to\s*\{\s*opacity:\s*1;\s*\}/.test(modernCss), "Route transition still transforms the entire page layer");
 check(modernCss.includes(".drag-pan") && modernCss.includes("cursor: grab") && modernCss.includes("touch-action: none") && modernCss.includes("will-change: scroll-position"), "Craft-tree drag-pan styling is missing");
-check(modernCss.includes(".app-boot") && modernCss.includes("repeat(6, minmax(0, 1fr))"), "Loading feedback or six-item mobile navigation styling is missing");
+check(modernCss.includes(".app-boot") && modernCss.includes("repeat(7, minmax(0, 1fr))"), "Loading feedback or seven-item mobile navigation styling is missing");
 check(modernCss.includes("body::after") && modernCss.includes(".stage-bar::after") && modernCss.includes("@keyframes sigil-turn"), "Section atmosphere, accent line or header sigil styling is missing");
 check(modernCss.includes(".hero::after") && modernCss.includes("--jump-accent") && modernCss.includes(".era-no"), "Home hero, section shortcuts or era timeline styling is missing");
 check(modernCss.includes(".rail::before") && modernCss.includes(".catalog-mode.active") && modernCss.includes('.card[data-era="end"]'), "Sidebar, catalog modes or boss-era visual identities are missing");

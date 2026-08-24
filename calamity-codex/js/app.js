@@ -52,17 +52,46 @@
   const ROUTE_RU = {
     home: "Главная",
     novice: "Путь новичка",
-    wiki: "Справочник",
+    wiki: "Вики-справочник",
     bosses: "Боссы",
     items: "Предметы",
     useful: "Полезное",
     favorites: "Избранное",
-    lex: "Словарь",
+    lex: "Словарь терминов",
     crafts: "Полное дерево",
     reverse: "Обратный крафт",
     biomes: "Биомы",
     mobs: "Мобы"
   };
+  /* Описание раздела для <meta name="description"> и og:*: меняется вместе
+     с заголовком, чтобы вкладка и поисковый сниппет соответствовали разделу. */
+  const ROUTE_SEO = {
+    home: "Русский спутник по Terraria 1.4.5 + Calamity: 30 квестов, 2535 предметов, 635 мобов, боссы, крафты и биомы — всё офлайн.",
+    novice: "30 квестов от первого дома до Верховной ведьмы: порядок действий, крафты, классы и первые боссы.",
+    wiki: "Каталог проверенных ссылок на официальные Terraria Wiki и Calamity Mod Wiki.",
+    bosses: "Все 54 босса Terraria и Calamity: порядок прохождения, эры, тактики и награды.",
+    items: "Каталог 2535 предметов Calamity: русские описания, спрайты, способы получения и рецепты.",
+    useful: "71 практическая подборка: наборы снаряжения, зелья, фермы и советы прохождения.",
+    favorites: "Личный рюкзак героя: отмеченные предметы, боссы и цели крафта.",
+    lex: "232 игровых термина Calamity и Terraria с русскими пояснениями.",
+    crafts: "Полное дерево крафта: ингредиенты, станции, визуальные рецепты и план крафта.",
+    reverse: "Выбери материал — увидишь всё, что из него создаётся в Calamity и Terraria.",
+    biomes: "Биомы Calamity: Затонувшее море, Бездна, Астральная инфекция и другие.",
+    mobs: "635 мобов Terraria и Calamity: где встречаются, чем опасны и что падает."
+  };
+  function applyRouteSEO(view) {
+    const description = ROUTE_SEO[view] || ROUTE_SEO.home;
+    const title = `${ROUTE_RU[view] || "Главная"} — Каламити Кодекс`;
+    const set = (selector, value) => document.querySelector(selector)?.setAttribute("content", value);
+    set('meta[name="description"]', description);
+    set('meta[property="og:title"]', title);
+    set('meta[property="og:description"]', description);
+    set('meta[property="og:url"]', location.href);
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) {
+      try { canonical.setAttribute("href", new URL(location.pathname, location.origin).href); } catch { /* file:// — оставляем базовый */ }
+    }
+  }
   let lastView = "";
   let lastScrollKey = "";
   let routeAnimation = null;
@@ -100,7 +129,34 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260824-core115";
+  /* Версия релиза берётся из query-параметра собственного <script>-тега
+     (?v=h-…), который проставляется сборкой по хэшу содержимого бандла.
+     Ручное версионирование датой больше не нужно: пока содержимое не менялось,
+     URL стабилен и для браузера, и для прокси; изменилось — URL меняется сам. */
+  const ASSET_VERSION = (() => {
+    try {
+      const own = document.currentScript?.src
+        || document.querySelector("script[src*='codex.min.js']")?.src
+        || "";
+      const version = own ? new URL(own, document.baseURI).searchParams.get("v") : "";
+      return /^[a-z0-9-]+$/i.test(version || "") ? version : "local";
+    } catch { return "local"; }
+  })();
+  /* Метка для встроенного сторожевого скрипта в index.html: ядро исполнилось,
+     дальше возможны только асинхронные ожидания, но не «вечная загрузка». */
+  window.CODEX_BOOT_OK = true;
+
+  /* Ленивые модальные оболочки: разметка лежит в <template> и клонируется
+     в DOM при первом открытии диалога. Стартовое дерево элементов меньше,
+     страница парсится быстрее, а поведение модалок не меняется. */
+  function mountModalShell(id) {
+    let node = document.getElementById(id);
+    if (node) return node;
+    const template = document.getElementById(`${id}-template`);
+    const shell = template?.content?.firstElementChild;
+    if (shell) node = document.body.appendChild(shell.cloneNode(true));
+    return node;
+  }
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -1509,9 +1565,22 @@
       if (!animationFrame && !document.hidden && !document.body.classList.contains("lite")) animationFrame = requestAnimationFrame(tick);
     };
     document.addEventListener("visibilitychange", startAnimation);
+    /* Тяжёлые списки (635 мобов, 2.5K предметов) сами нуждаются в кадрах
+       на композитинг/скролл — гасим фоновые частицы на время прокрутки
+       и возобновляем, когда она закончилась. Вызов приходит из общего
+       scroll-обработчика, чтобы слушатель скролла оставался один. */
+    let scrollIdleTimer = 0;
+    const pauseForScroll = () => {
+      if (!animationFrame) return;
+      cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = setTimeout(startAnimation, 180);
+    };
     startAnimation();
     return {
       sync: startAnimation,
+      pauseForScroll,
       set(name) {
         mode = name || "embers";
         dots.forEach((d) => {
@@ -1611,6 +1680,7 @@
     });
     if (routeTitle) routeTitle.textContent = ROUTE_RU[view];
     document.title = `${ROUTE_RU[view]} — Каламити Кодекс`;
+    applyRouteSEO(view);
     document.body.dataset.view = view;
     updateJourneyProgress();
     updateFavoritesBadge();
@@ -1753,8 +1823,8 @@
         title: "Справка и личное",
         desc: "Механики, термины и твой сохранённый прогресс.",
         links: [
-          ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Справочник", "5 разделов"],
-          ["#/lex", "assets/sprites/DecryptionComputer.png", "Словарь", `${Object.keys(CODEX.lex || {}).length} терминов`],
+          ["#/wiki", "assets/sprites/AdvancedDisplay.png", "Вики", "5 разделов"],
+          ["#/lex", "assets/sprites/DecryptionComputer.png", "Термины", `${Object.keys(CODEX.lex || {}).length} терминов`],
           ["#/favorites", "assets/sprites/HeavenfallenStardisk.png", "Избранное", `${favTotal} в рюкзаке`]
         ]
       }
@@ -3629,6 +3699,7 @@
       linkifyMobMentions(paragraph);
       box.hidden = false;
       box.classList.remove("failed");
+      box.querySelector("[data-wiki-retry]")?.remove();
       box.classList.add("loaded");
       if (!info.cycleCut) box.closest(".noncraft-source")?.classList.add("wiki-enriched");
       const languageMark = language === "en" ? " · EN" : "";
@@ -3663,6 +3734,21 @@
     box.classList.add("failed");
     if (label) label.textContent = `${profile.label} · проверка недоступна`;
     if (paragraph) paragraph.textContent = "Не удалось получить данные автоматически. Открой официальную страницу по ссылке ниже — локальная карточка не подменяет источник догадкой.";
+    /* Сброс заглушки: карточка не блокируется — проверку можно повторить,
+       например когда сеть вернулась. */
+    if (!box.querySelector("[data-wiki-retry]")) {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "btn ghost wiki-retry";
+      retry.dataset.wikiRetry = "";
+      retry.textContent = "Повторить проверку";
+      retry.addEventListener("click", () => {
+        retry.remove();
+        box.classList.remove("failed");
+        enrichWikiSource(root, info);
+      });
+      box.appendChild(retry);
+    }
   }
 
   /* ---------- источники предметов: NPC-дроп, тайлы, сундуки ---------- */
@@ -4953,7 +5039,7 @@
     const visible = list.slice(0, limit);
     app.innerHTML = `
       <div class="page">
-        ${mast("Словарь", "Все термины в формате карточек маршрута: изображение, смысл, источник и игровое название.")}
+        ${mast("Словарь терминов", "Все термины в формате карточек маршрута: изображение, смысл, источник и игровое название.")}
         <div class="filter-bar lex-controls">
           <label class="search-wrap">
             <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-4-4"/></svg>
@@ -5003,7 +5089,7 @@
     return `<article class="card has-art wiki-card">
       <div class="card-shot slot" data-kind="${escAttr(kind)}">
         ${visualArt(title, kind, options.art || "")}
-        <span class="kind-pill">${esc(options.type || "Справочник")}</span>
+        <span class="kind-pill">${esc(options.type || "Подборка")}</span>
         ${options.badge ? `<span class="tag-cls all">${esc(options.badge)}</span>` : ""}
       </div>
       <div class="card-body">
@@ -5069,7 +5155,7 @@
     }
     app.innerHTML = `
       <div class="page">
-        ${mast("Справочник", "Те же наглядные карточки маршрута: изображение, этап, источник, назначение и быстрый переход к подробностям.")}
+        ${mast("Полезное", "Наглядные карточки маршрута: изображение, этап, источник, назначение и быстрый переход к подробностям.")}
         <div class="chips wiki-tabs">
           ${tabs.map(([id, name]) => `<button class="chip ${tab === id ? "active" : ""}" data-tab="${id}">${name}<em>${sources[id].length}</em></button>`).join("")}
         </div>
@@ -7077,19 +7163,25 @@
     });
   }
 
-  const biomeModal = document.getElementById("biome-modal");
-  const biomeModalPanel = biomeModal?.querySelector(".biome-modal-panel");
-  const biomeModalImage = document.getElementById("biome-modal-image");
-  const biomeModalTitle = document.getElementById("biome-modal-title");
-  const biomeModalSub = document.getElementById("biome-modal-sub");
-  const biomeModalDesc = document.getElementById("biome-modal-desc");
-  const biomeModalDanger = document.getElementById("biome-modal-danger");
-  const biomeModalCount = document.getElementById("biome-modal-count");
-  const biomeModalPrev = document.getElementById("biome-modal-prev");
-  const biomeModalNext = document.getElementById("biome-modal-next");
-  let biomeViewerNames = [];
-  let biomeViewerIndex = 0;
-  let biomeViewerPreviousFocus = null;
+  /* Биома-просмотрщик монтируется из <template> при первом открытии. */
+  let biomeViewerApi = null;
+  function ensureBiomeViewer() {
+    if (biomeViewerApi) return biomeViewerApi;
+    const api = { modal: null, open: null, close: null };
+    const biomeModal = mountModalShell("biome-modal");
+    if (!biomeModal) return (biomeViewerApi = api);
+    const biomeModalPanel = biomeModal?.querySelector(".biome-modal-panel");
+    const biomeModalImage = document.getElementById("biome-modal-image");
+    const biomeModalTitle = document.getElementById("biome-modal-title");
+    const biomeModalSub = document.getElementById("biome-modal-sub");
+    const biomeModalDesc = document.getElementById("biome-modal-desc");
+    const biomeModalDanger = document.getElementById("biome-modal-danger");
+    const biomeModalCount = document.getElementById("biome-modal-count");
+    const biomeModalPrev = document.getElementById("biome-modal-prev");
+    const biomeModalNext = document.getElementById("biome-modal-next");
+    let biomeViewerNames = [];
+    let biomeViewerIndex = 0;
+    let biomeViewerPreviousFocus = null;
 
   function renderBiomeViewer() {
     const name = biomeViewerNames[biomeViewerIndex];
@@ -7155,6 +7247,15 @@
     if (biomeModalPrev) biomeModalPrev.onclick = () => moveBiomeViewer(-1);
     if (biomeModalNext) biomeModalNext.onclick = () => moveBiomeViewer(1);
   }
+    api.modal = biomeModal;
+    api.open = openBiomeViewer;
+    api.close = closeBiomeViewer;
+    return (biomeViewerApi = api);
+  }
+  /* Публичные обёртки: open монтирует модалку по требованию, close — безопасный
+     no-op, пока модалка ни разу не открывалась. */
+  function openBiomeViewer(name, names) { ensureBiomeViewer().open?.(name, names); }
+  function closeBiomeViewer(options = {}) { biomeViewerApi?.close?.(options); }
 
   function renderBiomes(params = {}) {
     fillRail("");
@@ -7326,7 +7427,7 @@
     Object.values(CODEX.lex || {}).forEach((x) => {
       const blob = `${x.ru} ${x.en} ${x.type} ${x.desc} ${x.where || ""} ${x.used || ""} ${x.craft || ""} ${(x.aliases || []).join(" ")}`.toLowerCase();
       if (matchesSearch(blob, q))
-        hits.push({ href: `#/lex?q=${encodeURIComponent(x.ru)}`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Словарь", mark: "A", art: BOSS_ART_BY_ID[x.id] || LEX_ART[x.en || x.ru] || resolveArt(x.en || x.ru) || "" });
+        hits.push({ href: `#/lex?q=${encodeURIComponent(x.ru)}`, title: x.ru, sub: `${x.type} · ${x.en}`, type: "Термины", mark: "A", art: BOSS_ART_BY_ID[x.id] || LEX_ART[x.en || x.ru] || resolveArt(x.en || x.ru) || "" });
     });
     const itemHitNames = new Set();
     (CODEX.items || []).forEach((x) => {
@@ -7567,17 +7668,17 @@
         hideTipCard({ restoreFocus: true });
         return;
       }
-      if (recipeModal && !recipeModal.hidden) {
+      if (recipeModalApi?.modal && !recipeModalApi.modal.hidden) {
         e.preventDefault();
         closeRecipeModal();
         return;
       }
-      if (treeModal && !treeModal.hidden) {
+      if (treeModalApi?.modal && !treeModalApi.modal.hidden) {
         e.preventDefault();
         closeCraftTree();
         return;
       }
-      if (biomeModal && !biomeModal.hidden) {
+      if (biomeViewerApi?.modal && !biomeViewerApi.modal.hidden) {
         e.preventDefault();
         closeBiomeViewer();
         return;
@@ -7707,6 +7808,9 @@
     const viewport = target === document || target === document.documentElement || target === document.body || target === window;
     if (viewport) viewportScrollDirty = true;
     if (viewport || hideTipOnFrame) scheduleViewportFrame();
+    /* Единый scroll-обработчик заодно гасит фоновые частицы на время
+       прокрутки тяжёлых списков — see FX.pauseForScroll. */
+    if (viewport) FX.pauseForScroll?.();
   }, { capture: true, passive: true });
   addEventListener("resize", invalidateScrollMetrics, { passive: true });
   if (typeof ResizeObserver !== "undefined" && app) {
@@ -7719,7 +7823,15 @@
   const shellEl = document.querySelector(".shell");
 
   /* ---------- отдельный визуальный рецепт ---------- */
-  const recipeModal = document.getElementById("recipe-modal");
+  /* Визуальный рецепт монтируется из <template> при первом открытии.
+     Чистые помощники плана крафта остаются в общем scope: их использует
+     и страница плана, и глобальные кнопки [data-add-craft-plan]. */
+  let recipeModalApi = null;
+  function ensureRecipeModal() {
+    if (recipeModalApi) return recipeModalApi;
+    const api = { modal: null, open: null, close: null };
+    const recipeModal = mountModalShell("recipe-modal");
+    if (!recipeModal) return (recipeModalApi = api);
   const recipePanel = recipeModal?.querySelector(".recipe-panel");
   const recipeContent = document.getElementById("recipe-content");
   const recipeResultName = document.getElementById("recipe-result-name");
@@ -7730,53 +7842,6 @@
   let recipeCurrent = "";
   let recipeStateKey = "";
   let recipePreviousFocus = null;
-
-  function recipeChecklistState(key) {
-    const all = store.get().recipeIngredients || {};
-    return new Set(Array.isArray(all[key]) ? all[key] : []);
-  }
-  function toggleRecipeChecklistItem(key, materialKey) {
-    const all = store.get().recipeIngredients || {};
-    const collected = new Set(Array.isArray(all[key]) ? all[key] : []);
-    if (collected.has(materialKey)) collected.delete(materialKey);
-    else collected.add(materialKey);
-    store.set({ recipeIngredients: { ...all, [key]: [...collected] } });
-    return collected.has(materialKey);
-  }
-  function clearRecipeChecklist(key) {
-    const all = { ...(store.get().recipeIngredients || {}) };
-    delete all[key];
-    store.set({ recipeIngredients: all });
-  }
-  function recipeCraftQuantity(key) {
-    const value = Number(store.get().recipeQuantities?.[key] || 1);
-    return Math.min(999, Math.max(1, Number.isFinite(value) ? Math.round(value) : 1));
-  }
-  function setRecipeCraftQuantity(key, value) {
-    const quantity = Math.min(999, Math.max(1, Math.round(Number(value) || 1)));
-    const all = { ...(store.get().recipeQuantities || {}), [key]: quantity };
-    store.set({ recipeQuantities: all });
-    return quantity;
-  }
-  function multipliedIngredientCount(raw, quantity) {
-    const value = Number.parseFloat(String(raw || "1").replace(",", "."));
-    if (!Number.isFinite(value)) return quantity === 1 ? String(raw || "1") : `${raw || "1"} × ${quantity}`;
-    const total = value * quantity;
-    return Number.isInteger(total) ? String(total) : String(Math.round(total * 100) / 100).replace(".", ",");
-  }
-  function recipeCraftCountLabel(quantity) {
-    const mod100 = quantity % 100;
-    const mod10 = quantity % 10;
-    const word = mod100 >= 11 && mod100 <= 14 ? "крафтов" : mod10 === 1 ? "крафт" : mod10 >= 2 && mod10 <= 4 ? "крафта" : "крафтов";
-    return `${quantity} ${word}`;
-  }
-
-  function recipeItemArt(info, className) {
-    const art = info.art || info.remoteArt || "";
-    return art
-      ? `<img class="${className || ""}${info.remoteArt && !info.art ? " remote" : ""}" src="${escAttr(releaseAsset(art))}" alt="" loading="lazy" decoding="async" />`
-      : `<span class="recipe-art-fallback" aria-hidden="true">◆</span>`;
-  }
   function renderVisualRecipe(name) {
     const info = ingredientInfo(name);
     const recipe = visualRecipeFor(name);
@@ -8012,6 +8077,60 @@
     hideTipCard();
     location.hash = `#/crafts?item=${encodeURIComponent(target)}`;
   };
+    api.modal = recipeModal;
+    api.open = openRecipeModal;
+    api.close = closeRecipeModal;
+    return (recipeModalApi = api);
+  }
+  function openRecipeModal(name) { ensureRecipeModal().open?.(name); }
+  function closeRecipeModal(options = {}) { recipeModalApi?.close?.(options); }
+
+  function recipeChecklistState(key) {
+    const all = store.get().recipeIngredients || {};
+    return new Set(Array.isArray(all[key]) ? all[key] : []);
+  }
+  function toggleRecipeChecklistItem(key, materialKey) {
+    const all = store.get().recipeIngredients || {};
+    const collected = new Set(Array.isArray(all[key]) ? all[key] : []);
+    if (collected.has(materialKey)) collected.delete(materialKey);
+    else collected.add(materialKey);
+    store.set({ recipeIngredients: { ...all, [key]: [...collected] } });
+    return collected.has(materialKey);
+  }
+  function clearRecipeChecklist(key) {
+    const all = { ...(store.get().recipeIngredients || {}) };
+    delete all[key];
+    store.set({ recipeIngredients: all });
+  }
+  function recipeCraftQuantity(key) {
+    const value = Number(store.get().recipeQuantities?.[key] || 1);
+    return Math.min(999, Math.max(1, Number.isFinite(value) ? Math.round(value) : 1));
+  }
+  function setRecipeCraftQuantity(key, value) {
+    const quantity = Math.min(999, Math.max(1, Math.round(Number(value) || 1)));
+    const all = { ...(store.get().recipeQuantities || {}), [key]: quantity };
+    store.set({ recipeQuantities: all });
+    return quantity;
+  }
+  function multipliedIngredientCount(raw, quantity) {
+    const value = Number.parseFloat(String(raw || "1").replace(",", "."));
+    if (!Number.isFinite(value)) return quantity === 1 ? String(raw || "1") : `${raw || "1"} × ${quantity}`;
+    const total = value * quantity;
+    return Number.isInteger(total) ? String(total) : String(Math.round(total * 100) / 100).replace(".", ",");
+  }
+  function recipeCraftCountLabel(quantity) {
+    const mod100 = quantity % 100;
+    const mod10 = quantity % 10;
+    const word = mod100 >= 11 && mod100 <= 14 ? "крафтов" : mod10 === 1 ? "крафт" : mod10 >= 2 && mod10 <= 4 ? "крафта" : "крафтов";
+    return `${quantity} ${word}`;
+  }
+
+  function recipeItemArt(info, className) {
+    const art = info.art || info.remoteArt || "";
+    return art
+      ? `<img class="${className || ""}${info.remoteArt && !info.art ? " remote" : ""}" src="${escAttr(releaseAsset(art))}" alt="" loading="lazy" decoding="async" />`
+      : `<span class="recipe-art-fallback" aria-hidden="true">◆</span>`;
+  }
   document.addEventListener("click", (event) => {
     const button = event.target.closest?.("[data-recipe]");
     if (!button) return;
@@ -8046,28 +8165,10 @@
   });
 
   /* ---------- дерево крафта ---------- */
-  const treeModal = document.getElementById("tree-modal");
-  const treePanel = treeModal?.querySelector(".tree-panel");
-  const treeBody = document.getElementById("tree-body");
-  let treeStack = [];
-  let treeCurrent = "";
-  let treePreviousFocus = null;
-  let modalTreeScale = savedTreeScale("modal");
+  /* Модальное дерево крафта монтируется из <template> при первом открытии.
+     Общие помощники графа (перетаскивание, сворачивание, разметка узлов)
+     остаются в общем scope: их использует и встроенное дерево на #/crafts. */
   const TREE_MAX_DEPTH = 32;
-
-  function applyModalTreeZoom() {
-    applyTreeGraphZoom(treeBody, modalTreeScale, treeModal, "[data-modal-tree-zoom-label]");
-  }
-  function adjustModalTreeZoom(action) {
-    const current = modalTreeScale;
-    const requested = action === "reset" ? 1 : current + (action === "in" ? TREE_ZOOM_STEP : -TREE_ZOOM_STEP);
-    modalTreeScale = adjustTreeSurfaceZoom(treeBody, current, requested, (scale) => {
-      modalTreeScale = Number(scale.toFixed(2));
-      applyModalTreeZoom();
-    });
-    saveTreeScale("modal", modalTreeScale);
-  }
-
   function bindDragPan(surface) {
     if (!surface || surface.dataset.dragPanBound) return;
     surface.dataset.dragPanBound = "1";
@@ -8182,13 +8283,6 @@
     }, true);
   }
 
-  bindDragPan(treeBody);
-  treeBody?.addEventListener("wheel", (event) => {
-    if (!event.ctrlKey && !event.metaKey) return;
-    event.preventDefault();
-    adjustModalTreeZoom(event.deltaY < 0 ? "in" : "out");
-  }, { passive: false });
-
   function toggleTreeNode(toggle) {
     const kids = toggle?.closest(".tnode")?.querySelector(":scope > .tkids");
     if (!kids) return;
@@ -8271,7 +8365,36 @@
       ${kidsHTML}${moreHTML}
     </div>`;
   }
-
+  let treeModalApi = null;
+  function ensureCraftTree() {
+    if (treeModalApi) return treeModalApi;
+    const api = { modal: null, open: null, close: null };
+    const treeModal = mountModalShell("tree-modal");
+    if (!treeModal) return (treeModalApi = api);
+  const treePanel = treeModal?.querySelector(".tree-panel");
+  const treeBody = document.getElementById("tree-body");
+  let treeStack = [];
+  let treeCurrent = "";
+  let treePreviousFocus = null;
+  let modalTreeScale = savedTreeScale("modal");
+  function applyModalTreeZoom() {
+    applyTreeGraphZoom(treeBody, modalTreeScale, treeModal, "[data-modal-tree-zoom-label]");
+  }
+  bindDragPan(treeBody);
+  treeBody?.addEventListener("wheel", (event) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    adjustModalTreeZoom(event.deltaY < 0 ? "in" : "out");
+  }, { passive: false });
+  function adjustModalTreeZoom(action) {
+    const current = modalTreeScale;
+    const requested = action === "reset" ? 1 : current + (action === "in" ? TREE_ZOOM_STEP : -TREE_ZOOM_STEP);
+    modalTreeScale = adjustTreeSurfaceZoom(treeBody, current, requested, (scale) => {
+      modalTreeScale = Number(scale.toFixed(2));
+      applyModalTreeZoom();
+    });
+    saveTreeScale("modal", modalTreeScale);
+  }
   function renderTree(name) {
     if (!treeModal || !treeBody) return;
     treeCurrent = name;
@@ -8326,7 +8449,7 @@
       rootLive.hidden = !sourceProfile;
       const liveLabel = rootLive.querySelector("small");
       const liveText = rootLive.querySelector("p");
-      if (liveLabel) liveLabel.textContent = `${sourceProfile?.label || "официальная wiki"} · проверяем источник…`;
+      if (liveLabel) liveLabel.textContent = `${sourceProfile?.label || "официальная вики"} · проверяем источник…`;
       if (liveText) liveText.textContent = "Ищем конкретный способ получения, противника, структуру, магазин или условие появления.";
       if (!rootLive.hidden) enrichWikiSource(rootLive.parentElement, info);
     }
@@ -8468,6 +8591,14 @@
       }
     };
   }
+    api.modal = treeModal;
+    api.open = openCraftTree;
+    api.close = closeCraftTree;
+    return (treeModalApi = api);
+  }
+  function openCraftTree(name) { ensureCraftTree().open?.(name); }
+  function closeCraftTree(options = {}) { treeModalApi?.close?.(options); }
+
 
   document.addEventListener("click", (e) => {
     const btn = e.target.closest && e.target.closest("[data-tree]");

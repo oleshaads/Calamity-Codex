@@ -8,6 +8,7 @@ const fail = (message) => { throw new Error(message); };
 const check = (condition, message) => { if (!condition) fail(message); };
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8")
   .replace(/<script\b[^>]*src=[^>]*><\/script>/g, "");
+const releaseVersion = (html.match(/codex\.min\.js\?v=([A-Za-z0-9._-]+)/) || [])[1] || "";
 const coreBundle = fs.readFileSync(path.join(root, "js/codex.min.js"), "utf8");
 const catalogBundle = fs.readFileSync(path.join(root, "js/codex-data.min.js"), "utf8");
 
@@ -23,6 +24,12 @@ function createRuntime(hash) {
     virtualConsole
   });
   const { window } = dom;
+  // Держим настоящий <script src> в DOM: приложение читает версию релиза
+  // с собственного тега (document.currentScript / querySelector), поэтому
+  // ленивый каталог должен запросить ту же версию, что и ядро.
+  const coreTag = window.document.createElement("script");
+  coreTag.src = `js/codex.min.js?v=${releaseVersion}`;
+  window.document.head.appendChild(coreTag);
   window.HTMLCanvasElement.prototype.getContext = () => ({
     clearRect() {}, beginPath() {}, arc() {}, fill() {}, fillRect() {}, save() {}, translate() {}, rotate() {}, restore() {},
     set fillStyle(value) {}
@@ -44,13 +51,21 @@ const settle = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
   check(!home.window.CALAMITY_ITEM_INDEX, "Heavy catalog data executed during initial home startup");
   check(!home.window.document.querySelector("script[data-codex-catalog]"), "Home route requested the lazy catalog bundle eagerly");
   check(home.errors.length === 0, `Core-only home route emitted runtime errors: ${home.errors.join("\n")}`);
+  // Тяжёлые модальные оболочки живут в <template> и не должны попадать
+  // в DOM до первого открытия: стартовое дерево элементов остаётся маленьким.
+  check(!home.window.document.getElementById("tree-modal")
+    && !home.window.document.getElementById("recipe-modal")
+    && !home.window.document.getElementById("biome-modal"), "Modal shells must not be mounted eagerly");
+  check(Boolean(home.window.document.getElementById("tree-modal-template"))
+    && Boolean(home.window.document.getElementById("recipe-modal-template"))
+    && Boolean(home.window.document.getElementById("biome-modal-template")), "Lazy modal templates are missing from the document");
   home.dom.window.close();
 
   const items = createRuntime("#/items");
   await settle();
   const request = items.window.document.querySelector("script[data-codex-catalog]");
   check(items.window.document.querySelector(".catalog-boot"), "Direct catalog route has no non-blocking loading state");
-  check(request && /codex-data\.min\.js\?v=20260824-core115$/.test(request.src), "Direct catalog route did not request the versioned lazy bundle");
+  check(request && request.src.endsWith(`codex-data.min.js?v=${releaseVersion}`), "Direct catalog route did not request the versioned lazy bundle");
 
   // jsdom does not fetch dynamically appended scripts. Execute the exact
   // production artifact and fire its load callback to exercise hydration.

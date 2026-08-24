@@ -17,14 +17,54 @@
   <meta name="twitter:title" content="Каламити Кодекс — путеводитель по Terraria Calamity" />
   <meta name="twitter:description" content="30 квестов, 635 мобов, полное дерево крафта и бестиарий — по-русски и офлайн." />
   <meta name="twitter:image" content="https://calamity-codex.pages.dev/assets/hero.jpg" />
-  <link rel="icon" href="assets/favicon.png" type="image/png" />
-  <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <link rel="manifest" href="manifest.webmanifest?v=20260824-core115" />
+  <link rel="icon" href="assets/favicon.png" type="image/png" width="128" height="128" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" width="192" height="192" />
+  <link rel="manifest" href="manifest.webmanifest?v=h-df9a86af92" />
+  <link rel="canonical" href="https://calamity-codex.pages.dev/" />
   <link rel="preload" href="assets/fonts/RussoOne-Regular.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="dns-prefetch" href="https://terraria.wiki.gg" />
   <link rel="dns-prefetch" href="https://calamitymod.wiki.gg" />
-  <link rel="preload" href="js/codex.min.js?v=20260824-core115" as="script" />
-  <link rel="stylesheet" href="css/modern.min.css?v=20260824-core115" />
+  <link rel="preload" href="js/codex.min.js?v=h-df9a86af92" as="script" />
+  <link rel="stylesheet" href="css/modern.min.css?v=h-df9a86af92" />
+  <script>
+    /* Сторож начальной загрузки (error boundary без фреймворков): если ядро
+       не загрузилось или не исполнилось (сеть, блокировщик, CDN), показываем
+       локализованный экран ошибки вместо вечного индикатора загрузки. */
+    (function () {
+      var CORE_RE = /codex(?:-data)?\.min\.js|catalog-tooltips\.js/;
+      function showError(reason) {
+        if (window.CODEX_BOOT_OK) return;
+        var app = document.getElementById("app");
+        if (!app || app.querySelector(".app-boot-error")) return;
+        app.setAttribute("aria-busy", "false");
+        app.innerHTML = '<section class="app-boot app-boot-error" role="alert">'
+          + '<span class="app-boot-mark" aria-hidden="true">!</span>'
+          + '<div><b>Кодекс не смог запуститься</b><small>'
+          + (reason || "Проверь соединение — файлы кодекса не дошли до браузера.")
+          + "</small></div>"
+          + '<div class="app-boot-actions"><button class="btn" type="button" data-boot-retry>Перезагрузить</button>'
+          + '<button class="btn ghost" type="button" data-boot-offline>Открыть офлайн-копию</button></div>'
+          + '<p class="app-boot-hint">Путеводитель работает офлайн: если кодекс уже открывался ранее, офлайн-копия откроется без сети.</p>'
+          + "</section>";
+        var retry = app.querySelector("[data-boot-retry]");
+        var offline = app.querySelector("[data-boot-offline]");
+        if (retry) retry.addEventListener("click", function () { location.reload(); });
+        if (offline) offline.addEventListener("click", function () {
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) location.reload();
+          else location.replace(location.pathname + "#/");
+        });
+      }
+      window.addEventListener("error", function (event) {
+        var node = event.target;
+        if (node && node.tagName === "SCRIPT" && CORE_RE.test(node.src || "") && !window.CODEX_BOOT_OK) {
+          showError("Файл ядра не загрузился — соединение прервано или заблокировано (" + (node.src || "").split("/").pop() + ").");
+        }
+      }, true);
+      setTimeout(function () {
+        if (!window.CODEX_BOOT_OK) showError("Запуск завис: браузер слишком долго не получает ответ. Попробуй перезагрузить страницу.");
+      }, 20000);
+    })();
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#app">Перейти к содержимому</a>
@@ -46,54 +86,54 @@
       <nav class="rail-nav" id="main-nav">
         <span class="nav-caption">Прохождение</span>
         <a href="#/" data-nav="home">
-          <span class="nav-icon slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/Calamity.png" alt="" width="42" height="588" loading="lazy" decoding="async" /></span>
           <span>Главная</span>
         </a>
         <a href="#/novice" data-nav="novice">
-          <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/Wooden_Sword.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span>
           <span>Путь новичка</span><em>30</em>
         </a>
         <span class="nav-caption">Крафт и предметы</span>
         <a class="nav-primary" href="#/crafts" data-nav="crafts">
-          <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/Iron_Anvil.png" alt="" width="32" height="16" loading="lazy" decoding="async" /></span>
           <span>Полное дерево</span><em data-craft-plan-count title="Целей в плане крафта">0</em>
         </a>
         <a href="#/items" data-nav="items">
-          <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/StarterBag.png" alt="" width="26" height="34" loading="lazy" decoding="async" /></span>
           <span>Предметы</span><em>2.5K</em>
         </a>
-        <a href="#/reverse" data-nav="reverse">
-          <span class="nav-icon slot"><img src="assets/sprites/WulfrumMetalScrap.png" alt="" loading="lazy" /></span>
+        <a href="#/reverse" data-nav="reverse" title="Что можно скрафтить из каждого материала">
+          <span class="nav-icon slot"><img src="assets/sprites/WulfrumMetalScrap.png" alt="" width="20" height="22" loading="lazy" decoding="async" /></span>
           <span>Обратный крафт</span><em>⇄</em>
         </a>
         <span class="nav-caption">Мир и боссы</span>
         <a href="#/bosses" data-nav="bosses">
-          <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" width="30" height="20" loading="lazy" decoding="async" /></span>
           <span>Боссы</span><em>54</em>
         </a>
         <a href="#/mobs" data-nav="mobs">
-          <span class="nav-icon slot"><img src="assets/mob-sprites/v-zombie.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/mob-sprites/v-zombie.png" alt="" width="38" height="48" loading="lazy" decoding="async" /></span>
           <span>Мобы</span><em>635</em>
         </a>
         <a href="#/biomes" data-nav="biomes">
-          <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/Rock.png" alt="" width="26" height="20" loading="lazy" decoding="async" /></span>
           <span>Биомы</span>
         </a>
         <span class="nav-caption">Справка и личное</span>
-        <a href="#/useful" data-nav="useful">
-          <span class="nav-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span>
+        <a href="#/useful" data-nav="useful" title="Практические наборы и советы прохождения — материалы кодекса">
+          <span class="nav-icon slot"><img src="assets/vanilla-sprites/1923.png" alt="" width="34" height="30" loading="lazy" decoding="async" /></span>
           <span>Полезное</span><em>71</em>
         </a>
-        <a href="#/wiki" data-nav="wiki">
-          <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" loading="lazy" /></span>
-          <span>Справочник</span>
+        <a href="#/wiki" data-nav="wiki" title="Каталог ссылок на официальные вики Terraria и Calamity — уходит на внешние сайты">
+          <span class="nav-icon slot"><img src="assets/sprites/AdvancedDisplay.png" alt="" width="40" height="28" loading="lazy" decoding="async" /></span>
+          <span>Вики</span>
         </a>
-        <a href="#/lex" data-nav="lex">
-          <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" loading="lazy" /></span>
-          <span>Словарь</span>
+        <a href="#/lex" data-nav="lex" title="Словарь игровых терминов Calamity — 232 записи с русскими пояснениями">
+          <span class="nav-icon slot"><img src="assets/sprites/DecryptionComputer.png" alt="" width="42" height="40" loading="lazy" decoding="async" /></span>
+          <span>Термины</span>
         </a>
         <a href="#/favorites" data-nav="favorites">
-          <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" loading="lazy" /></span>
+          <span class="nav-icon slot"><img src="assets/sprites/HeavenfallenStardisk.png" alt="" width="44" height="48" loading="lazy" decoding="async" /></span>
           <span>Избранное</span><em data-favorites-count>0</em>
         </a>
       </nav>
@@ -106,7 +146,7 @@
           <div class="hpbar mini"><i id="rail-progress-fill"></i></div>
         </div>
         <div class="rail-rev" id="rail-rev" hidden>
-          <span><b>Месть</b><i>revengeance</i></span>
+          <span><b>Месть</b><i>Revengeance</i></span>
           <div class="ragebar mini"><i></i></div>
         </div>
         <button class="lite-toggle" id="lite-toggle" type="button" data-lite-toggle aria-pressed="false" title="Отключает эффекты, тени и фоновые сетевые запросы — для слабых устройств и медленного интернета">
@@ -164,19 +204,23 @@
   </div>
 
   <nav class="mobile-tabs" aria-label="Быстрая навигация">
-    <a href="#/" data-nav="home"><span class="slot"><img src="assets/sprites/Calamity.png" alt="" loading="lazy" /></span><span>Главная</span></a>
-    <a href="#/novice" data-nav="novice"><span class="slot"><img src="assets/sprites/Wooden_Sword.png" alt="" loading="lazy" /></span><span>Путь</span></a>
-    <a class="nav-primary" href="#/crafts" data-nav="crafts"><span class="slot"><img src="assets/sprites/Iron_Anvil.png" alt="" loading="lazy" /></span><span>Дерево</span></a>
-    <a href="#/items" data-nav="items"><span class="slot"><img src="assets/sprites/StarterBag.png" alt="" loading="lazy" /></span><span>Предметы</span></a>
-    <a href="#/reverse" data-nav="reverse"><span class="slot"><img src="assets/sprites/WulfrumMetalScrap.png" alt="" loading="lazy" /></span><span>Из чего</span></a>
-    <a href="#/bosses" data-nav="bosses"><span class="slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" loading="lazy" /></span><span>Боссы</span></a>
-    <a href="#/useful" data-nav="useful"><span class="slot"><img src="assets/vanilla-sprites/1923.png" alt="" loading="lazy" /></span><span>Полезное</span></a>
+    <a href="#/" data-nav="home"><span class="slot"><img src="assets/sprites/Calamity.png" alt="" width="42" height="588" loading="lazy" decoding="async" /></span><span>Главная</span></a>
+    <a href="#/novice" data-nav="novice"><span class="slot"><img src="assets/sprites/Wooden_Sword.png" alt="" width="32" height="32" loading="lazy" decoding="async" /></span><span>Путь</span></a>
+    <a class="nav-primary" href="#/crafts" data-nav="crafts"><span class="slot"><img src="assets/sprites/Iron_Anvil.png" alt="" width="32" height="16" loading="lazy" decoding="async" /></span><span>Дерево</span></a>
+    <a href="#/items" data-nav="items"><span class="slot"><img src="assets/sprites/StarterBag.png" alt="" width="26" height="34" loading="lazy" decoding="async" /></span><span>Предметы</span></a>
+    <a href="#/reverse" data-nav="reverse" title="Что можно скрафтить из материала"><span class="slot"><img src="assets/sprites/WulfrumMetalScrap.png" alt="" width="20" height="22" loading="lazy" decoding="async" /></span><span>Обратный</span></a>
+    <a href="#/bosses" data-nav="bosses"><span class="slot"><img src="assets/sprites/Suspicious_Looking_Eye.png" alt="" width="30" height="20" loading="lazy" decoding="async" /></span><span>Боссы</span></a>
+    <a href="#/useful" data-nav="useful"><span class="slot"><img src="assets/vanilla-sprites/1923.png" alt="" width="34" height="30" loading="lazy" decoding="async" /></span><span>Полезное</span></a>
   </nav>
 
   <button class="to-top" id="to-top" type="button" aria-label="Наверх">▲</button>
   <div id="tt" class="tt" hidden></div>
   <div id="tip-card" class="tip-card panel" role="dialog" aria-modal="false" aria-label="Сведения об объекте" tabindex="-1" hidden></div>
 
+  <!-- Тяжёлые модальные оболочки живут в <template> и попадают в DOM только
+       при первом открытии (см. mountModalShell в app.js): стартовое дерево
+       элементов остаётся маленьким, парсинг страницы — быстрым. -->
+  <template id="recipe-modal-template">
   <div class="recipe-modal" id="recipe-modal" hidden>
     <div class="recipe-modal-backdrop" data-recipe-close></div>
     <section class="recipe-panel panel" role="dialog" aria-modal="true" aria-labelledby="recipe-dialog-title recipe-result-name" aria-describedby="recipe-dialog-help">
@@ -194,7 +238,9 @@
       </footer>
     </section>
   </div>
+  </template>
 
+  <template id="tree-modal-template">
   <div class="tree-modal" id="tree-modal" hidden>
     <div class="tree-backdrop" data-tree-close></div>
     <div class="tree-panel panel" role="dialog" aria-modal="true" aria-labelledby="tree-dialog-title tree-root-name" aria-describedby="tree-legend">
@@ -227,7 +273,9 @@
       <div class="tree-body" id="tree-body"></div>
     </div>
   </div>
+  </template>
 
+  <template id="biome-modal-template">
   <div class="biome-modal" id="biome-modal" hidden>
     <div class="biome-modal-backdrop" data-biome-close></div>
     <section class="biome-modal-panel panel" role="dialog" aria-modal="true" aria-labelledby="biome-modal-title" aria-describedby="biome-modal-desc">
@@ -251,10 +299,11 @@
       </footer>
     </section>
   </div>
+  </template>
 
   <div id="toast" class="toast" role="status" hidden></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
-  <script defer src="js/codex.min.js?v=20260824-core115"></script>
+  <script defer src="js/codex.min.js?v=h-df9a86af92"></script>
 </body>
 </html>

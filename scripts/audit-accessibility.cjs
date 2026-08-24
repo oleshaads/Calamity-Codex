@@ -8,6 +8,8 @@ const fail = (message) => { throw new Error(message); };
 const check = (condition, message) => { if (!condition) fail(message); };
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8")
   .replace(/<script\b[^>]*src=[^>]*><\/script>/g, "");
+// Версия релиза (contenthash) читается из тега ядра — как в проде.
+const releaseVersion = (html.match(/codex\.min\.js\?v=([A-Za-z0-9._-]+)/) || [])[1] || "";
 const coreBundle = fs.readFileSync(path.join(root, "js/codex.min.js"), "utf8");
 const catalogBundle = fs.readFileSync(path.join(root, "js/codex-data.min.js"), "utf8");
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -30,6 +32,9 @@ function createRuntime(hash) {
   });
   window.scrollTo = () => {};
   window.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+  const coreTag = window.document.createElement("script");
+  coreTag.src = `js/codex.min.js?v=${releaseVersion}`;
+  window.document.head.appendChild(coreTag);
   window.eval(`${coreBundle}\n//# sourceURL=codex.min.js`);
   return { dom, window, errors };
 }
@@ -46,7 +51,7 @@ const visibleFocusable = (root) => [...root.querySelectorAll(FOCUSABLE)]
   const itemIntent = homeDocument.querySelector('#main-nav a[href="#/items"]');
   itemIntent.dispatchEvent(new home.window.MouseEvent("pointerover", { bubbles: true }));
   const prefetch = homeDocument.querySelector('link[data-codex-prefetch]');
-  check(prefetch && /codex-data\.min\.js\?v=20260824-core115$/.test(prefetch.href), "Catalog intent did not create the current versioned prefetch hint");
+  check(prefetch && prefetch.href.endsWith(`codex-data.min.js?v=${releaseVersion}`), "Catalog intent did not create the current versioned prefetch hint");
   check(!home.window.CALAMITY_ITEM_INDEX, "Catalog prefetch executed the heavy payload instead of only warming the cache");
 
   const menuButton = homeDocument.getElementById("menu-btn");
@@ -81,7 +86,7 @@ const visibleFocusable = (root) => [...root.querySelectorAll(FOCUSABLE)]
   const itemDocument = items.window.document;
   const baguetteCard = [...itemDocument.querySelectorAll(".catalog-item-card")].find((card) => card.textContent.includes("Baguette"));
   const baguetteSprite = baguetteCard?.querySelector("img.item-art");
-  check(baguetteSprite?.getAttribute("src") === "assets/item-sprites/Baguette.png?v=20260824-core115", "Catalog still renders a stale unversioned Baguette animation sheet URL");
+  check(baguetteSprite?.getAttribute("src") === `assets/item-sprites/Baguette.png?v=${releaseVersion}`, "Catalog still renders a stale unversioned Baguette animation sheet URL");
   // Full tree is intentionally a full-page primary link now. Create a focused
   // quick-preview trigger to regression-test the still-supported ingredient
   // modal without adding another competing control to every catalog card.

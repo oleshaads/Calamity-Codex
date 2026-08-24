@@ -8,6 +8,8 @@ const fail = (message) => { throw new Error(message); };
 const check = (condition, message) => { if (!condition) fail(message); };
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8")
   .replace(/<script\b[^>]*src=[^>]*><\/script>/g, "");
+// Версия релиза (contenthash) читается из тега ядра — как в проде.
+const releaseVersion = (html.match(/codex\.min\.js\?v=([A-Za-z0-9._-]+)/) || [])[1] || "";
 const coreBundle = fs.readFileSync(path.join(root, "js/codex.min.js"), "utf8");
 const catalogBundle = fs.readFileSync(path.join(root, "js/codex-data.min.js"), "utf8");
 const errors = [];
@@ -28,6 +30,11 @@ window.HTMLCanvasElement.prototype.getContext = () => ({
 window.scrollTo = () => {};
 window.HTMLElement.prototype.scrollIntoView = () => {};
 window.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+// Приложение читает версию релиза с собственного <script>-тега — даём ему
+// настоящий тег, чтобы ленивый каталог запросил ту же версию, что и ядро.
+const coreTag = window.document.createElement("script");
+coreTag.src = `js/codex.min.js?v=${releaseVersion}`;
+window.document.head.appendChild(coreTag);
 window.eval(`${coreBundle}\n//# sourceURL=codex.min.js`);
 const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function waitFor(predicate, timeout = 2000) {
@@ -45,7 +52,7 @@ async function waitFor(predicate, timeout = 2000) {
   input.dispatchEvent(new window.Event("input", { bubbles: true }));
   await settle(150);
   const request = window.document.querySelector("script[data-codex-catalog]");
-  check(request && /codex-data\.min\.js\?v=20260824-core115$/.test(request.src), "First global search did not request the current lazy data bundle");
+  check(request && request.src.endsWith(`codex-data.min.js?v=${releaseVersion}`), "First global search did not request the current lazy data bundle");
   window.eval(`${catalogBundle}\n//# sourceURL=codex-data.min.js`);
   request.onload();
   const htmlElement = window.document.documentElement;

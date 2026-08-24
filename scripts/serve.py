@@ -140,7 +140,9 @@ class CodexHandler(http.server.SimpleHTTPRequestHandler):
         # revalidate, so a new deployment cannot leave an old shell cached.
         query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
         release = query.get("v", [""])[0]
-        versioned = bool(re.fullmatch(r"\d{8}-core\d+", release))
+        # Валидные метки релиза: старые ручные даты (20260824-core115) и
+        # автоматические contenthash-версии сборки (h-0123456789).
+        versioned = bool(re.fullmatch(r"\d{8}-core\d+", release) or re.fullmatch(r"h-[0-9a-f]{10}", release))
         cache_control = "public, max-age=31536000, immutable" if versioned else "public, max-age=0, must-revalidate"
         self.send_header("Cache-Control", cache_control)
         self.send_header("X-Content-Type-Options", "nosniff")

@@ -1,4 +1,7 @@
-const VERSION = "20260824-core115";
+/* VERSION проставляется сборкой (scripts/build-runtime.mjs) по хэшу содержимого
+   бандлов: пока файлы не менялись — URL и кеш стабильны, изменились — версия
+   меняется сама. Ручные даты больше не используются. */
+const VERSION = "h-df9a86af92";
 const CORE_CACHE = `calamity-codex-core-${VERSION}`;
 const RUNTIME_CACHE = `calamity-codex-runtime-${VERSION}`;
 const CORE_ASSETS = [
@@ -7,12 +10,12 @@ const CORE_ASSETS = [
   `./manifest.webmanifest?v=${VERSION}`,
   `./css/modern.min.css?v=${VERSION}`,
   `./js/codex.min.js?v=${VERSION}`,
-  `./js/codex-data.min.js?v=${VERSION}`,
   "./assets/favicon.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
   "./assets/hero.webp",
   "./assets/fonts/RussoOne-Regular.woff2",
+  `./assets/sprite-manifest.json?v=${VERSION}`,
   "./assets/sprites/Calamity.png",
   "./assets/sprites/Wooden_Sword.png",
   "./assets/sprites/AdvancedDisplay.png",
@@ -23,16 +26,41 @@ const CORE_ASSETS = [
   "./assets/sprites/Iron_Anvil.png",
   "./assets/sprites/Rock.png"
 ];
+// Тяжёлые индексы каталога греются в фоне после активации: установка
+// сервис-воркера остаётся быстрой, а обещание «каталог доступен офлайн»
+// выполняется целиком — предметы, мобы и рецепты не требуют сети.
+const CORE_EXTRA_ASSETS = [
+  `./js/codex-data.min.js?v=${VERSION}`,
+  `./js/catalog-tooltips.js?v=${VERSION}`
+];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CORE_CACHE).then((cache) => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CORE_CACHE);
+    // Один сбой файла не должен ронять всю установку: ошибочные доберут
+    // фоновый прогрев и cacheFirst.
+    await Promise.all(CORE_ASSETS.map((url) => cache.add(url).catch(() => {})));
+    await self.skipWaiting();
+  })());
 });
+
+async function warmCoreExtras() {
+  const cache = await caches.open(CORE_CACHE);
+  await Promise.all(CORE_EXTRA_ASSETS.map(async (url) => {
+    try {
+      if (await cache.match(url)) return;
+      const response = await fetch(url);
+      if (response.ok) await cache.put(url, response);
+    } catch { /* остаёмся на cacheFirst — прогрев повторится в следующий заход */ }
+  }));
+}
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys.filter((key) => key.startsWith("calamity-codex-") && ![CORE_CACHE, RUNTIME_CACHE].includes(key)).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
+      .then(() => warmCoreExtras())
   );
 });
 
@@ -64,10 +92,20 @@ async function instantNavigation(event, request) {
   }
 }
 
+let putsSinceTrim = 0;
+
 async function cacheFirst(event, request) {
   const cached = await caches.match(request);
   if (cached) return cached;
-  const response = await fetch(request);
+  let response = null;
+  try {
+    response = await fetch(request);
+  } catch {
+    // Сеть недоступна, а этого файла ещё нет в кеше (например, графика,
+    // которую не успел прогреть фоновый прогрев) — отдаём честную ошибку
+    // вместо падения обработчика: страница продолжает работать офлайн.
+    return (await caches.match(request, { ignoreSearch: true })) || Response.error();
+  }
   if (response.ok && response.type === "basic") {
     const copy = response.clone();
     event.waitUntil((async () => {
@@ -82,7 +120,6 @@ async function cacheFirst(event, request) {
   }
   return response;
 }
-let putsSinceTrim = 0;
 
 function currentReleaseAssetRequest(request, url) {
   if (!url.pathname.includes("/assets/") || url.searchParams.get("v") === VERSION) return request;

@@ -320,6 +320,23 @@ kbd {
 .app-boot b, .app-boot small { display: block; }
 .app-boot b { color: #f1ede3; font-family: var(--mono); font-size: 14px; letter-spacing: .06em; text-transform: uppercase; }
 .app-boot small { margin-top: 7px; color: #84909c; font-size: 11px; }
+/* Экран ошибки запуска (сторожевой скрипт в index.html): без бесконечной
+   загрузки — причина по-русски и кнопки действий. */
+.app-boot-error .app-boot-mark { border-color: #6b2a2a; color: #ff8d7e; animation: none; }
+.app-boot-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.app-boot-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #66727e;
+  font-size: 10px;
+  line-height: 1.5;
+}
 .app-boot > i {
   grid-column: 1 / -1;
   height: 4px;
@@ -467,8 +484,10 @@ kbd {
   background: #0c1118;
   font-size: 9px;
   font-style: normal;
+  font-variant-numeric: tabular-nums;
   line-height: 15px;
   text-align: center;
+  justify-self: end;
 }
 .rail-nav a.active em { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, #0c1118); }
 
@@ -3553,7 +3572,7 @@ body.biome-open, body.tree-open, body.menu-open { overflow: hidden; }
   right: 0;
   bottom: 0;
   display: none;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   padding: 7px 8px calc(7px + env(safe-area-inset-bottom, 0px));
   border-top: 2px solid color-mix(in srgb, var(--accent), #080c11 58%);
@@ -5236,6 +5255,9 @@ body.recipe-open { overflow: hidden; }
 .wiki-source-live.failed { border-color: #765137; background: #24180f; }
 .wiki-source-live.failed small { color: #e0a36f; }
 .wiki-source-live.failed p { color: #d4b79d !important; }
+/* Кнопка «Повторить проверку» в неудавшейся онлайн-проверке: заглушка
+   не блокирует карточку — сброс доступен прямо на месте. */
+.wiki-retry { justify-self: start; margin-top: 2px; padding: 4px 10px; font-size: 9px; }
 
 /* Масштабируется только граф внутри фиксированного viewport дерева. */
 .tree-body > .tnode,

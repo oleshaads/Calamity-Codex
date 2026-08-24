@@ -56,10 +56,12 @@ for (const [name, size] of Object.entries({ "mauler.png": [204, 106], "nuclear-t
 const builder = fs.readFileSync(path.join(root, "scripts/build-item-catalog.mjs"), "utf8");
 check(builder.includes("normalize-sprite-frames.mjs") && builder.includes("--skip-npcs"), "Catalog rebuild would restore full animation sheets");
 
-const releaseVersion = "20260824-core115";
+const releaseVersion = (fs.readFileSync(path.join(root, "calamity-codex/index.html"), "utf8").match(/codex\.min\.js\?v=([A-Za-z0-9._-]+)/) || [])[1] || "";
 const appSource = fs.readFileSync(path.join(root, "calamity-codex/js/app.js"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(root, "calamity-codex/sw.js"), "utf8");
-check(appSource.includes(`ASSET_VERSION = "${releaseVersion}"`) && appSource.includes("function releaseAsset") && appSource.includes("function versionLocalImages"), "Local sprite URLs are not tied to the current release");
+// Версия читается приложением с собственного <script>-тега (contenthash),
+// поэтому источник истины — index.html, а не константа в app.js.
+check(appSource.includes("document.currentScript") && appSource.includes("function releaseAsset") && appSource.includes("function versionLocalImages"), "Local sprite URLs are not tied to the current release");
 check(appSource.includes("releaseAsset(`assets/item-sprites/") && appSource.includes("releaseAsset(src)") && appSource.includes("releaseAsset(localArt)"), "Item, boss or NPC cards can still request stale unversioned sprite URLs");
 check(serviceWorker.includes(`VERSION = "${releaseVersion}"`) && serviceWorker.includes("currentReleaseAssetRequest(request, url)"), "Service worker does not replace stale sprite cache keys with the current release");
 console.log("PASS: 101 item and 75 NPC animation sheets render as one genuine, cache-safe frame without duplicate sprites");
