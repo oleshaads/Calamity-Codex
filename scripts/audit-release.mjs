@@ -39,7 +39,7 @@ check(spriteFiles.length === items.length, `Expected ${items.length} item sprite
 
 const app = fs.readFileSync(path.join(root, "js/app.js"), "utf8");
 const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const releaseVersion = "20260819-core107";
+const releaseVersion = "20260819-core108";
 const runtimeSources = [
   "data.js", "extra.js", "lexicon.js", "plain.js", "plain-late.js", "polish.js", "bosses.js", "sprites.js", "app.js"
 ];

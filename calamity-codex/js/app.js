@@ -100,7 +100,7 @@
     tool: "Инструменты", mat: "Материалы", summon: "Призываемое", potion: "Расходники", misc: "Прочее"
   };
   const CLS_RU = { melee: "Воин", ranged: "Стрелок", mage: "Маг", summoner: "Призыватель", rogue: "Плут", all: "Все классы" };
-  const ASSET_VERSION = "20260819-core107";
+  const ASSET_VERSION = "20260819-core108";
   const LOCAL_ASSET_RE = /^(?:\.\/)?assets\//;
   function releaseAsset(source) {
     const value = String(source || "");
@@ -2947,23 +2947,43 @@
     if (reverseUseIndexCache) return reverseUseIndexCache;
     getRecipeIndex();
     reverseUseIndexCache = new Map();
-    (visualRecipeIndex || new Map()).forEach((recipe, resultKey) => {
-      (recipe.ings || []).forEach((ingredient) => {
-        const key = normalizeArtName(ingredient.key || ingredient.name);
+    const push = (ingredient, entry) => {
+      // Индексируем и по игровому имени, и по служебному ключу vanilla:ID —
+      // выбор пользователя может прийти в любой из этих форм.
+      [ingredient.name, ingredient.key].filter(Boolean).forEach((raw) => {
+        const key = normalizeArtName(raw);
         if (!key) return;
         if (!reverseUseIndexCache.has(key)) reverseUseIndexCache.set(key, []);
-        reverseUseIndexCache.get(key).push({ result: recipe.result || resultKey, count: ingredient.count || "", recipe });
+        reverseUseIndexCache.get(key).push(entry);
+      });
+    };
+    (visualRecipeIndex || new Map()).forEach((recipe, resultKey) => {
+      (recipe.ings || []).forEach((ingredient) => {
+        push(ingredient, { result: recipe.result || resultKey, count: ingredient.count || "", recipe });
+      });
+    });
+    // Полнота важнее дерева: учитываем и альтернативные ванильные рецепты,
+    // где ингредиент участвует только в неосновном варианте.
+    VANILLA_RECIPE_OPTIONS_BY_ID.forEach((options, resultId) => {
+      const item = VANILLA_BY_ID.get(String(resultId));
+      if (!item) return;
+      options.forEach((option) => {
+        const recipe = { ings: option.ings, station: vanillaStationName(option.station), yield: Math.max(1, Number(option.yield || 1)), result: item.name };
+        option.ings.forEach((ingredient) => push(ingredient, { result: item.name, count: ingredient.count || "", recipe }));
       });
     });
     return reverseUseIndexCache;
   }
+  const recipesNomText = (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? "рецепт" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "рецепта" : "рецептов"}`;
+  const REVERSE_POPULAR = ["Wood", "Stone Block", "Iron Bar", "Gel", "Fallen Star", "Cobweb", "Glass", "Obsidian", "Hellstone Bar", "Soul of Light", "Soul of Night", "Hallowed Bar"];
   function reverseUsesFor(name) {
     const info = ingredientInfo(name);
     const keys = new Set([
       normalizeArtName(info.name),
       normalizeArtName(info.en),
       info.catName ? normalizeArtName(info.catName) : "",
-      info.vanilla ? normalizeArtName(info.vanilla.name) : ""
+      info.vanilla ? normalizeArtName(info.vanilla.name) : "",
+      info.vanilla ? normalizeArtName(`vanilla:${info.vanilla.id}`) : ""
     ].filter(Boolean));
     const rows = [];
     const seen = new Set();
@@ -6764,21 +6784,23 @@
       const ingName = ing.key || ing.name;
       const ingInfo = ingredientInfo(ingName);
       const isSource = sourceKeys.has(normalizeArtName(ing.name)) || sourceKeys.has(normalizeArtName(ingInfo.name));
-      return `<span class="reverse-ing${isSource ? " is-source" : ""}">${ing.count ? `${esc(craftAmount(ing.count))} × ` : ""}${esc(ingInfo.ru)}</span>`;
+      const ingArt = ingInfo.art || ingInfo.remoteArt || "";
+      return `<span class="reverse-ing${isSource ? " is-source" : ""}">${ingArt ? `<img src="${escAttr(ingArt)}" alt="" loading="lazy" decoding="async" />` : ""}${ing.count ? `<i>${esc(craftAmount(ing.count))}×</i>` : ""}${esc(ingInfo.ru)}</span>`;
     }).join("");
+    const stationChip = `<span class="reverse-ing reverse-station"><b aria-hidden="true">⚒</b>${esc(row.recipe.station ? craftStationInline(row.recipe.station) : "в инвентаре")}</span>`;
     const obtain = ruText(info.obtain || "");
-    const obtainShort = obtain.length > 220 ? `${obtain.slice(0, 217)}…` : obtain;
+    const obtainShort = obtain.length > 200 ? `${obtain.slice(0, 197)}…` : obtain;
     return `<article class="reverse-result-card">
       <div class="reverse-result-head">
         <span class="slot reverse-result-art">${art ? `<img${info.remoteArt && !info.art ? ` class="remote"` : ""} src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
         <div class="reverse-result-title">
           <b>${esc(info.ru)}</b>
           ${info.en && info.en !== info.ru ? `<small>${esc(info.en)}</small>` : ""}
-          <em>${esc(info.typeLabel || "Предмет")}${row.recipe.station ? ` · ${esc(craftStationInline(row.recipe.station))}` : ""}</em>
+          <em>${esc(info.typeLabel || "Предмет")}</em>
         </div>
         <span class="reverse-result-need">нужно<b>×${esc(craftAmount(row.count || 1))}</b></span>
       </div>
-      <div class="reverse-result-recipe">${chips}</div>
+      <div class="reverse-result-recipe">${chips}${stationChip}</div>
       ${obtainShort ? `<p class="reverse-result-obtain">${esc(obtainShort)}</p>` : ""}
       <div class="reverse-result-actions">
         <a class="tree-btn" href="#/crafts?item=${encodeURIComponent(row.result)}">◆ Дерево</a>
@@ -6787,7 +6809,7 @@
       </div>
     </article>`;
   }
-  function renderReverseCraftOutput(section, value) {
+  function renderReverseCraftOutput(section, value, limit = 60) {
     const output = section.querySelector("#reverse-craft-output");
     const summaryBadge = section.querySelector("[data-reverse-summary]");
     if (!output) return;
@@ -6796,28 +6818,36 @@
       normalizeArtName(info.name),
       normalizeArtName(info.en),
       info.catName ? normalizeArtName(info.catName) : "",
-      info.vanilla ? normalizeArtName(info.vanilla.name) : ""
+      info.vanilla ? normalizeArtName(info.vanilla.name) : "",
+      info.vanilla ? normalizeArtName(`vanilla:${info.vanilla.id}`) : ""
     ].filter(Boolean));
     const rows = reverseUsesFor(value);
-    const visible = rows.slice(0, 60);
+    const visible = rows.slice(0, limit);
     const art = info.art || info.remoteArt || "";
-    const recipesNom = (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? "рецепт" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "рецепта" : "рецептов"}`;
-    if (summaryBadge) summaryBadge.textContent = rows.length ? `${info.ru} · ${recipesNom(rows.length)}` : `${info.ru} · конечный предмет`;
+    if (summaryBadge) summaryBadge.textContent = rows.length ? `${info.ru} · ${recipesNomText(rows.length)}` : `${info.ru} · конечный предмет`;
     output.innerHTML = `
       <div class="reverse-craft-selected">
         <span class="slot reverse-selected-art">${art ? `<img${info.remoteArt && !info.art ? ` class="remote"` : ""} src="${escAttr(art)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
         <div class="reverse-selected-copy">
           <small>выбранный ингредиент</small>
           <b>${esc(info.ru)}</b>
-          ${info.en && info.en !== info.ru ? `<span>в игре: ${esc(info.en)}</span>` : ""}
+          <span>${esc(info.typeLabel || "Предмет")}${info.en && info.en !== info.ru ? ` · в игре: ${esc(info.en)}` : ""}</span>
         </div>
-        <span class="reverse-craft-count">${rows.length ? `участвует в ${recipeCountText(rows.length)}` : "ни в одном рецепте"}</span>
+        <div class="reverse-selected-side">
+          <span class="reverse-craft-count">${rows.length ? `⚒ участвует в ${recipeCountText(rows.length)}` : "ни в одном рецепте"}</span>
+          <a class="tree-btn ghost" href="#/crafts?item=${encodeURIComponent(info.key || info.name)}">◆ Его полное дерево</a>
+        </div>
       </div>
       ${rows.length
         ? `<div class="reverse-result-grid">${visible.map((row) => reverseResultCardHTML(row, sourceKeys)).join("")}</div>
-          ${rows.length > visible.length ? `<p class="reverse-more-note">Показаны первые ${visible.length} из ${rows.length} рецептов — уточни, что ищешь, через глобальный поиск или полное дерево.</p>` : ""}`
+          ${rows.length > visible.length ? `<button class="reverse-more" type="button" data-reverse-more>Показать ещё ${Math.min(60, rows.length - visible.length)} из ${rows.length - visible.length} оставшихся ▾</button>` : ""}`
         : `<div class="empty-state reverse-empty"><span>◆</span><b>Из этого предмета ничего не крафтится</b><p>${esc(info.ru)} — конечный результат или самостоятельный ресурс. Открой его в полном дереве, чтобы посмотреть, из чего создаётся он сам.</p>${fullTreeLink(info.key || info.name)}</div>`}
     `;
+    const moreBtn = output.querySelector("[data-reverse-more]");
+    if (moreBtn) moreBtn.onclick = () => {
+      renderReverseCraftOutput(section, value, limit + 60);
+      SND.play("tick");
+    };
     versionLocalImages(output);
   }
   function bindReverseCraft(section, initialUse) {
@@ -6861,6 +6891,9 @@
         }, 180);
       });
     }
+    section.querySelectorAll(".reverse-pop-card").forEach((card) => {
+      card.onclick = () => selectReverse(card.dataset.choiceName || "");
+    });
     if (craftReverseUse) renderReverseCraftOutput(section, craftReverseUse);
   }
 
@@ -6889,7 +6922,19 @@
           </label>
           <div class="craft-tree-choice-grid reverse-craft-suggest" id="reverse-craft-suggest" hidden></div>
           <div class="reverse-craft-output" id="reverse-craft-output">
-            <div class="reverse-craft-placeholder"><span aria-hidden="true">⇄</span><b>Выбери ингредиент выше</b><p>Например: «паутина», «души» или «слиток» — появятся все предметы, которые из него создаются, с рецептами и источниками.</p></div>
+            <div class="reverse-pop">
+              <div class="reverse-pop-head"><b>Популярные ингредиенты</b><small>нажми любой — сразу увидишь все применения</small></div>
+              <div class="reverse-pop-grid">${REVERSE_POPULAR.map((popName) => {
+                const popInfo = ingredientInfo(popName);
+                const popArt = popInfo.art || popInfo.remoteArt || "";
+                const popCount = reverseUsesFor(popName).length;
+                return `<button class="reverse-pop-card" type="button" data-choice-name="${escAttr(popName)}">
+                  <span class="slot reverse-pop-art">${popArt ? `<img src="${escAttr(popArt)}" alt="" loading="lazy" decoding="async" />` : `<i aria-hidden="true">◆</i>`}</span>
+                  <b>${esc(popInfo.ru)}</b>
+                  <em>${recipesNomText(popCount)}</em>
+                </button>`;
+              }).join("")}</div>
+            </div>
           </div>
         </section>
         <p class="craft-tree-help"><b>Подсказка:</b> у каждой карточки есть кнопки «Дерево» и «Рецепт», а выбранный ингредиент подсвечен золотом в составе. Ссылку на подборку можно копировать — выбор сохранён в адресе.</p>
